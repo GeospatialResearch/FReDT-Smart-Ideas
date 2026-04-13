@@ -1,0 +1,164 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Sat Apr 11 17:11:15 2026
+
+@author: mng42
+"""
+
+from pathlib import Path
+import sys
+sys.path.append(r"C:\Users\mng42\spyder_hydromt\digital_twin_codes\for_both")
+
+from terrain_data_for_wflow_generator import TerrainDataWflowGenerator
+
+from wflow_simulations_generator import WflowSimulationsGenerator
+from flood_model_simulations_generator import FloodModelSimulationsGenerator
+
+
+class HydraulicAndHydrodynamicPipeline:
+    """This class is to generate hydraulic and hydrodynamic results"""
+    
+    def __init__(
+            self,
+            hydro_combination_path: Path,
+            outlet_gauge_locations_filename: str,
+            
+            precipitation_path: Path,
+            start_time: str,
+            end_time: str,
+            
+            subbasin: list,
+            bbox: list,
+            num_threads: int,
+            flood_aoi_boundary: list,
+            
+            strord: int = 4,
+            resolution: float = 0.00045,
+            threshold: int = 1000,
+            width_rate_control: float = 2,
+            discharge_rate_control: float = 1,
+            crs: int = 2193
+        ) -> None:
+        """
+        Generate hydraulic and hydrodynamic results
+        
+        Parameters
+        ----------
+        hydro_combination_path : Path
+            Directory to folder storing all necessary data
+        outlet_gauge_locations_filename: str
+            Filename of outlet gauge locations
+        precipitation_path: Path
+            A directory to where the preciptation files are stored
+        start_time : str
+            Starting time of simulation.
+            This should include the spin-up time. 
+            Normally, it is 1-year before the flood event.
+        end_time : str
+            Ending time of simulation
+            This should include some periods of time after the flood event.
+            Normally, it is about 2-3 months.
+        subbasin : list
+            Outlet coordinates
+        bbox : list
+            Given bounding box coordinates that contains the subbasin coordinates
+        num_threads : int
+            Number of threads that controls how fast the wflow model can run
+        flood_aoi_boundary : list
+            Boundaries' coordinates of area of interest.
+            Format is [xmin, ymin, xmax, ymax]
+        strord : int
+            Minimum stream order
+        resolution : float
+            Resolution for flow data. 
+            Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
+        threshold: int = 1000
+            Minimum number of cells/up-slope area required to initiate and main a channel.
+            Default is 1000
+        width_rate_control: float = 2
+            The rate to control river width. Default is 2
+        discharge_rate_control: float = 1
+            The rate to control river discharge. Default is 1
+        crs : int = 2193
+            Targeted crs. The default is 2193 for NZTM.
+        """
+        # Set up necessary parameters
+        self.hydro_combination_path = hydro_combination_path
+        self.outlet_gauge_locations_filename = outlet_gauge_locations_filename
+        self.precipitation_path = precipitation_path
+        self.start_time = start_time
+        self.end_time = end_time
+        self.subbasin = subbasin
+        self.bbox = bbox
+        self.num_threads = num_threads
+        self.flood_aoi_boundary = flood_aoi_boundary
+        self.strord = strord
+        self.resolution = resolution
+        self.threshold = threshold
+        self.width_rate_control = width_rate_control
+        self.discharge_rate_control = discharge_rate_control
+        self.crs = crs
+        
+        self.hydromt_path = Path(r"D:\Digital_Twin_data\necessary_data")
+        
+    def terrain_data_pipeline(self):
+        """Generate terrain data for wflow and flood models"""
+        # Set up terrain data generation system
+        terrain_data = TerrainDataWflowGenerator(
+            self.hydro_combination_path,
+            self.outlet_gauge_locations_filename,
+            self.resolution,
+            self.threshold,
+            self.width_rate_control,
+            self.discharge_rate_control
+        )
+        
+        # Generate terrain data
+        terrain_data.terrain_for_wflow_generator()
+        
+    def wflow_data_pipeline(self):
+        """Generate wflow model data for flood model"""
+        # Set up wflow model data generation system
+        wflow_data = WflowSimulationsGenerator(
+            self.hydromt_path,
+            self.hydro_combination_path,
+            self.precipitation_path,
+            self.start_time,
+            self.end_time,
+            self.subbasin,
+            self.strord,
+            self.bbox,
+            self.num_threads,
+            self.resolution
+        )
+        
+        # Generate wflow model data
+        wflow_data.wflow_model_simulations_pipeline()
+        
+    def flood_data_pipeline(self):
+        """Generate flood model data"""
+        # Set up flood model data generation system
+        flood_data = FloodModelSimulationsGenerator(
+            self.hydro_combination_path,
+            self.hydro_combination_path,
+            self.precipitation_path,
+            self.flood_aoi_boundary,
+            self.start_time,
+            self.end_time,
+            self.crs 
+        )
+        
+        # Generate flood model data
+        flood_data.flood_model_executor()
+        
+    def hydraulic_and_hydrodynamic_simulation_generator(self):
+        """Generate hydraulic and hydrodynamic simulations"""
+        # Generate terrain data for wflow and flood models
+        self.terrain_data_pipeline()
+        
+        # Generate wflow data
+        self.wflow_data_pipeline()
+        
+        # Generate flood data
+        self.flood_data_pipeline()
+        
