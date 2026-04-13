@@ -9,10 +9,10 @@ from pathlib import Path
 import sys
 sys.path.append(r"C:\Users\mng42\spyder_hydromt\digital_twin_codes\for_both")
 
-from terrain_data_for_wflow_generator import TerrainDataWflowGenerator
+from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 
 from wflow_simulations_generator import WflowSimulationsGenerator
-from flood_model_simulations_generator import FloodModelSimulationsGenerator
+from src.eddie_floodresilience.flood_model.lisflood.flood_model_simulations_generator import FloodModelSimulationsGenerator
 
 
 class HydraulicAndHydrodynamicPipeline:

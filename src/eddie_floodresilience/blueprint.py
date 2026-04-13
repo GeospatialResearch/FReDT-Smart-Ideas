@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, make_response, Response
 
 from eddie.check_celery_alive import check_celery_alive
 from src.eddie_floodresilience import tasks
-from src.eddie_floodresilience.flood_model.flood_scenario_process_service import FloodScenarioProcessService
+from src.eddie_floodresilience.flood_model.hydraulic_and_hydrodynamic_service import Whirinaki1999ScenarioProcessService
 
 os.environ.pop("Path", None)
 # See issue https://github.com/GeospatialResearch/eddie_floodresilience/issues/1 for reason behind disabled QA
@@ -15,7 +15,7 @@ from pywps import Service  # pylint: disable=wrong-import-position,wrong-import-
 
 blueprint = Blueprint('eddie_floodresilience', __name__)
 processes = [
-    FloodScenarioProcessService()
+    Whirinaki1999ScenarioProcessService()
 ]
 
 process_descriptor = {process.identifier: process.abstract for process in processes}
