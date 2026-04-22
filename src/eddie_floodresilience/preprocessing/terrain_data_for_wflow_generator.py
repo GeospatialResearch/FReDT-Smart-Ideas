@@ -7,12 +7,12 @@ Created on Sat Apr 11 16:23:13 2026
 
 from pathlib import Path
 import sys
-sys.path.append(r"C:\Users\mng42\spyder_hydromt\digital_twin_codes\for_both")
 
-from terrain_data_manipulator import TerrainFilter
-from terrain_attributes_generator import StreamTopologyGenerator, \
-                                         StreamHydraulicsGenerator
-from terrain_data_for_wflow_preparator import TerrainDataWflowPreparator
+
+from .terrain_data_manipulator import TerrainFilter
+from .terrain_attributes_generator import (StreamTopologyGenerator,
+                                           StreamHydraulicsGenerator)
+from .terrain_data_for_wflow_preparator import TerrainDataWflowPreparator
 
 class TerrainDataWflowGenerator:
     """This class is to generate terrain data for wflow model"""

@@ -4,13 +4,11 @@ Created on Thu Apr  9 08:43:08 2026
 
 @author: mng42
 """
-import os
-os.chdir(r"C:\Users\mng42\spyder_hydromt\digital_twin_codes\for_both")
 
 from pathlib import Path
 
-from wflow_data_catalog_generator import DataCatalogGenerator
-from wflow_build_generator import WflowBuildGenerator
+from .wflow_data_catalog_generator import DataCatalogGenerator
+from .wflow_build_generator import WflowBuildGenerator
 
 
 import subprocess

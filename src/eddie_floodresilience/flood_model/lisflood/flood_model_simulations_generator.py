@@ -7,13 +7,13 @@ Created on Tue Apr  7 21:12:29 2026
 
 from pathlib import Path
 
-from flood_model_inputs_generator import TerrainGenerator, \
+from .flood_model_inputs_generator import TerrainGenerator, \
                                          TerrainFloodModelGenerator, \
                                          InjectionPointsFloodModelGenerator
                             
-from flood_model_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
+from .flood_model_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 
-from flood_model_parameters_generator import ParametersFloodModelGenerator
+from .flood_model_parameters_generator import ParametersFloodModelGenerator
 
 import subprocess
 
