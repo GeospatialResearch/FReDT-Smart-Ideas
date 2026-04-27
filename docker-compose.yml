@@ -125,7 +125,7 @@ services:
   terria_map:
     # Front-end using terria.js
     build:
-      context: lib/eddie/terriajs
+      context: terriajs
     ports:
       - "${WWW_PORT}:3001"
     environment:
