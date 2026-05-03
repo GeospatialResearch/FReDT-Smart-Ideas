@@ -362,10 +362,10 @@ class InjectionPointsFloodModelGenerator():
             Directory to folder storing catchment model data
         terrain_bounding_box : Polygon
             Bounding's box of terrain data
-        start_time : str
-            String of starting time details. Format is "yyyy-mm-ddThh:mm:ss"
-        end_time : str
-            String of ending time details. Format is Dataframe that contains rivers' flow data at injection points
+        start_time : datetime
+            Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
+        end_time : datetime
+            Ending time details. Format is Dataframe that contains rivers' flow data at injection points
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         """
@@ -528,13 +528,13 @@ class InjectionPointsFloodModelGenerator():
         points_path = self.flood_model_path / "injection_points.shp"
         points_gdf.to_file(points_path)
     
-    def extract_rivers_flow_from_catchment_model(self) -> pd.Series:
+    def extract_rivers_flow_from_catchment_model(self) -> xr.DataArray:
         """
         Extract rivers' flow data from catchment model outputs
 
         Returns
         -------
-        rivers_flow : pd.Series
+        rivers_flow : xr.DataArray
             Rivers' flow data extracted from catchment model outputs
         """
         # Set path to rivers' data 
@@ -565,7 +565,7 @@ class InjectionPointsFloodModelGenerator():
         Returns
         -------
         injection_points_flow_df : pd.DataFrame
-            Dataframe that contains rivers' flow data at injection points
+            A table that contains rivers' flow data at injection points
         """
         # Set up dictionary for rivers' flow data for all injection points
         injection_points_flow_dict = {}
@@ -596,7 +596,7 @@ class InjectionPointsFloodModelGenerator():
     def write_out_rivers_flow_within_time(
             self,
             injection_points_flow_df: pd.DataFrame,
-            rivers_flow: pd.Series
+            rivers_flow: xr.DataArray
             ) -> None:
         """
         Write out rivers' flow within given time
@@ -604,11 +604,17 @@ class InjectionPointsFloodModelGenerator():
         Parameters
         ----------
         injection_points_flow_df : pd.DataFrame
-            Dataframe that contains rivers' flow data at injection points
+            A table that contains rivers' flow data at injection points
+        rivers_flow : xr.DataArray
+            Rivers' flow data extracted from catchment model outputs
         """
+        # Set up correct time values
+        times = pd.to_datetime(rivers_flow['time'].values)
+
         # Add time to dataframe of injection points' river flows
         injection_points_flow_df.insert(
-                0, "time", rivers_flow.time.values
+                0, "time",
+                times
             )
         
         # Extract rivers' flow within given time

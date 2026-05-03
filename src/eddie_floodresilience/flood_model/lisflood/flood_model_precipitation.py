@@ -12,7 +12,7 @@ import netCDF4
 
 import numpy as np
 from pathlib import Path
-import pandas as pd
+from datetime import datetime
 
 
 class PrecipitationGenerator():
@@ -23,8 +23,8 @@ class PrecipitationGenerator():
         flood_model_path: Path,
         precipitation_path: Path,
         terrain_bounding_box: xr.Dataset,
-        start_time: str,
-        end_time: str,
+        start_time: datetime,
+        end_time: datetime,
         crs: int = 2193
     ) -> None:
         """
@@ -38,10 +38,10 @@ class PrecipitationGenerator():
             Directory to folder storing precipitation data
         terrain_bounding_box: Polygon
             Bounding's box of terrain data
-        start_time : str
-            String of starting time details. Format is "yyyy-mm-ddThh:mm:ss"
-        end_time : str
-            String of ending time details.
+        start_time : datetime
+            Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
+        end_time : datetime
+            Ending time details.
         crs : int, optional
             Targeted crs. The default is 2193 for NZTM.
         """
@@ -66,8 +66,8 @@ class PrecipitationGenerator():
         # This is just within a month.
         # But it should be able to read different months,
         # and it will be scripted in the future
-        given_year = pd.to_datetime(self.start_time).year
-        given_month = f"{pd.to_datetime(self.start_time).month:02d}"  # Ex: 01, 02, etc.
+        given_year = self.start_time.year
+        given_month = f"{self.start_time.month:02d}"  # Ex: 01, 02, etc.
         
         # Set up path to precipitation file
         precipitation_name = f"precipitation_nz_{given_year}{given_month}.nc"
@@ -231,7 +231,7 @@ class PrecipitationGenerator():
         Parameters
         ----------
         precipitation_path : Path
-            Path where precipitation data is stored
+            A directory where precipitation data is stored
         precipitation_data : xr.Dataset
             Precipitation data that needs writing out
         """

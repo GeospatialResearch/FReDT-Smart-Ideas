@@ -24,8 +24,8 @@ class ParametersFloodModelGenerator():
         self,
         flood_model_path: Path,
         terrain_bounding_box: Polygon,
-        start_time: str,
-        end_time: str
+        start_time: datetime,
+        end_time: datetime
     ) -> None:
         """
         Generate parameter files for flood model
@@ -36,10 +36,10 @@ class ParametersFloodModelGenerator():
             Directory to folder storing flood model data
         terrain_bounding_box : Polygon
             Bounding's box of terrain data
-        start_time : str
-            String of starting time details. Format is "yyyy-mm-ddThh:mm:ss"
-        end_time : str
-            String of ending time details.
+        start_time : datetime
+            Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
+        end_time : datetime
+            Ending time details.
         """
         self.flood_model_path = flood_model_path
         self.terrain_bounding_box = terrain_bounding_box
@@ -142,12 +142,8 @@ class ParametersFloodModelGenerator():
             Simulated time in seconds from starting to ending times
         
         """
-        # Format simulated time
-        formatted_start_time = datetime.strptime(self.start_time, "%Y-%m-%dT%H:%M:%S")
-        formatted_end_time = datetime.strptime(self.end_time, "%Y-%m-%dT%H:%M:%S")
-        
         # Compute simulated time in seconds
-        seconds = int((formatted_end_time - formatted_start_time).total_seconds())
+        seconds = int((self.end_time - self.start_time).total_seconds())
         
         return seconds
         
@@ -214,7 +210,5 @@ class ParametersFloodModelGenerator():
         
         # Generate par file
         self.par_generator()
-        
-                
-            
+
         

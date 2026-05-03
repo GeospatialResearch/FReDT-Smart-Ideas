@@ -6,6 +6,7 @@ Created on Tue Apr  7 21:12:29 2026
 """
 
 from pathlib import Path
+from datetime import datetime
 
 from .flood_model_inputs_generator import TerrainGenerator, \
                                          TerrainFloodModelGenerator, \
@@ -27,8 +28,8 @@ class FloodModelSimulationsGenerator():
         catchment_model_path: Path,
         precipitation_path: Path,
         aoi_boundary: list,
-        start_time: str,
-        end_time: str,
+        start_time: datetime,
+        end_time: datetime,
         crs: int = 2193
     ) -> None:
         """
@@ -45,9 +46,9 @@ class FloodModelSimulationsGenerator():
         aoi_boundary : list
             Boundaries' coordinates of area of interest.
             Format is [xmin, ymin, xmax, ymax]
-        start_time: str
+        start_time: datetime
             Starting time of the flood event
-        end_time: str
+        end_time: datetime
             Ending time of the flood event
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.            

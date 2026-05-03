@@ -7,6 +7,7 @@ Created on Thu Apr  9 09:01:33 2026
 
 import yaml
 from pathlib import Path
+from datetime import datetime
 
 
 class WflowBuildGenerator():
@@ -14,8 +15,8 @@ class WflowBuildGenerator():
     
     def __init__(
         self,
-        start_time: str,
-        end_time: str,
+        start_time: datetime,
+        end_time: datetime,
         resolution: float,
         wflow_model_path: Path
     ) -> None:
@@ -26,21 +27,21 @@ class WflowBuildGenerator():
 
         Parameters
         ----------
-        start_time : str
+        start_time : datetime
             Starting time of simulation.
             This should include the spin-up time. 
             Normally, it is 1-year before the flood event.
-        end_time : str
+        end_time : datetime
             Ending time of simulation
             This should include some periods of time after the flood event.
-            Normally, it is about 2-3 months.
+            Normally, it is about 12 hours or 1 day.
         resolution : float
             Resolution for flow data. 
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         wflow_model_path: Path
             A directory to where the data_catalog.yml is stored and to run wflow model
         """
-        self.start_time = start_time
+        self.start_time = start_time.replace(year=start_time.year - 1)
         self.end_time = end_time
         self.resolution = resolution
         self.wflow_model_path = wflow_model_path

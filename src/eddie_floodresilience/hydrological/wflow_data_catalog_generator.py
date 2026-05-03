@@ -16,7 +16,7 @@ class DataCatalogGenerator():
             self,
             hydromt_path: Path,
             wflow_model_path: Path,
-            precipitation_path: Path
+            forcing_path: Path
         ) -> None:
         """
         Generate data_catalog.yml for preprocessing data for wflow.
@@ -29,12 +29,12 @@ class DataCatalogGenerator():
             A directory to where all necessary files are stored to run wflow model
         wflow_model_path: Path
             A directory to where the data_catalog.yml is stored and to run wflow model
-        precipitation_path: Path
-            A directory to where the preciptation files are stored
+        forcing_path: Path
+            A directory to where the forcing files are stored
         """
         self.hydromt_path = hydromt_path
         self.wflow_model_path = wflow_model_path
-        self.precipitation_path = precipitation_path
+        self.forcing_path = forcing_path
         
     def meta_section(self) -> dict:
         """
@@ -80,7 +80,7 @@ class DataCatalogGenerator():
                     "source_license": "https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products",
                     "source_url": "https://doi.org/10.24381/cds.bd0915c6"
                 },
-                "path": str(self.precipitation_path / "era5_hourly_*.nc"),
+                "path": str(self.forcing_path / "era5_hourly_*.nc"),
                 "unit_add": {
                     "temp": -273.15
                 },

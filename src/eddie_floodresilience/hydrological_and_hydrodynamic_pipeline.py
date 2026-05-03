@@ -6,6 +6,7 @@ Created on Sat Apr 11 17:11:15 2026
 """
 
 from pathlib import Path
+from datetime import datetime
 
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 
@@ -13,17 +14,18 @@ from src.eddie_floodresilience.hydrological.wflow_simulations_generator import W
 from src.eddie_floodresilience.flood_model.lisflood.flood_model_simulations_generator import FloodModelSimulationsGenerator
 
 
-class HydraulicAndHydrodynamicPipeline:
-    """This class is to generate hydraulic and hydrodynamic results"""
+class HydrologicalAndHydrodynamicPipeline:
+    """This class is to generate hydrological and hydrodynamic results"""
     
     def __init__(
             self,
             hydro_combination_path: Path,
             outlet_gauge_locations_filename: str,
-            
+
+            forcing_path: Path,
             precipitation_path: Path,
-            start_time: str,
-            end_time: str,
+            start_time: datetime,
+            end_time: datetime,
             
             subbasin: list,
             bbox: list,
@@ -38,7 +40,7 @@ class HydraulicAndHydrodynamicPipeline:
             crs: int = 2193
         ) -> None:
         """
-        Generate hydraulic and hydrodynamic results
+        Generate hydrological and hydrodynamic results
         
         Parameters
         ----------
@@ -46,8 +48,10 @@ class HydraulicAndHydrodynamicPipeline:
             Directory to folder storing all necessary data
         outlet_gauge_locations_filename: str
             Filename of outlet gauge locations
+        forcing_path: Path
+            A directory to where the forcing files are stored
         precipitation_path: Path
-            A directory to where the preciptation files are stored
+            A directory to where the precipitation files are stored
         start_time : str
             Starting time of simulation.
             This should include the spin-up time. 
@@ -59,7 +63,7 @@ class HydraulicAndHydrodynamicPipeline:
         subbasin : list
             Outlet coordinates
         bbox : list
-            Given bounding box coordinates that contains the subbasin coordinates
+            Given bounding box coordinates that contains the sub-basin coordinates
         num_threads : int
             Number of threads that controls how fast the wflow model can run
         flood_aoi_boundary : list
@@ -83,6 +87,7 @@ class HydraulicAndHydrodynamicPipeline:
         # Set up necessary parameters
         self.hydro_combination_path = hydro_combination_path
         self.outlet_gauge_locations_filename = outlet_gauge_locations_filename
+        self.forcing_path = forcing_path
         self.precipitation_path = precipitation_path
         self.start_time = start_time
         self.end_time = end_time
@@ -120,7 +125,7 @@ class HydraulicAndHydrodynamicPipeline:
         wflow_data = WflowSimulationsGenerator(
             self.hydromt_path,
             self.hydro_combination_path,
-            self.precipitation_path,
+            self.forcing_path,
             self.start_time,
             self.end_time,
             self.subbasin,
@@ -149,7 +154,7 @@ class HydraulicAndHydrodynamicPipeline:
         # Generate flood model data
         flood_data.flood_model_executor()
         
-    def hydraulic_and_hydrodynamic_simulation_generator(self):
+    def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
         # Generate terrain data for wflow and flood models
         self.terrain_data_pipeline()
@@ -160,13 +165,14 @@ class HydraulicAndHydrodynamicPipeline:
         # Generate flood data
         self.flood_data_pipeline()
 
+# This is where to check the model
 def main():
     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_001")
     outlet_gauge_locations_filename = 'river_points_with_outlets_002'
     forcing_path = Path(r"H:\Barra/Whirinaki\merge_gauges_HIRDS_004")
     precipitation_path = Path(r"H:\Barra/Whirinaki\rainfall_gauges_HIRDS_004")
-    start_time = "1998-01-01T00:00:00"
-    end_time = "1999-03-01T00:00:00"
+    start_time = datetime.fromisoformat("1999-01-20T00:00:00")
+    end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
     subbasin = [173.46365, -35.45662]
     bbox = [173.44134, -35.61760, 173.77608, -35.11105]
@@ -181,7 +187,7 @@ def main():
     crs = 2193
 
     # Set up hydraulic and hydrodynamic pipeline
-    hydraulic_hydrodynamic_pipeline = HydraulicAndHydrodynamicPipeline(
+    hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
         hydro_combination_path,
         outlet_gauge_locations_filename,
 
@@ -202,7 +208,7 @@ def main():
         discharge_rate_control,
         crs
     )
-    hydraulic_hydrodynamic_pipeline.hydraulic_and_hydrodynamic_simulation_generator()
+    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
 
 if __name__ == '__main__':
     main()

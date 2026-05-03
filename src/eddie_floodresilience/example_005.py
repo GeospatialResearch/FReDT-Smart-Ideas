@@ -9,7 +9,7 @@ from pathlib import Path
 import sys
 sys.path.append(r"C:\Users\mng42\spyder_hydromt\digital_twin_codes\for_both")
 
-from src.eddie_floodresilience.hydraulic_and_hydrodynamic_pipeline import HydraulicAndHydrodynamicPipeline
+from src.eddie_floodresilience.hydrological_and_hydrodynamic_pipeline import HydraulicAndHydrodynamicPipeline
 
 
 hydro_combination_path = Path(r"D:\Digital_Twin_data\hydraulic_hydrodynamic_path_001")
