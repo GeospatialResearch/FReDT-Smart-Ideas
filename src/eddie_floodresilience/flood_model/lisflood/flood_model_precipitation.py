@@ -276,7 +276,7 @@ class PrecipitationGenerator():
             
             # Clip each precipitation timestep
             clipped_reprojected_each_precipitation_timestep = self.clip_precipitation(
-                1152, 
+                1160,  # This value is constant
                 reprojected_each_precipitation_timestep
             )
             
@@ -344,7 +344,7 @@ class PrecipitationGenerator():
         
         # Clip coarse precipitation
         clipped_coarse_precipitation = self.clip_precipitation(
-            12500,
+            12600,
             formatted_coarse_precipitation_subset
         )
         

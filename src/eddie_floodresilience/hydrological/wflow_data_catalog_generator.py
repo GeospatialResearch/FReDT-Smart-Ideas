@@ -233,7 +233,7 @@ class DataCatalogGenerator():
         # Generate a dictionary with terrain information
         terrain = {
             "merit_hydrox": {
-                "crs": 4326,
+                "crs": 2193,
                 "data_type": "RasterDataset",
                 "driver": "raster",
                 "meta": {
@@ -262,7 +262,7 @@ class DataCatalogGenerator():
         # Generate a dictionary with basin information
         basin = {
             "merit_hydro_index": {
-                "crs": 4326,
+                "crs": 2193,
                 "data_type": "GeoDataFrame",
                 "driver": "vector",
                 "meta": {

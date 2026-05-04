@@ -548,7 +548,7 @@ class InjectionPointsFloodModelGenerator():
         
     def extract_rivers_flow_for_injection_points(
             self,
-            rivers_flow: pd.Series,
+            rivers_flow: xr.DataArray,
             points_gdf: gpd.GeoDataFrame
             ) -> pd.DataFrame:
         """
@@ -556,7 +556,7 @@ class InjectionPointsFloodModelGenerator():
         
         Parameters
         ----------
-        rivers_flow : pd.Series
+        rivers_flow : xr.DataArray
             Rivers' flow data extracted from catchment model outputs
         points_gdf : gpd.GeoDataFrame
             Points geodataframe of intersections between rivers and DEM
@@ -575,13 +575,13 @@ class InjectionPointsFloodModelGenerator():
         for i, row in points_gdf.iterrows():
             # Get longitude (or x), latitude (or y), and ID
             lon_x = row.geometry.x
-            lat_x = row.geometry.y
+            lat_y = row.geometry.y
             name = row['FID']
             
             # Extract rivers' flow data at injection points
             injection_points_flow = rivers_flow.sel(
-                    lon=lon_x,
-                    lat=lat_x,
+                    x=lon_x,
+                    y=lat_y,
                     method='nearest'
                 )
             

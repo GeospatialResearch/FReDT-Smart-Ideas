@@ -120,8 +120,8 @@ class WflowBuildGenerator():
                 "river_geom_fn": "hydro_rivers_lin",
                 "river_upa": 0.1,
                 "rivdph_method": "powlaw",
-                "min_rivdph": 0.1,
-                "min_rivwth": 0.5,
+                "min_rivdph": 0.01,
+                "min_rivwth": 0.05,
                 "slope_len": 2000,
                 "smooth_len": 5000,
                 "river_routing": "kinematic-wave"

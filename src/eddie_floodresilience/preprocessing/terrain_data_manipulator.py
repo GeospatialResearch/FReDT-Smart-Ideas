@@ -79,10 +79,6 @@ class TerrainFilter:
         -----------
         path: str
             Common path to the directory that contains necessary files to filter terrain data
-        origin_crs : int = 2193
-            Original CRS (default is 2193)
-        converted_crs : int = 4326
-            Converted CRS (default is 4326)
         roughness : bool
             Whether to print out roughness and DEM. Default is True
         """
@@ -91,32 +87,26 @@ class TerrainFilter:
         self.converted_crs = converted_crs
         self.roughness = roughness
 
-    def dem_crs_conversion(self) -> None:
-        """Convert DEM CRS. Here default is to convert DEM CRS from 2193 to 4326"""
-        # Get DEM
-        dem = rxr.open_rasterio(self.path / "8m_geofabric.nc")
-
-        # Ensure the origin CRS is attached
-        dem_origin_crs = dem.rio.write_crs(f"EPSG:{self.origin_crs}", inplace=True)
-
-        # Reproject the crs to converted crs
-        dem_converted_crs = dem_origin_crs.rio.reproject(f"EPSG:{self.converted_crs}")
+    def terrain_splitting(self) -> None:
+        """Split terrain data into DEM and roughness (if any)"""
+        # Get terrain
+        terrain = rxr.open_rasterio(self.path / "8m_geofabric.nc")
 
         # Save as tif
         if self.roughness:
-            dem_converted_crs['z'].rio.to_raster(self.path / "dem_converted_crs.tif")
-            dem_converted_crs['zo'].rio.to_raster(self.path / "roughness_converted_crs.tif")
+            terrain['z'].rio.to_raster(self.path / "dem_split.tif")  # Name here is constant
+            terrain['zo'].rio.to_raster(self.path / "roughness_split.tif")  # Name here is constant
         else:
-            dem_converted_crs.rio.to_raster(self.path / "dem_converted_crs.tif")
+            terrain.rio.to_raster(self.path / "dem_split.tif")
 
     def remove_sea(self) -> None:
         """Clip sea area mainly in DEM and roughness"""
         # Get New Zealand shapefile
-        nz_shapefile = self.path / "nz_coastline_4326.shp"
+        nz_shapefile = self.path / "nz_coastline.shp"
 
         # Files need changing
-        dem = self.path / "dem_converted_crs.tif"
-        roughness = self.path / "roughness_converted_crs.tif"
+        dem = self.path / "dem_split.tif"  # Name here is constant
+        roughness = self.path / "roughness_split.tif"  # Name here is constant
 
         # Remove sea by changing sea area into nodata value (-9999)
         value_change(nz_shapefile, dem, -9999, False)
@@ -125,20 +115,20 @@ class TerrainFilter:
     def nodata_filling(self) -> None:
         """Fill nodata value with -9999"""
         # Fill the nodata value
-        dem_nosea = rxr.open_rasterio(self.path / "dem_converted_crs.tif")
+        dem_nosea = rxr.open_rasterio(self.path / "dem_split.tif")  # Name here is constant
         dem_replace_nodata = dem_nosea.fillna(-9999)
         dem_write_nodata = dem_replace_nodata.rio.write_nodata(-9999)
-        dem_write_nodata.rio.to_raster(self.path / "dem_for_wflow.tif")
+        dem_write_nodata.rio.to_raster(self.path / "dem_for_wflow.tif")  # Name here is constant
 
-        roughness_nosea = rxr.open_rasterio(self.path / "roughness_converted_crs.tif")
+        roughness_nosea = rxr.open_rasterio(self.path / "roughness_split.tif")  # Name here is constant
         roughness_replace_nodata = roughness_nosea.fillna(-9999)
         roughness_write_nodata = roughness_replace_nodata.rio.write_nodata(-9999)
-        roughness_write_nodata.rio.to_raster(self.path / "roughness_for_wflow.tif")
+        roughness_write_nodata.rio.to_raster(self.path / "roughness_for_wflow.tif")  # Name here is constant
 
     def filter_dem_for_wflow(self) -> None:
         """Convert DEM into version that can be used by wflow"""
-        # Convert DEM and roughness CRS (default: 2193 --> 4326)
-        self.dem_crs_conversion()
+        # Split terrain data into DEM and roughness
+        self.terrain_splitting()
 
         # Remove sea
         self.remove_sea()

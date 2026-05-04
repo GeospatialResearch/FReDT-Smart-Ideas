@@ -4,7 +4,6 @@ mainly using Whitebox package.
 """
 
 from pathlib import Path
-from dataclasses import dataclass
 from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
 from osgeo import gdal # Import gdal before rasterio
@@ -35,7 +34,7 @@ class TerrainAttributesGenerator():
             self,
             path: Path,
             raster_name: str = 'dem',
-            resolution: float = 0.00045,
+            resolution: float = 50,
             threshold: int = 1000
     ) -> None:
         """
@@ -47,8 +46,8 @@ class TerrainAttributesGenerator():
             Path to the directory that contains necessary files to generate terrain data
         raster_name: str = 'dem'
             Name of the raster. Mostly 'dem' and 'roughness'
-        resolution: float = 0.00045
-            Resolution to resample data. Default is 0.00045 in crs 4326 (100m in crs 2193)
+        resolution: float = 100
+            Resolution to resample data. Default is 100m in crs 2193
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
@@ -94,9 +93,9 @@ class TerrainAttributesGenerator():
 
         Parameters
         ----------
-        flat_increment: float = 0.0001
+        flat_increment: float = 1
             If flat surfaces such as lakes have the slope 0 it will act like a sink.
-            This parameter will set a small slope to flat areas. Default is 0.0001.
+            This parameter will set a small slope to flat areas. Default is 1.
             https://github.com/williamlidberg/Whitebox-tutorial/blob/main/streams.py
         """
         input_path = self.path / f"{self.raster_name}_for_wflow_coarser.tif"
@@ -122,7 +121,7 @@ class TerrainAttributesGenerator():
 
             # Read data using rioxarray to add crs and then overwrite out
             with rxr.open_rasterio(output_path_no_deps) as raster_no_deps_crs:
-                raster_no_deps_crs = raster_no_deps_crs.rio.write_crs('EPSG:4326')
+                raster_no_deps_crs = raster_no_deps_crs.rio.write_crs('EPSG:2193')
                 raster_no_deps_crs.rio.to_raster(fr"{self.path}\{self.raster_name}_for_wflow_coarser_nodeps_crs.tif")
         else:
             print(f"'{output_path_crs.name}' already exists!")
@@ -232,11 +231,11 @@ class TerrainAttributesGenerator():
             If True, it is D8 streams that includes watershed information
         """
         if info_from_watershed == False:
-            # Repair streams within 0.0005 degree or ~50m distance
+            # Repair streams within 50m distance
             wbt.repair_stream_vector_topology(
                 i=str(self.path / "streams_d8.shp"),
                 output=str(self.path / "repaired_streams_d8.shp"),
-                dist="0.0005"  
+                dist="50"
             )
             
             # Read the repaired streams
@@ -253,7 +252,7 @@ class TerrainAttributesGenerator():
             wbt.repair_stream_vector_topology(
                 i=str(self.path / "streams_watershed_more_info.shp"),
                 output=str(self.path / "repaired_streams_watershed_more_info.shp"),
-                dist="0.0005"  
+                dist="50"
             )
             
             # Read the repaired streams
@@ -274,14 +273,14 @@ class TerrainAttributesGenerator():
         ]
         
         # Remove very short lines
-        min_line = 0.00001  # about 1m in crs 2193
+        min_line = 1
         repaired_streams = repaired_streams[
             repaired_streams.geometry.length > min_line
         ]
         
         # Set up crs
         # This will be changed in the future
-        repaired_streams = repaired_streams.set_crs(crs=4326)
+        repaired_streams = repaired_streams.set_crs(crs=2193)
         
         # Write out the repaired streams again
         repaired_streams.to_file(self.path / output_filename)
@@ -362,7 +361,7 @@ class StreamTopologyGenerator():
     def __init__(
             self,
             path: Path,
-            resolution: float = 0.00045,
+            resolution: float = 50,
             threshold: int = 1000
     ) -> None:
         """
@@ -372,8 +371,8 @@ class StreamTopologyGenerator():
         ----------
         path: str
             Path to the directory that contains necessary files to generate stream data
-        resolution: float = 0.00045
-            Resolution to resample data. Default is 0.00045 (100m)
+        resolution: float = 100
+            Resolution to resample data. Default is 100m
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
@@ -470,7 +469,7 @@ class StreamTopologyGenerator():
         )
 
         # Add crs
-        streams_rename = streams_rename.set_crs(4326)
+        streams_rename = streams_rename.set_crs(2193)
 
         # Write out
         stream_output_path = self.path / "streams_d8_area_strahler.shp"
@@ -514,7 +513,7 @@ class StreamHydraulicsGenerator():
             path: Path,
             outlet_gauge_locations_file: str,
             streams_bankfull_stage: float = 1.5,
-            resolution: float = 0.00045,
+            resolution: float = 50,
             threshold: int = 1000,
             width_rate_control: float = 2,
             discharge_rate_control: float = 1
@@ -532,7 +531,7 @@ class StreamHydraulicsGenerator():
             The stage to focus on the area that is considered as stream/river area
             or bankfull area comparing with HAND.
             Default is 1.5
-        resolution : float = 0.00045
+        resolution : float = 100
             Resolution to resample data
         threshold : int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
@@ -688,6 +687,8 @@ class StreamHydraulicsGenerator():
             d8_pointer
         )
 
+        print("It fails here")
+
         # Add more information into stream vector such as
         # reach IDs or FIDs, connectivity, stream orders, flow connectivity information, etc.
         streams_watershed_vector_more_info, _, _, _ = wbe.vector_stream_network_analysis(
@@ -770,11 +771,6 @@ class StreamHydraulicsGenerator():
         # Get pixel size: Each pixel represents X meters on the ground
         pixel_size = abs(hand.rio.resolution()[0])
 
-        # Convert degrees to meters
-        lat = float(bankfull.y.mean())  # Get latitude
-        meters_per_degree = (111300 * np.cos(np.deg2rad(lat)))
-        pixel_size_meter = pixel_size * meters_per_degree
-
         # Measure distance to the river bank:
         # For every river pixel, it calculates the distance to the nearest non-river pixel (the river bank)
         # It here is the function "distance_transform_edt"
@@ -783,7 +779,7 @@ class StreamHydraulicsGenerator():
         # For example: bank 1m 2m 3m 4m 3m 2m 1m bank
         # (so near the bank --> small distance, near the middle --> larger distance)
         # ==> Logic is: How far am I from the river edge?
-        distance = distance_transform_edt(bankfull_np) * pixel_size_meter
+        distance = distance_transform_edt(bankfull_np) * pixel_size
 
         # Filter out only the distance from the center line to a bank
         # So it will be like: bank Nan Nan 4m Nan Nan bank

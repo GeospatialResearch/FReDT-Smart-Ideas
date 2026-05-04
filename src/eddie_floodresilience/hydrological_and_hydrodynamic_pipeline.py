@@ -156,31 +156,36 @@ class HydrologicalAndHydrodynamicPipeline:
         
     def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
-        # Generate terrain data for wflow and flood models
-        self.terrain_data_pipeline()
-        
-        # Generate wflow data
-        self.wflow_data_pipeline()
-        
+        # # Generate terrain data for wflow and flood models
+        # self.terrain_data_pipeline()
+        #
+        # # Generate wflow data
+        # self.wflow_data_pipeline()
+
         # Generate flood data
         self.flood_data_pipeline()
 
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_001")
-    outlet_gauge_locations_filename = 'river_points_with_outlets_002'
-    forcing_path = Path(r"H:\Barra/Whirinaki\merge_gauges_HIRDS_004")
-    precipitation_path = Path(r"H:\Barra/Whirinaki\rainfall_gauges_HIRDS_004")
+    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_005")
+    outlet_gauge_locations_filename = 'river_outlet'
+    forcing_path = Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
+    precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
-    subbasin = [173.46365, -35.45662]
-    bbox = [173.44134, -35.61760, 173.77608, -35.11105]
+    # subbasin = [173.46365, -35.45662]
+    # bbox = [173.44134, -35.61760, 173.77608, -35.11105]
+
+
+    subbasin = [1642072.60, 6076218.85]
+    bbox = [1639968.20, 6058374.30, 1670723.51, 6114366.30]
+
     num_threads = 6
     flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
 
     strord = 4
-    resolution = 0.00045
+    resolution = 50
     threshold = 1000
     width_rate_control = 1 / 20
     discharge_rate_control = 1

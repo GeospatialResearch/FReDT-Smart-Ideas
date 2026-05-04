@@ -21,7 +21,7 @@ class TerrainDataWflowGenerator:
             self,
             terrain_path: Path,
             outlet_gauge_locations_filename: str,
-            resolution: float = 0.00045,
+            resolution: float = 100,
             threshold: int = 1000,
             width_rate_control: float = 2,
             discharge_rate_control: float = 1
@@ -35,8 +35,8 @@ class TerrainDataWflowGenerator:
             A directory to where the terrain data are stored
         outlet_gauge_locations_filename: str
             Filename of outlet gauge locations
-        resolution: float = 0.00045
-            Resolution to resample data. Default is 0.00045 in crs 4326 (100m in crs 2193)
+        resolution: float = 100
+            Resolution to resample data. Default is 100m in crs 2193)
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
