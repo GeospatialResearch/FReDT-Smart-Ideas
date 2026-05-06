@@ -69,8 +69,8 @@ class TerrainFilter:
             self,
             path: Path,
             origin_crs: int = 2193,
-            converted_crs: int = 4326,
-            roughness: bool = True
+            roughness: bool = True,
+            origin_filename: str = '8m_geofabric'
     ) -> None:
         """
         Filter terrain data for wflow
@@ -81,23 +81,27 @@ class TerrainFilter:
             Common path to the directory that contains necessary files to filter terrain data
         roughness : bool
             Whether to print out roughness and DEM. Default is True
+        origin_filename : str = '8m_geofabric'
+            Name of terrain raster filename.
+            At the moment, only two names - 8m_geofabric and 4m_geofabric
         """
         self.path = path
         self.origin_crs = origin_crs
-        self.converted_crs = converted_crs
         self.roughness = roughness
+        self.origin_filename = origin_filename
 
     def terrain_splitting(self) -> None:
         """Split terrain data into DEM and roughness (if any)"""
         # Get terrain
-        terrain = rxr.open_rasterio(self.path / "8m_geofabric.nc")
+        terrain_file_path = list(self.path.glob(f"{self.origin_filename}.nc"))
+        terrain = rxr.open_rasterio(terrain_file_path[0])
 
         # Save as tif
         if self.roughness:
-            terrain['z'].rio.to_raster(self.path / "dem_split.tif")  # Name here is constant
-            terrain['zo'].rio.to_raster(self.path / "roughness_split.tif")  # Name here is constant
+            terrain['z'].rio.to_raster(self.path / f"{self.origin_filename}_dem_split.tif")  # Name here is constant
+            terrain['zo'].rio.to_raster(self.path / f"{self.origin_filename}_roughness_split.tif")  # Name here is constant
         else:
-            terrain.rio.to_raster(self.path / "dem_split.tif")
+            terrain.rio.to_raster(self.path / f"{self.origin_filename}_dem_split.tif")
 
     def remove_sea(self) -> None:
         """Clip sea area mainly in DEM and roughness"""
@@ -105,8 +109,8 @@ class TerrainFilter:
         nz_shapefile = self.path / "nz_coastline.shp"
 
         # Files need changing
-        dem = self.path / "dem_split.tif"  # Name here is constant
-        roughness = self.path / "roughness_split.tif"  # Name here is constant
+        dem = self.path / f"{self.origin_filename}_dem_split.tif"  # Name here is constant
+        roughness = self.path / f"{self.origin_filename}_roughness_split.tif"  # Name here is constant
 
         # Remove sea by changing sea area into nodata value (-9999)
         value_change(nz_shapefile, dem, -9999, False)
@@ -115,15 +119,15 @@ class TerrainFilter:
     def nodata_filling(self) -> None:
         """Fill nodata value with -9999"""
         # Fill the nodata value
-        dem_nosea = rxr.open_rasterio(self.path / "dem_split.tif")  # Name here is constant
+        dem_nosea = rxr.open_rasterio(self.path / f"{self.origin_filename}_dem_split.tif")  # Name here is constant
         dem_replace_nodata = dem_nosea.fillna(-9999)
         dem_write_nodata = dem_replace_nodata.rio.write_nodata(-9999)
-        dem_write_nodata.rio.to_raster(self.path / "dem_for_wflow.tif")  # Name here is constant
+        dem_write_nodata.rio.to_raster(self.path / f"{self.origin_filename}_dem_for_wflow.tif")  # Name here is constant
 
-        roughness_nosea = rxr.open_rasterio(self.path / "roughness_split.tif")  # Name here is constant
+        roughness_nosea = rxr.open_rasterio(self.path / f"{self.origin_filename}_roughness_split.tif")  # Name here is constant
         roughness_replace_nodata = roughness_nosea.fillna(-9999)
         roughness_write_nodata = roughness_replace_nodata.rio.write_nodata(-9999)
-        roughness_write_nodata.rio.to_raster(self.path / "roughness_for_wflow.tif")  # Name here is constant
+        roughness_write_nodata.rio.to_raster(self.path / f"{self.origin_filename}_roughness_for_wflow.tif")  # Name here is constant
 
     def filter_dem_for_wflow(self) -> None:
         """Convert DEM into version that can be used by wflow"""

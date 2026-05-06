@@ -9,8 +9,8 @@ from pathlib import Path
 from datetime import datetime
 
 from .flood_model_inputs_generator import TerrainGenerator, \
-                                         TerrainFloodModelGenerator, \
-                                         InjectionPointsFloodModelGenerator
+                                          TerrainFloodModelGenerator, \
+                                          InjectionPointsFloodModelGenerator
                             
 from .flood_model_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 

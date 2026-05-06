@@ -8,19 +8,21 @@ from osgeo import gdal # Import gdal before rasterio
 import rioxarray as rxr
 import xarray as xr
 from rasterio.enums import Resampling
-import netCDF4
+from scipy.ndimage import binary_dilation
 
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import box
 from shapely.geometry import mapping, Polygon, LineString, MultiLineString
 
-import glob
-
 from pathlib import Path
 from shapely.geometry import Point, MultiPoint
 
 import pandas as pd
+
+from src.eddie_floodresilience.preprocessing.terrain_data_manipulator import TerrainFilter
+from src.eddie_floodresilience.preprocessing.terrain_attributes_generator import TerrainAttributesGenerator
+
 
 
 class TerrainGenerator():
@@ -49,7 +51,7 @@ class TerrainGenerator():
         self.aoi_boundary = box(*aoi_boundary)  # using * to unpack xmin, ymin, xmax, ymax
         self.crs = crs
     
-    def read_terrain_data(self) -> None:
+    def read_terrain_data(self) -> xr.Dataset:
         """
         Read terrain data. This terrain data includes:
             - z as DEM
@@ -161,8 +163,8 @@ class TerrainGenerator():
         self.write_out_terrain_data(terrain_crs_clipped)
         
         return terrain_bounding_box, terrain_crs_clipped
-        
-    
+
+
 class TerrainFloodModelGenerator():
     """This class is to generate terrain data (DEM and friction) for flood model"""
     
@@ -180,7 +182,7 @@ class TerrainFloodModelGenerator():
         flood_model_path : Path
             Directory to folder storing flood model data
         terrain_crs_clipped : xr.Dataset
-            Clipped terrain data with crs
+            Clipped terrain data with projection
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.            
         """
@@ -250,34 +252,204 @@ class TerrainFloodModelGenerator():
         terrain_variable = terrain_variable.round(9)
         
         return terrain_variable
-    
+
+    def strahler_for_manning_generator(self):
+        """Generate Strahler order streams raster to filter river in Manning's n"""
+        # Split terrain data to collect roughness raster
+        TerrainFilter(
+            self.flood_model_path,
+            origin_filename='4m_geofabric'
+        ).filter_dem_for_wflow()
+
+        # Set up class to generate Strahler order streams
+        strahler_for_manning = TerrainAttributesGenerator(
+            self.flood_model_path,
+            'dem',
+            10,
+            1000,
+            origin_filename='4m_geofabric'
+        )
+
+        # Resample resolution (from 4m to 10m)
+        strahler_for_manning.raster_resampling('nn')
+
+        # Fill depression (default is 0.0001)
+        strahler_for_manning.raster_fill_depression()
+
+        # Generate D8 pointers
+        strahler_for_manning.d8_pointer_generator()
+
+        # Generate streams for whole catchment
+        strahler_for_manning.d8_stream_generator()
+
+        # Generate Strahler order streams for manning's n
+        strahler_for_manning.strahler_stream_order_generator()
+
+    def resample_roughness(self):
+        """Resample roughness from 4m to 8m"""
+        # Get roughness path
+        roughness_path = self.flood_model_path / f"4m_geofabric_roughness_split.tif"
+
+        # Read roughness raster
+        roughness = rxr.open_rasterio(roughness_path)
+
+        # Convert -9999 to 0.004
+        roughness = roughness.where(roughness != -9999, 0.004)
+
+        # Write nodata
+        roughness = roughness.rio.write_nodata(-9999)
+
+        # Resample to 8m
+        roughness_8m = roughness.rio.reproject(
+            roughness.rio.crs,
+            resolution=8,
+            resampling=Resampling.nearest
+        )
+
+        # Save roughness 8m out
+        roughness_outpath = self.flood_model_path / f"roughness_8m.tif"
+        roughness_8m.rio.to_raster(roughness_outpath)
+
+        return roughness_8m
+
+    def strahler_filter_generator(
+            self,
+            roughness: xr.DataArray
+    ):
+        """Generate filtered Strahler Order stream raster"""
+        # Get strahler path
+        strahler_path = self.flood_model_path / "4m_geofabric_strahler_d8.tif"
+
+        # Read strahler
+        strahler = rxr.open_rasterio(strahler_path)
+
+        # Reproject and rescale strahler to roughness 8m
+        strahler_8m = strahler.rio.reproject_match(
+            roughness,
+            resampling=Resampling.nearest
+        )
+
+        # Filter to choose only 3 and 4 orders
+        strahler_mask_8m = (strahler_8m == 3) | (strahler_8m == 4)
+
+        return strahler_mask_8m
+
     def roughness_to_manning(
             self,
             roughness: xr.DataArray,
             h: float = 1
-    ) -> None:
+    ) -> xr.DataArray:
         """
-        Convert raster of roughness to manning's n
+        Convert raster of roughness length to Manning's n
 
         Parameters
         ----------
-        roughness : Any
-            A raster of roughness data
+        roughness : xr.DataArray
+            Roughness length raster
         h : float = 1
             Value of depth. Default is 1
+
+        Returns
+        -------
+        manning : xr.DataArray
+            Manning's n raster converted from roughness length raster
         """
+        # Avoid zero division
+        roughness = roughness.where(roughness > 1e-6)
+
+        # Avoid invalid log inputs
+        ratio = h / roughness
+        ratio_h_roughness = ratio.where(ratio > 1)
+
         # Convert roughness length to Manning's n
-        ratio_h_roughness = h / roughness
         numerator = 0.41 * (h ** (1 / 6)) * (ratio_h_roughness - 1)
         denominator = np.sqrt(9.80665) * (1 + ratio_h_roughness * (np.log(ratio_h_roughness) - 1))
         manning_n = numerator / denominator
 
         return manning_n
+
+    def manning_adjustment(
+            self,
+            strahler_mask_raster: bool,
+            manning: xr.DataArray
+    ) -> xr.DataArray:
+        """
+        Filter out unreasonable Manning's n and adjust river Manning's n
+
+        Parameters
+        ----------
+        strahler_mask_raster : bool
+            Strahler at 8m and being filtered (only 3 and 4 orders)
+        manning : xr.DataArray
+            Manning's n raster converted from the roughness length raster
+
+        Returns
+        -------
+        adjusted_manning : xr.DataArray
+            Manning's n raster that is filtered out unreasonable values with adjusted river
+        """
+        # Filter out unreasonable Manning's n
+        manning_filtered = manning.clip(
+            min=0.01,
+            max=0.15
+        )
+
+        # Buffer the mask by 1-pixel wide to 2-pixel wide
+        mask = strahler_mask_raster.values.astype(bool)
+        buffered_mask = binary_dilation(mask, iterations=1)
+
+        # Convert back to DataArray
+        buffered_mask_da = xr.DataArray(
+            buffered_mask,
+            coords=strahler_mask_raster.coords,
+            dims=strahler_mask_raster.dims
+        )
+
+        # Adjust river Manning's n.
+        # At the moment, the value is kept at 0.06
+        manning_river_adjusted = manning_filtered.where(
+            ~buffered_mask_da,
+            0.07
+        )
+
+        return manning_river_adjusted
+
+    def manning_generator(self):
+        """Generate clipped Manning's n from 4m to 8m with adjusted river"""
+        # Generate Strahler Order streams and roughness length at 4m
+        self.strahler_for_manning_generator()
+
+        # Resample roughness to 8m
+        roughness_8m = self.resample_roughness()
+
+        # Filter Strahler Order streams
+        strahler_mask_8m = self.strahler_filter_generator(roughness_8m)
+
+        # Convert roughness length to Manning's n
+        manning = self.roughness_to_manning(
+            roughness_8m,
+            0.1
+        )
+
+        # Adjust Manning's n
+        adjusted_manning = self.manning_adjustment(
+            strahler_mask_8m,
+            manning
+        )
+
+        # Clip Manning's n
+        clipped_adjusted_manning = adjusted_manning.rio.clip_box(
+            *self.terrain_crs_clipped.rio.bounds()
+        )
+
+        # Write out
+        manning_outpath = self.flood_model_path / "manning.asc"
+        clipped_adjusted_manning.rio.to_raster(manning_outpath)
     
     def write_out_terrain_data(
             self,
-            variable_name,
-            terrain_variable
+            variable_name: str,
+            terrain_variable: xr.DataArray
         ) -> None:
         """
         Write out terrain data as ASCII file
@@ -286,7 +458,7 @@ class TerrainFloodModelGenerator():
         ----------
         variable_name : str
             Variable name could be 'z' (DEM) and 'zo' (roughness length)
-        terrain_variable : xr.Dataset
+        terrain_variable : xr.DataArray
             Specific terrain data that needs writing out
         """
         # Set up path
@@ -310,25 +482,11 @@ class TerrainFloodModelGenerator():
         # Format terrain data
         terrain_variable = self.format_terrain_data_pipeline(variable_name)
         
-        if variable_name == 'zo':
-            # Convert roughness length to manning
-            manning = self.roughness_to_manning(
-                terrain_variable,
-                1
-            )
-            
-            # Write out terrain data
-            self.write_out_terrain_data(
-                "manning", 
-                manning
-            )
-        
-        else:
-            # Write out terrain data
-            self.write_out_terrain_data(
-                variable_name,
-                terrain_variable
-            )        
+        # Write out terrain data
+        self.write_out_terrain_data(
+            variable_name,
+            terrain_variable
+        )
         
     def execute_terrain_data_generator(self) -> None:
         """Generate specific terrain data"""
@@ -336,7 +494,7 @@ class TerrainFloodModelGenerator():
         self.terrain_data_generator('z')
         
         # Generate manning
-        self.terrain_data_generator('zo')
+        self.manning_generator()
         
         
 class InjectionPointsFloodModelGenerator():
