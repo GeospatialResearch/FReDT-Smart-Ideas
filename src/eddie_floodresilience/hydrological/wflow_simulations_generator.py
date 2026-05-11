@@ -29,6 +29,7 @@ class WflowSimulationsGenerator():
         strord: int,
         bbox: list,
         num_threads: int,
+        polygons: str = None,
         resolution: float = 0.00045
     ) -> None:
         """
@@ -58,6 +59,9 @@ class WflowSimulationsGenerator():
             Given bounding box coordinates that contains the subbasin coordinates
         num_threads : int
             Number of threads that controls how fast the wflow model can run
+        polygons : str = None
+            Name of polygon file that is used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
         resolution : float
             Resolution for flow data. 
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
@@ -73,7 +77,8 @@ class WflowSimulationsGenerator():
         self.bbox = bbox
 
         self.num_threads = num_threads
-        
+
+        self.polygons = polygons
         self.resolution = resolution
         
     def files_for_preprocessing_generator(self) -> None:
@@ -82,7 +87,8 @@ class WflowSimulationsGenerator():
         data_catalog = DataCatalogGenerator(
             self.hydromt_path,
             self.wflow_model_path,
-            self.forcing_path
+            self.forcing_path,
+            self.polygons
         )
         data_catalog.data_catalog_generator()
         

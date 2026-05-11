@@ -7,11 +7,15 @@ Created on Sat Apr 11 17:11:15 2026
 
 from pathlib import Path
 from datetime import datetime
+import geopandas as gpd
+
+from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution
 
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
 from src.eddie_floodresilience.flood_model.lisflood.flood_model_simulations_generator import FloodModelSimulationsGenerator
+
 
 
 class HydrologicalAndHydrodynamicPipeline:
@@ -31,7 +35,8 @@ class HydrologicalAndHydrodynamicPipeline:
             bbox: list,
             num_threads: int,
             flood_aoi_boundary: list,
-            
+
+            polygons: str = None,
             strord: int = 4,
             resolution: float = 0.00045,
             threshold: int = 1000,
@@ -69,6 +74,10 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_aoi_boundary : list
             Boundaries' coordinates of area of interest.
             Format is [xmin, ymin, xmax, ymax]
+
+        polygons : str = None
+            Name of polygon file that is used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
         strord : int
             Minimum stream order
         resolution : float
@@ -95,6 +104,8 @@ class HydrologicalAndHydrodynamicPipeline:
         self.bbox = bbox
         self.num_threads = num_threads
         self.flood_aoi_boundary = flood_aoi_boundary
+
+        self.polygons = polygons
         self.strord = strord
         self.resolution = resolution
         self.threshold = threshold
@@ -103,7 +114,18 @@ class HydrologicalAndHydrodynamicPipeline:
         self.crs = crs
         
         self.hydromt_path = Path(r"D:\Digital_Twin_data\necessary_data")
-        
+
+    def total_solutions(self):
+        """Develop solutions for flood risk resilience"""
+        if self.polygons is not None:
+            # Land cover/natural solution
+            landcover_solution = LandCoverSolution(
+                self.hydro_combination_path,
+                self.hydromt_path,
+                self.polygons
+            )
+            landcover_solution.landcover_change()
+
     def terrain_data_pipeline(self):
         """Generate terrain data for wflow and flood models"""
         # Set up terrain data generation system
@@ -132,6 +154,7 @@ class HydrologicalAndHydrodynamicPipeline:
             self.strord,
             self.bbox,
             self.num_threads,
+            self.polygons,
             self.resolution
         )
         
@@ -156,6 +179,9 @@ class HydrologicalAndHydrodynamicPipeline:
         
     def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
+        # # Apply solutions
+        # self.total_solutions()
+        #
         # # Generate terrain data for wflow and flood models
         # self.terrain_data_pipeline()
         #
@@ -167,7 +193,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_007")
+    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_010")
     outlet_gauge_locations_filename = 'river_outlet'
     forcing_path = Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
     precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
@@ -184,6 +210,7 @@ def main():
     num_threads = 6
     flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
 
+    polygons = None
     strord = 4
     resolution = 50
     threshold = 1000
@@ -206,6 +233,7 @@ def main():
         num_threads,
         flood_aoi_boundary,
 
+        polygons,
         strord,
         resolution,
         threshold,

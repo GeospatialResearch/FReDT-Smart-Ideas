@@ -16,7 +16,8 @@ class DataCatalogGenerator():
             self,
             hydromt_path: Path,
             wflow_model_path: Path,
-            forcing_path: Path
+            forcing_path: Path,
+            polygons: str = None
         ) -> None:
         """
         Generate data_catalog.yml for preprocessing data for wflow.
@@ -31,10 +32,14 @@ class DataCatalogGenerator():
             A directory to where the data_catalog.yml is stored and to run wflow model
         forcing_path: Path
             A directory to where the forcing files are stored
+        polygons : str = None
+            Name of polygon file that is used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
         """
         self.hydromt_path = hydromt_path
         self.wflow_model_path = wflow_model_path
         self.forcing_path = forcing_path
+        self.polygons = polygons
         
     def meta_section(self) -> dict:
         """
@@ -130,13 +135,18 @@ class DataCatalogGenerator():
     def landcover_section(self) -> dict:
         """
         Write out landcover section
-        
 
         Returns
         -------
         landcover : dict
             A dictionary contains information of landcover
         """
+        # Polygons for land cover solutions
+        if self.polygons is None:
+            landcover_file = 'globcover_origin.tif'
+        else:
+            landcover_file = 'globcover.tif'
+
         # At the moment the name globcover and other information is kept fixed for basic automation,
         # it might be changed in the future.
         # NOTE: the information is not from globcover - it is LCDB converted to globcover
@@ -153,7 +163,7 @@ class DataCatalogGenerator():
                     "source_license": "CC-BY-3.0",
                     "source_url": "http://due.esrin.esa.int/page_globcover.php"
                 },
-                "path": "globcover.tif"
+                "path": landcover_file
             }
         }
         

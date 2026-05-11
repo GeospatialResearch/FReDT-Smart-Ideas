@@ -43,7 +43,7 @@ class TerrainAttributesGenerator():
 
         Parameters
         ----------
-        path: str
+        path: Path
             Path to the directory that contains necessary files to generate terrain data
         raster_name: str = 'dem'
             Name of the raster. Mostly 'dem' and 'roughness'

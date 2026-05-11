@@ -409,7 +409,7 @@ class TerrainFloodModelGenerator():
         # At the moment, the value is kept at 0.06
         manning_river_adjusted = manning_filtered.where(
             ~buffered_mask_da,
-            0.07
+            0.05
         )
 
         return manning_river_adjusted
@@ -661,11 +661,6 @@ class InjectionPointsFloodModelGenerator():
                 1, points_gdf.shape[0] + 1
                 )
             ]
-
-        # Convert to crs 4326 (world geodetic system 1984)
-        # This is used by catchment model.
-        # This line will be removed in the future
-        points_gdf = points_gdf.to_crs(4326)
         
         return points_gdf
     
