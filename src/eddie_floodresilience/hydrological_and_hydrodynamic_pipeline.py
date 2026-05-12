@@ -7,9 +7,8 @@ Created on Sat Apr 11 17:11:15 2026
 
 from pathlib import Path
 from datetime import datetime
-import geopandas as gpd
 
-from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution
+from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 
@@ -37,6 +36,7 @@ class HydrologicalAndHydrodynamicPipeline:
             flood_aoi_boundary: list,
 
             polygons: str = None,
+            vectors: str = None,
             strord: int = 4,
             resolution: float = 0.00045,
             threshold: int = 1000,
@@ -78,6 +78,10 @@ class HydrologicalAndHydrodynamicPipeline:
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
+        vectors : str = None
+            Name of vector file that is used to change the elevation information.
+            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
+            and 'distance' column to specify how smooth to decrease elevation.
         strord : int
             Minimum stream order
         resolution : float
@@ -106,6 +110,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.flood_aoi_boundary = flood_aoi_boundary
 
         self.polygons = polygons
+        self.vectors = vectors
         self.strord = strord
         self.resolution = resolution
         self.threshold = threshold
@@ -124,7 +129,15 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.hydromt_path,
                 self.polygons
             )
-            landcover_solution.landcover_change()
+            landcover_solution.apply_landcover_solution()
+
+        if self.vectors is not None:
+            # Elevation solution
+            elevation_solution = ElevationSolution(
+                self.hydro_combination_path,
+                self.vectors
+            )
+            elevation_solution.apply_elevation_solution()
 
     def terrain_data_pipeline(self):
         """Generate terrain data for wflow and flood models"""
@@ -179,9 +192,9 @@ class HydrologicalAndHydrodynamicPipeline:
         
     def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
-        # # Apply solutions
-        # self.total_solutions()
-        #
+        # Apply solutions
+        self.total_solutions()
+
         # # Generate terrain data for wflow and flood models
         # self.terrain_data_pipeline()
         #
@@ -193,7 +206,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_010")
+    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_012")
     outlet_gauge_locations_filename = 'river_outlet'
     forcing_path = Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
     precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
@@ -211,6 +224,7 @@ def main():
     flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
 
     polygons = None
+    vectors = r'vectors/vectors.csv'
     strord = 4
     resolution = 50
     threshold = 1000
@@ -234,6 +248,7 @@ def main():
         flood_aoi_boundary,
 
         polygons,
+        vectors,
         strord,
         resolution,
         threshold,

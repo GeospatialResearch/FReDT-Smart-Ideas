@@ -19,6 +19,7 @@ from pathlib import Path
 from shapely.geometry import Point, MultiPoint
 
 import pandas as pd
+from datetime import datetime
 
 from src.eddie_floodresilience.preprocessing.terrain_data_manipulator import TerrainFilter
 from src.eddie_floodresilience.preprocessing.terrain_attributes_generator import TerrainAttributesGenerator
@@ -505,8 +506,8 @@ class InjectionPointsFloodModelGenerator():
         flood_model_path: Path,
         catchment_model_path: Path,
         terrain_bounding_box: Polygon,
-        start_time: str,
-        end_time: str,
+        start_time: datetime,
+        end_time: datetime,
         crs: int = 2193
     ) -> None:
         """

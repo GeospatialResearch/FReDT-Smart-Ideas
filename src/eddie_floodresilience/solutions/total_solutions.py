@@ -3,10 +3,17 @@ import rioxarray as rxr
 import xarray as xr
 from pathlib import Path
 import geopandas as gpd
+import pandas as pd
 from rasterio.features import rasterize
 
-import numpy as np
+from whitebox_workflows import WbEnvironment, Raster
+from whitebox.whitebox_tools import WhiteboxTools
 
+wbe = WbEnvironment()
+wbe.verbose = True
+wbe.max_procs = -1
+
+wbt = WhiteboxTools()
 
 class LandCoverSolution():
     """This class is to change the land cover based on polygons"""
@@ -82,7 +89,7 @@ class LandCoverSolution():
         return modified_landcover
 
 
-    def landcover_change(self):
+    def apply_landcover_solution(self):
         """This is to change the landcover based on polygons"""
         # Read current land cover data
         with rxr.open_rasterio(self.hydromt_path / r'globcover_origin.tif') as current_landcover:
@@ -108,5 +115,144 @@ class LandCoverSolution():
             compress="LZW",
             tiled=True,
             BIGTIFF="IF_SAFER"
+        )
+
+
+class ElevationSolution():
+    """This class is to change the elevation"""
+
+    def __init__(
+            self,
+            hydro_combination_path: Path,
+            vectors: str = None
+    ) -> None:
+        """
+        Change the elevation based on the vector
+
+        Parameters
+        ----------
+        hydro_combination_path : Path
+            Directory to folder storing all necessary data
+        vectors : str = None
+            Name of dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
+        """
+        self.hydro_combination_path = hydro_combination_path
+        self.vectors = pd.read_csv(self.hydro_combination_path / vectors)
+
+        self.dem = wbe.read_raster(str(self.hydro_combination_path / r"z.asc"))
+
+    def increase_elevation(
+            self,
+            dem: Raster,
+            vector_path: Path,
+            value: float
+    ):
+        """
+        Increase the elevation
+
+        Parameters
+        ----------
+        dem : wbe.Raster
+            Elevation data read by whitebox tool
+        vector_path : Path
+            A directory to a specific vector
+        value : int
+            A value to increase the elevation
+
+        Returns
+        -------
+        increased_elevation : Raster
+            Modified elevation data
+        """
+        # Raise elevation data values
+        increased_elevation = wbe.raise_walls(
+            dem,
+            wbe.read_vector(str(vector_path)),
+            wall_height=value
+        )
+
+        return increased_elevation
+
+    def decrease_elevation(
+            self,
+            dem: Raster,
+            vector_path: Path,
+            value: float,
+            distance: float
+    ):
+        """
+        Decrease the elevation
+
+        Parameters
+        ----------
+        dem : Raster
+            Elevation data read by whitebox tool
+        vector_path : Path
+            A directory to a specific vector
+        value : float
+            Value to decrease the elevation
+        distance : float
+            Rate to control the sharpness of changing elevation
+
+        Returns
+        -------
+        decreased_elevation : Raster
+            Modified elevation data
+        """
+        # Decrease elevation data
+        decreased_elevation = wbe.burn_streams(
+            dem,
+            wbe.read_vector(str(vector_path)),
+            decrement_value=abs(value),
+            gradient_distance=distance
+        )
+
+        return decreased_elevation
+
+    def change_elevation(self):
+        """Change the elevation"""
+
+        # Copy DEM to work separately
+        modified_dem = self.dem
+
+        # Change elevation based on each vector
+        for idx, row in self.vectors.iterrows():
+
+            vector_path = row["vector_path"]
+            value = row["value"]
+            distance = row["distance"]
+
+            # Increase elevation
+            if value > 0:
+                modified_dem = self.increase_elevation(
+                    modified_dem,
+                    vector_path,
+                    value
+                )
+
+            # Decrease elevation
+            else:
+                modified_dem = self.decrease_elevation(
+                    modified_dem,
+                    vector_path,
+                    value,
+                    distance
+                )
+
+        return modified_dem
+
+    def apply_elevation_solution(self):
+        """Apply solution to elevation data"""
+        # Change elevation data
+        modified_dem = self.change_elevation()
+
+        # Write out
+        wbe.write_raster(
+            modified_dem,
+            str(self.hydro_combination_path / "z.asc"),
+            compress=False
         )
 
