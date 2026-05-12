@@ -5,6 +5,8 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 from rasterio.features import rasterize
+from scipy.ndimage import distance_transform_edt
+import numpy as np
 
 from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
@@ -142,12 +144,44 @@ class ElevationSolution():
         self.hydro_combination_path = hydro_combination_path
         self.vectors = pd.read_csv(self.hydro_combination_path / vectors)
 
-        self.dem = wbe.read_raster(str(self.hydro_combination_path / r"z.asc"))
+        with rxr.open_rasterio(self.hydro_combination_path / "z.asc") as dem:
+            self.dem = dem.squeeze().load()
+
+    def rasterize_vector(self, vector_path):
+        """
+        Rasterize vector
+
+        Parameters
+        ----------
+        vector_path : str
+            A directory to vector
+
+        Returns
+        -------
+        vector_raster : xr.DataArray
+            Rasterized vector
+        """
+        # Read vector
+        vector = gpd.read_file(vector_path)
+
+        # Get the shape of vector
+        shapes = [(geom, 1) for geom in vector.geometry]
+
+        # Rasterize the vector
+        vector_raster = rasterize(
+            shapes,
+            out_shape=self.dem.shape,
+            transform=self.dem.rio.transform(),
+            fill=0,
+            dtype="uint8"
+        )
+
+        return vector_raster
 
     def increase_elevation(
             self,
-            dem: Raster,
-            vector_path: Path,
+            dem: xr.DataArray,
+            mask: np.ndarray,
             value: float
     ):
         """
@@ -155,11 +189,11 @@ class ElevationSolution():
 
         Parameters
         ----------
-        dem : wbe.Raster
+        dem : xr.DataArray
             Elevation data read by whitebox tool
-        vector_path : Path
-            A directory to a specific vector
-        value : int
+        mask : np.ndarray
+            Rasterized vector
+        value : float
             A value to increase the elevation
 
         Returns
@@ -167,21 +201,20 @@ class ElevationSolution():
         increased_elevation : Raster
             Modified elevation data
         """
-        # Raise elevation data values
-        increased_elevation = wbe.raise_walls(
-            dem,
-            wbe.read_vector(str(vector_path)),
-            wall_height=value
-        )
+        # Create a copy of DEM to modify
+        increased_dem = dem.copy()
 
-        return increased_elevation
+        # Increase elevation data values
+        increased_dem.values[mask == 1] += value
+
+        return increased_dem
 
     def decrease_elevation(
             self,
-            dem: Raster,
-            vector_path: Path,
+            dem: xr.DataArray,
+            mask: np.ndarray,
             value: float,
-            distance: float
+            distance: float = 0
     ):
         """
         Decrease the elevation
@@ -190,8 +223,8 @@ class ElevationSolution():
         ----------
         dem : Raster
             Elevation data read by whitebox tool
-        vector_path : Path
-            A directory to a specific vector
+        mask : np.ndarray
+            Rasterized vector
         value : float
             Value to decrease the elevation
         distance : float
@@ -202,15 +235,24 @@ class ElevationSolution():
         decreased_elevation : Raster
             Modified elevation data
         """
-        # Decrease elevation data
-        decreased_elevation = wbe.burn_streams(
-            dem,
-            wbe.read_vector(str(vector_path)),
-            decrement_value=abs(value),
-            gradient_distance=distance
-        )
+        # Create a copy of DEM to modify
+        decreased_dem = dem.copy()
 
-        return decreased_elevation
+        # If no smoothing by distance, sharply change
+        if distance <= 0:
+            decreased_dem.values[mask == 1] -= abs(value)
+            return decreased_dem
+
+        else:
+            # Smoothing using distance
+            # Here we create a smoothing transition weights.
+            # It will mask out area (close to vector) that should be affected (close to 1)
+            # and area (far away from the vector) that should not be affected (close to 0)
+            dist = distance_transform_edt(mask == 0)
+            weight = np.clip(1 - dist / distance, 0, 1)
+            decreased_dem.values -= abs(value) * weight
+
+        return decreased_dem
 
     def change_elevation(self):
         """Change the elevation"""
@@ -219,17 +261,21 @@ class ElevationSolution():
         modified_dem = self.dem
 
         # Change elevation based on each vector
-        for idx, row in self.vectors.iterrows():
+        for _, row in self.vectors.iterrows():
 
+            # Extract information for each vector
             vector_path = row["vector_path"]
             value = row["value"]
             distance = row["distance"]
+
+            # Rasterize vector
+            rasterized_vector = self.rasterize_vector(vector_path)
 
             # Increase elevation
             if value > 0:
                 modified_dem = self.increase_elevation(
                     modified_dem,
-                    vector_path,
+                    rasterized_vector,
                     value
                 )
 
@@ -237,7 +283,7 @@ class ElevationSolution():
             else:
                 modified_dem = self.decrease_elevation(
                     modified_dem,
-                    vector_path,
+                    rasterized_vector,
                     value,
                     distance
                 )
@@ -250,9 +296,9 @@ class ElevationSolution():
         modified_dem = self.change_elevation()
 
         # Write out
-        wbe.write_raster(
-            modified_dem,
-            str(self.hydro_combination_path / "z.asc"),
-            compress=False
+        modified_dem.rio.to_raster(
+            self.hydro_combination_path / "z.asc",
+            compress="LZW",
+            tiled=True
         )
 

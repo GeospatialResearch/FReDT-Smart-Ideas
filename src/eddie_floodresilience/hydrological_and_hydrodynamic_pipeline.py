@@ -206,7 +206,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_012")
+    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_013")
     outlet_gauge_locations_filename = 'river_outlet'
     forcing_path = Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
     precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
