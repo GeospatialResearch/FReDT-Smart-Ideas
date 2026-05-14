@@ -117,6 +117,7 @@ class WflowSimulationsGenerator():
             "-r", region_information,
             "-i", f"{self.wflow_model_path}/wflow_build.yml",
             "-d", f"{self.wflow_model_path}/data_catalog.yml",
+            "--fo",
             "-vv"
         ]
 

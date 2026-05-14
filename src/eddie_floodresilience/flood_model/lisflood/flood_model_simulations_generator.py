@@ -31,6 +31,7 @@ class FloodModelSimulationsGenerator():
         start_time: datetime,
         end_time: datetime,
         crs: int = 2193,
+        polygons: int = None,
         vectors: str = None
     ) -> None:
         """
@@ -53,6 +54,9 @@ class FloodModelSimulationsGenerator():
             Ending time of the flood event
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
+        polygons : str = None
+            Name of polygon file that is used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
         vectors : str = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
@@ -65,6 +69,7 @@ class FloodModelSimulationsGenerator():
         self.start_time = start_time
         self.end_time = end_time
         self.crs = crs
+        self.polygons = polygons
         self.vectors = vectors
 
         # Call out class to generate common terrain data
@@ -135,7 +140,9 @@ class FloodModelSimulationsGenerator():
             self.flood_model_path,
             self.terrain_bounding_box,
             self.start_time,
-            self.end_time
+            self.end_time,
+            self.polygons,
+            self.vectors
         )
         
         # Generate parameter files
@@ -171,7 +178,7 @@ class FloodModelSimulationsGenerator():
         
     def flood_model_executor(self):
         """Generate necessary inputs for flood model"""
-        if self.vectors is None:
+        if self.polygons is not None or self.vectors is None:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
 
@@ -188,6 +195,12 @@ class FloodModelSimulationsGenerator():
             self.flood_model_simulations_generator()
 
         else:
+            # Generate terrain data for flood model
+            self.terrain_data_for_flood_model_generator()
+
+            # Generate parameter files for flood model
+            self.parameters_files_for_flood_model_generator()
+
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
         

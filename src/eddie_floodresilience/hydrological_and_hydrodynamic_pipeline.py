@@ -185,7 +185,8 @@ class HydrologicalAndHydrodynamicPipeline:
             self.start_time,
             self.end_time,
             self.crs,
-            self.polygons
+            self.polygons,
+            self.vectors
         )
         
         # Generate flood model data
@@ -205,14 +206,13 @@ class HydrologicalAndHydrodynamicPipeline:
             self.flood_data_pipeline()
 
         elif self.vectors is not None:
+            # Apply solutions
+            self.total_solutions()
 
             # Generate flood data
             self.flood_data_pipeline()
 
         else:
-            # Apply solutions
-            self.total_solutions()
-
             # Generate terrain data for wflow and flood models
             self.terrain_data_pipeline()
 
@@ -225,7 +225,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_013")
+    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_015")
     outlet_gauge_locations_filename = 'river_outlet'
     forcing_path = Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
     precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
@@ -242,8 +242,8 @@ def main():
     num_threads = 6
     flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
 
-    polygons = None
-    vectors = r'vectors/vectors.csv'
+    polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
+    vectors = r'vectors/vectors.csv' # r'vectors/vectors.csv'
     strord = 4
     resolution = 50
     threshold = 1000
@@ -275,6 +275,7 @@ def main():
         discharge_rate_control,
         crs
     )
+
     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
 
 if __name__ == '__main__':

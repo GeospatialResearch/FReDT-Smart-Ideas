@@ -25,7 +25,9 @@ class ParametersFloodModelGenerator():
         flood_model_path: Path,
         terrain_bounding_box: Polygon,
         start_time: datetime,
-        end_time: datetime
+        end_time: datetime,
+        polygons: str = None,
+        vectors: str = None
     ) -> None:
         """
         Generate parameter files for flood model
@@ -40,12 +42,21 @@ class ParametersFloodModelGenerator():
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details.
+        polygons : str = None
+            Name of polygon file that is used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
+        vectors : str = None
+            Name of vector file that is used to change the elevation information.
+            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
+            and 'distance' column to specify how smooth to decrease elevation.
         """
         self.flood_model_path = flood_model_path
         self.terrain_bounding_box = terrain_bounding_box
         self.injection_points_flow = pd.read_csv(fr"{self.flood_model_path}\injection_points_flow.csv")
         self.start_time = start_time
         self.end_time = end_time
+        self.polygons = polygons
+        self.vectors = vectors
         
     def bci_generator(self) -> None:
         """Generate bci files - where the locations of injection points are defined"""
@@ -89,8 +100,7 @@ class ParametersFloodModelGenerator():
                     injection_points_boundary
                 )
                 bci_parameter.write(injection_points_text)
-                
-                
+
     def bdy_generator(self) -> None:
         """Generate bdy files - where the flow data of injection points are stored"""
         
@@ -149,9 +159,39 @@ class ParametersFloodModelGenerator():
         
     def par_generator(self) -> None:
         """Generate par files - where all the parameter data are navigated"""
-        
-        # Path to output
-        output = fr"{self.flood_model_path}\output"
+
+        if self.polygons is not None and self.vectors is not None:
+            # Extract number ID
+            number_ids = [
+                int(f.stem.split("_")[-1])
+                for f in Path(self.flood_model_path).glob("output_landcover_elevation_*")
+            ]
+
+            # Get next output
+            output_number = max(number_ids, default=0) + 1
+
+            # Write out output
+            output = Path(self.flood_model_path) / f"output_landcover_elevation_{output_number:03d}"
+
+        elif self.polygons is not None:
+            # Path to output for land cover
+            output = str(
+                max(Path(self.flood_model_path).glob("output_landcover_*"),
+                default=Path(self.flood_model_path) / "output_landcover_001")
+            )
+
+        elif self.vectors is not None:
+            # Path to output for elevation
+            output = str(
+                max(Path(self.flood_model_path).glob("output_elevation_*"),
+                default=Path(self.flood_model_path) / "output_elevation_001")
+            )
+
+        else:
+            # Path to output
+            output = fr"{self.flood_model_path}\output"
+
+        # Create output (if not available)
         Path(output).mkdir(parents=True, exist_ok=True)
         
         # Path to bdy file
@@ -159,10 +199,17 @@ class ParametersFloodModelGenerator():
         
         # Path to bci file
         bci = fr"{self.flood_model_path}\bci.bci"
-        
-        # Path to DEM
-        z = fr"{self.flood_model_path}\z.asc"
-        
+
+        if self.vectors is not None:
+            # Path to DEM
+            z = str(max(
+                Path(self.flood_model_path).glob("z_elevation_*.asc"),
+                default=Path(self.flood_model_path) / "z.asc"
+            ))
+        else:
+            # Path to DEM
+            z = fr"{self.flood_model_path}\z.asc"
+
         # Path to Manning's n
         n = fr"{self.flood_model_path}\manning.asc"
         

@@ -143,9 +143,12 @@ class DataCatalogGenerator():
         """
         # Polygons for land cover solutions
         if self.polygons is None:
-            landcover_file = 'globcover_origin.tif'
+            landcover_file = 'original_globcover.tif'
         else:
-            landcover_file = 'globcover.tif'
+            landcover_file = max(
+                Path(self.hydromt_path).glob("globcover_*.tif"),
+                default=Path(self.hydromt_path) / "globcover_001.tif"
+            ).name
 
         # At the moment the name globcover and other information is kept fixed for basic automation,
         # it might be changed in the future.

@@ -27,7 +27,11 @@ class LandCoverSolution():
             polygons: str = None
     ) -> None:
         """
-        Change the land cover based on polygons
+        Change the land cover based on polygons.
+        This class relates to functions:
+        - landcover_section in wflow_data_catalog_generator.py
+        - par_generator in flood_model_parameters_generator.py
+        - hydrological_and_hydrodynamic_simulation_generator in hydrological_and_hydrodynamic_pipeline.py
 
         Parameters
         ----------
@@ -94,7 +98,7 @@ class LandCoverSolution():
     def apply_landcover_solution(self):
         """This is to change the landcover based on polygons"""
         # Read current land cover data
-        with rxr.open_rasterio(self.hydromt_path / r'globcover_origin.tif') as current_landcover:
+        with rxr.open_rasterio(self.hydromt_path / r'original_globcover.tif') as current_landcover:
             current_landcover = current_landcover.squeeze().load()
 
         # Read polygons
@@ -111,9 +115,21 @@ class LandCoverSolution():
             polygons_crs
         )
 
+        # Find existing elevation files
+        existing_landcover_files = sorted(
+            self.hydromt_path.glob("globcover_*.tif")
+        )
+
+        # Decide the number of output file
+        # based on the number of running the model
+        number = len(existing_landcover_files) + 1
+
+        # Create filename
+        output_name = f"globcover_{number:03d}.tif"
+
         # Write out new land cover
         modified_landcover.rio.to_raster(
-            self.hydromt_path / "globcover.tif",
+            self.hydromt_path / output_name,
             compress="LZW",
             tiled=True,
             BIGTIFF="IF_SAFER"
@@ -129,7 +145,11 @@ class ElevationSolution():
             vectors: str = None
     ) -> None:
         """
-        Change the elevation based on the vector
+        Change the elevation based on the vector.
+        This class relates to functions:
+        - flood_model_executor in flood_model_simulations_generator.py
+        - par_generator in flood_model_parameters_generator.py
+        - hydrological_and_hydrodynamic_simulation_generator in hydrological_and_hydrodynamic_pipeline.py
 
         Parameters
         ----------
@@ -295,9 +315,21 @@ class ElevationSolution():
         # Change elevation data
         modified_dem = self.change_elevation()
 
+        # Find existing elevation files
+        existing_z_files = sorted(
+            self.hydro_combination_path.glob("z_elevation_*.asc")
+        )
+
+        # Decide the number of output file
+        # based on the number of running the model
+        number = len(existing_z_files) + 1
+
+        # Create filename
+        output_name = f"z_elevation_{number:03d}.asc"
+
         # Write out
         modified_dem.rio.to_raster(
-            self.hydro_combination_path / "z.asc",
+            self.hydro_combination_path / output_name,
             compress="LZW",
             tiled=True
         )
