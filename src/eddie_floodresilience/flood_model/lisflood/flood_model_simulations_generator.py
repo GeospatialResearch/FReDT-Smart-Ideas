@@ -30,7 +30,8 @@ class FloodModelSimulationsGenerator():
         aoi_boundary: list,
         start_time: datetime,
         end_time: datetime,
-        crs: int = 2193
+        crs: int = 2193,
+        vectors: str = None
     ) -> None:
         """
         Generate flood model simulations
@@ -51,7 +52,11 @@ class FloodModelSimulationsGenerator():
         end_time: datetime
             Ending time of the flood event
         crs : int = 2193
-            Targeted crs. The default is 2193 for NZTM.            
+            Targeted crs. The default is 2193 for NZTM.
+        vectors : str = None
+            Name of vector file that is used to change the elevation information.
+            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
+            and 'distance' column to specify how smooth to decrease elevation.
         """
         self.flood_model_path = flood_model_path
         self.catchment_model_path = catchment_model_path
@@ -60,7 +65,8 @@ class FloodModelSimulationsGenerator():
         self.start_time = start_time
         self.end_time = end_time
         self.crs = crs
-        
+        self.vectors = vectors
+
         # Call out class to generate common terrain data
         self.terrain = TerrainGenerator(
             self.flood_model_path, 
@@ -165,18 +171,23 @@ class FloodModelSimulationsGenerator():
         
     def flood_model_executor(self):
         """Generate necessary inputs for flood model"""
-        # # Generate terrain data for flood model
-        # self.terrain_data_for_flood_model_generator()
-        #
-        # # Generate injection points for flood model
-        # self.injection_points_for_flood_model_generator()
-        #
-        # # Generate precipitation data for flood model
-        # self.precipitation_data_for_flood_model_generator()
-        #
-        # # Generate parameter files for flood model
-        # self.parameters_files_for_flood_model_generator()
-        
-        # Generate simulations by running flood model
-        self.flood_model_simulations_generator()
+        if self.vectors is None:
+            # Generate terrain data for flood model
+            self.terrain_data_for_flood_model_generator()
+
+            # Generate injection points for flood model
+            self.injection_points_for_flood_model_generator()
+
+            # Generate precipitation data for flood model
+            self.precipitation_data_for_flood_model_generator()
+
+            # Generate parameter files for flood model
+            self.parameters_files_for_flood_model_generator()
+
+            # Generate simulations by running flood model
+            self.flood_model_simulations_generator()
+
+        else:
+            # Generate simulations by running flood model
+            self.flood_model_simulations_generator()
         

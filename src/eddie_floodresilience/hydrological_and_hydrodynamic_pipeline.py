@@ -184,7 +184,8 @@ class HydrologicalAndHydrodynamicPipeline:
             self.flood_aoi_boundary,
             self.start_time,
             self.end_time,
-            self.crs 
+            self.crs,
+            self.polygons
         )
         
         # Generate flood model data
@@ -192,17 +193,35 @@ class HydrologicalAndHydrodynamicPipeline:
         
     def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
-        # Apply solutions
-        self.total_solutions()
+        # The if function here will be modified later
+        if self.polygons is not None:
+            # Apply solutions
+            self.total_solutions()
 
-        # # Generate terrain data for wflow and flood models
-        # self.terrain_data_pipeline()
-        #
-        # # Generate wflow data
-        # self.wflow_data_pipeline()
+            # Generate wflow data
+            self.wflow_data_pipeline()
 
-        # Generate flood data
-        self.flood_data_pipeline()
+            # Generate flood data
+            self.flood_data_pipeline()
+
+        elif self.vectors is not None:
+
+            # Generate flood data
+            self.flood_data_pipeline()
+
+        else:
+            # Apply solutions
+            self.total_solutions()
+
+            # Generate terrain data for wflow and flood models
+            self.terrain_data_pipeline()
+
+            # Generate wflow data
+            self.wflow_data_pipeline()
+
+            # Generate flood data
+            self.flood_data_pipeline()
+
 
 # This is where to check the model
 def main():
