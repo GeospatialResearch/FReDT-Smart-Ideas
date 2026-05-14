@@ -18,7 +18,8 @@ class WflowBuildGenerator():
         start_time: datetime,
         end_time: datetime,
         resolution: float,
-        wflow_model_path: Path
+        wflow_model_path: Path,
+        forcing_path: Path
     ) -> None:
         """
         Generate wflow_build.yml for preprocessing data for wflow.
@@ -40,13 +41,15 @@ class WflowBuildGenerator():
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         wflow_model_path: Path
             A directory to where the data_catalog.yml is stored and to run wflow model
+        forcing_path: Path
+            A directory to where the forcing files are stored
         """
         self.start_time = start_time.replace(year=start_time.year - 1)
         self.end_time = end_time
         self.resolution = resolution
         self.wflow_model_path = wflow_model_path
-        
-        
+        self.forcing_path = forcing_path
+
     def config_section(self) -> dict:
         """
         Write out configuration section
@@ -62,12 +65,12 @@ class WflowBuildGenerator():
                 "starttime": self.start_time,
                 "endtime": self.end_time,
                 "timestepsecs": 3600,
-                "input.path_forcing": "era5_hourly_new.nc",
+                "input.path_forcing": str(self.forcing_path),
                 # Extra parameters
                 "water_mass_balance__flag": True,
                 "output.path": "output.nc",
                 "output.compressionlevel": 1,
-                "netcdf.path": "output_scalar_waikanae.nc",
+                "netcdf.path": "output_scalar.nc",
                 "output.vertical.actevap": "actevap",
                 "output.vertical.satwaterdepth": "satwaterdepth",
                 "output.vertical.ustoredepth": "ustoredepth",
@@ -229,67 +232,6 @@ class WflowBuildGenerator():
         
         return gauges
     
-    def precipitation_section(self) -> dict:
-        """
-        Write out precipitation's section
-        
-        Returns
-        -------
-        precipitation : dict
-            A dictionary that contains precipitation's section
-        """
-        # Generate precipitation's section
-        precipitation = {
-            "setup_precip_forcing": {
-                "precip_fn": "era5_hourly",
-                "chunksize": 48
-            }
-        }
-        
-        return precipitation
-    
-    def temperature_section(self) -> dict:
-        """
-        Write out temperature section
-        
-        Returns
-        -------
-        temp_pet : dict
-            A dictionary that contains temperature section
-        """
-        # Generate temperature section
-        temperature = {
-            "setup_temp_pet_forcing": {
-                "temp_pet_fn": "era5_hourly",
-                "press_correction": True,
-                "temp_correction": True,
-                "dem_forcing_fn": "era5_orography",
-                "skip_pet": True,
-                "chunksize": 48
-            }    
-        }
-        
-        return temperature
-    
-    def potential_evaporation_section(self) -> dict:
-        """
-        Write out potential evaporation
-        
-        Returns
-        -------
-        potential_evaporation : dict
-            A dictionary that contains potential evaporation section
-        """
-        # Generate potential evaporation section
-        potential_evaporation = {
-            "setup_pet_forcing": {
-                "pet_fn": "era5_hourly",
-                "chunksize": 48
-            }
-        }
-        
-        return potential_evaporation
-    
     def constant_parameters_section(self) -> dict:
         """
         Write out constant parameters' section
@@ -365,9 +307,6 @@ class WflowBuildGenerator():
             self.lai_section(),
             self.soil_section(),
             self.gauges_section(),
-            self.precipitation_section(),
-            self.temperature_section(),
-            self.potential_evaporation_section(),
             self.constant_parameters_section(),
             self.write_section()
         ]

@@ -25,7 +25,7 @@ class HydrologicalAndHydrodynamicPipeline:
             hydro_combination_path: Path,
             outlet_gauge_locations_filename: str,
 
-            forcing_path: Path,
+            forcing_name: str,
             precipitation_path: Path,
             start_time: datetime,
             end_time: datetime,
@@ -53,8 +53,8 @@ class HydrologicalAndHydrodynamicPipeline:
             Directory to folder storing all necessary data
         outlet_gauge_locations_filename: str
             Filename of outlet gauge locations
-        forcing_path: Path
-            A directory to where the forcing files are stored
+        forcing_name: str
+            Name of forcing data. Should be the site name. Ex: 'whirinaki'
         precipitation_path: Path
             A directory to where the precipitation files are stored
         start_time : str
@@ -100,7 +100,6 @@ class HydrologicalAndHydrodynamicPipeline:
         # Set up necessary parameters
         self.hydro_combination_path = hydro_combination_path
         self.outlet_gauge_locations_filename = outlet_gauge_locations_filename
-        self.forcing_path = forcing_path
         self.precipitation_path = precipitation_path
         self.start_time = start_time
         self.end_time = end_time
@@ -119,6 +118,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.crs = crs
         
         self.hydromt_path = Path(r"D:\Digital_Twin_data\necessary_data")
+        self.forcing_path = Path(self.hydromt_path / fr"forcing_data/{forcing_name}/forcing_*.nc")
 
     def total_solutions(self):
         """Develop solutions for flood risk resilience"""
@@ -227,7 +227,7 @@ class HydrologicalAndHydrodynamicPipeline:
 def main():
     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_015")
     outlet_gauge_locations_filename = 'river_outlet'
-    forcing_path = Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
+    forcing_name = 'whirinaki'
     precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
@@ -256,7 +256,7 @@ def main():
         hydro_combination_path,
         outlet_gauge_locations_filename,
 
-        forcing_path,
+        forcing_name,
         precipitation_path,
         start_time,
         end_time,

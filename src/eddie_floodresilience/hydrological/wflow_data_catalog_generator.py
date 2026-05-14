@@ -16,7 +16,6 @@ class DataCatalogGenerator():
             self,
             hydromt_path: Path,
             wflow_model_path: Path,
-            forcing_path: Path,
             polygons: str = None
         ) -> None:
         """
@@ -30,15 +29,12 @@ class DataCatalogGenerator():
             A directory to where all necessary files are stored to run wflow model
         wflow_model_path: Path
             A directory to where the data_catalog.yml is stored and to run wflow model
-        forcing_path: Path
-            A directory to where the forcing files are stored
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
         """
         self.hydromt_path = hydromt_path
         self.wflow_model_path = wflow_model_path
-        self.forcing_path = forcing_path
         self.polygons = polygons
         
     def meta_section(self) -> dict:
@@ -58,47 +54,7 @@ class DataCatalogGenerator():
         }
         
         return meta
-    
-    def forcing_section(self) -> dict:
-        """
-        Write out forcing section
-        
-        Returns
-        -------
-        forcing : dict
-            A dictionary contains information of forcing section
-        """
-        # At the moment the name era5 and other information is kept fixed for basic automation,
-        # it will be changed in the future.
-        # NOTE: the information is not from ERA5
-        # Generate a dictionary with forcing information
-        forcing = {
-            "era5_hourly": {
-                "crs": 4326,
-                "data_type": "RasterDataset",
-                "driver": "netcdf",
-                "meta": {
-                    "category": "meteo",
-                    "history": "Extracted from Copernicus Climate Data Store",
-                    "paper_doi": "10.1002/qj.3803",
-                    "paper_ref": "Hersbach et al. (2019)",
-                    "source_license": "https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products",
-                    "source_url": "https://doi.org/10.24381/cds.bd0915c6"
-                },
-                "path": str(self.forcing_path / "era5_hourly_*.nc"),
-                "unit_add": {
-                    "temp": -273.15
-                },
-                "unit_mult": {
-                    "pet": 3600,
-                    "precip": 1,
-                    "press_msl": 0.01
-                }
-            }   
-        }
-        
-        return forcing
-    
+
     def orography_section(self) -> dict:
         """
         Write out orography section
@@ -391,7 +347,6 @@ class DataCatalogGenerator():
         # Set up list of all sections
         sections_list = [
             self.meta_section(),
-            self.forcing_section(),
             self.orography_section(),
             self.landcover_section(),
             self.gauges_section(),
