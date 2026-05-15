@@ -87,6 +87,7 @@ class WflowSimulationsGenerator():
         data_catalog = DataCatalogGenerator(
             self.hydromt_path,
             self.wflow_model_path,
+            self.forcing_path,
             self.polygons
         )
         data_catalog.data_catalog_generator()

@@ -59,13 +59,19 @@ class WflowBuildGenerator():
         config : dict
             A dictionary that contains configuration section
         """
+        # Set up path for forcing
+        if str(self.forcing_path).endswith(".nc"):
+            input_path_forcing = str(self.forcing_path)
+        else:
+            input_path_forcing = "era5_hourly_new.nc"
+
         # Generate configuration section
         config = {
             "setup_config": {
                 "starttime": self.start_time,
                 "endtime": self.end_time,
                 "timestepsecs": 3600,
-                "input.path_forcing": str(self.forcing_path),
+                "input.path_forcing": input_path_forcing,
                 # Extra parameters
                 "water_mass_balance__flag": True,
                 "output.path": "output.nc",
@@ -231,7 +237,68 @@ class WflowBuildGenerator():
         }
         
         return gauges
-    
+
+    def precipitation_section(self) -> dict:
+        """
+        Write out precipitation's section
+
+        Returns
+        -------
+        precipitation : dict
+            A dictionary that contains precipitation's section
+        """
+        # Generate precipitation's section
+        precipitation = {
+            "setup_precip_forcing": {
+                "precip_fn": "era5_hourly",
+                "chunksize": 48
+            }
+        }
+
+        return precipitation
+
+    def temperature_section(self) -> dict:
+        """
+        Write out temperature section
+
+        Returns
+        -------
+        temp_pet : dict
+            A dictionary that contains temperature section
+        """
+        # Generate temperature section
+        temperature = {
+            "setup_temp_pet_forcing": {
+                "temp_pet_fn": "era5_hourly",
+                "press_correction": True,
+                "temp_correction": True,
+                "dem_forcing_fn": "era5_orography",
+                "skip_pet": True,
+                "chunksize": 48
+            }
+        }
+
+        return temperature
+
+    def potential_evaporation_section(self) -> dict:
+        """
+        Write out potential evaporation
+
+        Returns
+        -------
+        potential_evaporation : dict
+            A dictionary that contains potential evaporation section
+        """
+        # Generate potential evaporation section
+        potential_evaporation = {
+            "setup_pet_forcing": {
+                "pet_fn": "era5_hourly",
+                "chunksize": 48
+            }
+        }
+
+        return potential_evaporation
+
     def constant_parameters_section(self) -> dict:
         """
         Write out constant parameters' section
@@ -298,18 +365,35 @@ class WflowBuildGenerator():
         wflow_build = {}
         
         # Set up sections list
-        sections_list = [
-            self.config_section(),
-            self.basemaps_section(),
-            self.rivers_section(),
-            self.lakes_section(),
-            self.landcover_section(),
-            self.lai_section(),
-            self.soil_section(),
-            self.gauges_section(),
-            self.constant_parameters_section(),
-            self.write_section()
-        ]
+        if str(self.forcing_path).endswith(".nc"):
+            sections_list = [
+                self.config_section(),
+                self.basemaps_section(),
+                self.rivers_section(),
+                self.lakes_section(),
+                self.landcover_section(),
+                self.lai_section(),
+                self.soil_section(),
+                self.gauges_section(),
+                self.constant_parameters_section(),
+                self.write_section()
+            ]
+        else:
+            sections_list = [
+                self.config_section(),
+                self.basemaps_section(),
+                self.rivers_section(),
+                self.lakes_section(),
+                self.landcover_section(),
+                self.lai_section(),
+                self.soil_section(),
+                self.gauges_section(),
+                self.precipitation_section(),
+                self.temperature_section(),
+                self.potential_evaporation_section(),
+                self.constant_parameters_section(),
+                self.write_section()
+            ]
         
         # Generate wflow build section
         for each_section in sections_list:

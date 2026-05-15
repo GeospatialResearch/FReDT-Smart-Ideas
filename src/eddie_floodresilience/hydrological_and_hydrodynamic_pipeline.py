@@ -118,7 +118,10 @@ class HydrologicalAndHydrodynamicPipeline:
         self.crs = crs
         
         self.hydromt_path = Path(r"D:\Digital_Twin_data\necessary_data")
-        self.forcing_path = Path(self.hydromt_path / fr"forcing_data/{forcing_name}/forcing_*.nc")
+        if isinstance(forcing_name, str) and not Path(forcing_name).exists():
+            self.forcing_path = Path(self.hydromt_path / fr"forcing_data/{forcing_name}/forcing_*.nc")
+        else:
+            self.forcing_path = forcing_name
 
     def total_solutions(self):
         """Develop solutions for flood risk resilience"""
@@ -227,14 +230,13 @@ class HydrologicalAndHydrodynamicPipeline:
 def main():
     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_015")
     outlet_gauge_locations_filename = 'river_outlet'
-    forcing_name = 'whirinaki'
+    forcing_name = Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
     precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
     # subbasin = [173.46365, -35.45662]
     # bbox = [173.44134, -35.61760, 173.77608, -35.11105]
-
 
     subbasin = [1642072.60, 6076218.85]
     bbox = [1639968.20, 6058374.30, 1670723.51, 6114366.30]
@@ -280,3 +282,68 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+
+
+
+
+
+
+
+# # This is where to check the model
+# def main():
+#     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_015")
+#     outlet_gauge_locations_filename = 'river_outlet'
+#     forcing_name = 'whirinaki' # Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
+#     precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
+#     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
+#     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
+#
+#     # subbasin = [173.46365, -35.45662]
+#     # bbox = [173.44134, -35.61760, 173.77608, -35.11105]
+#
+#     subbasin = [1642072.60, 6076218.85]
+#     bbox = [1639968.20, 6058374.30, 1670723.51, 6114366.30]
+#
+#     num_threads = 6
+#     flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
+#
+#     polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
+#     vectors = r'vectors/vectors.csv' # r'vectors/vectors.csv'
+#     strord = 4
+#     resolution = 50
+#     threshold = 1000
+#     width_rate_control = 1 / 20
+#     discharge_rate_control = 1
+#     crs = 2193
+#
+#     # Set up hydraulic and hydrodynamic pipeline
+#     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+#         hydro_combination_path,
+#         outlet_gauge_locations_filename,
+#
+#         forcing_name,
+#         precipitation_path,
+#         start_time,
+#         end_time,
+#
+#         subbasin,
+#         bbox,
+#         num_threads,
+#         flood_aoi_boundary,
+#
+#         polygons,
+#         vectors,
+#         strord,
+#         resolution,
+#         threshold,
+#         width_rate_control,
+#         discharge_rate_control,
+#         crs
+#     )
+#
+#     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+#
+# if __name__ == '__main__':
+#     main()
