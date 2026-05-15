@@ -7,6 +7,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 from pathlib import Path
 from datetime import datetime
+from typing import Union
 
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 
@@ -25,7 +26,7 @@ class HydrologicalAndHydrodynamicPipeline:
             hydro_combination_path: Path,
             outlet_gauge_locations_filename: str,
 
-            forcing_name: str,
+            forcing_name: Union[str, Path],
             precipitation_path: Path,
             start_time: datetime,
             end_time: datetime,
@@ -53,8 +54,9 @@ class HydrologicalAndHydrodynamicPipeline:
             Directory to folder storing all necessary data
         outlet_gauge_locations_filename: str
             Filename of outlet gauge locations
-        forcing_name: str
+        forcing_name: Union[str, Path]
             Name of forcing data. Should be the site name. Ex: 'whirinaki'
+            Or a directory to forcing data
         precipitation_path: Path
             A directory to where the precipitation files are stored
         start_time : str
@@ -228,28 +230,28 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_015")
+    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_mataura_path_001")
     outlet_gauge_locations_filename = 'river_outlet'
-    forcing_name = Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
-    precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
-    start_time = datetime.fromisoformat("1999-01-20T00:00:00")
-    end_time = datetime.fromisoformat("1999-01-22T12:00:00")
+    forcing_name = Path(r"H:\Barra\Mataura\merge_gauges_HIRDS_001")
+    precipitation_path = Path(r"H:\Barra\Mataura\rainfall_gauges_HIRDS")
+    start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+    end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
     # subbasin = [173.46365, -35.45662]
     # bbox = [173.44134, -35.61760, 173.77608, -35.11105]
 
-    subbasin = [1642072.60, 6076218.85]
+    subbasin = [1285688.507,4882084.580]
     bbox = [1639968.20, 6058374.30, 1670723.51, 6114366.30]
 
     num_threads = 6
-    flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
+    flood_aoi_boundary = [1276964, 4858876, 1293316, 4893108]
 
-    polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
-    vectors = r'vectors/vectors.csv' # r'vectors/vectors.csv'
+    polygons = None # r'polygons/polygons.shp'
+    vectors = None # r'vectors/vectors.csv'
     strord = 4
-    resolution = 50
+    resolution = 100
     threshold = 1000
-    width_rate_control = 1 / 20
+    width_rate_control = 1
     discharge_rate_control = 1
     crs = 2193
 
@@ -290,7 +292,7 @@ if __name__ == '__main__':
 
 
 
-
+# WHIRINAKI
 # # This is where to check the model
 # def main():
 #     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_015")
