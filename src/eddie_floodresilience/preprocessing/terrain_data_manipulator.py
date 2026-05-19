@@ -68,6 +68,8 @@ class TerrainFilter:
     def __init__(
             self,
             path: Path,
+            hydromt_path: Path,
+            river_name: str,
             origin_crs: int = 2193,
             roughness: bool = True,
             origin_filename: str = '8m_geofabric'
@@ -79,6 +81,10 @@ class TerrainFilter:
         -----------
         path: str
             Common path to the directory that contains necessary files to filter terrain data
+        hydromt_path : Path
+            A directory to where all necessary files are stored to run wflow model
+        river_name: str
+            Name of directory to where the river information files are stored
         roughness : bool
             Whether to print out roughness and DEM. Default is True
         origin_filename : str = '8m_geofabric'
@@ -86,14 +92,19 @@ class TerrainFilter:
             At the moment, only two names - 8m_geofabric and 4m_geofabric
         """
         self.path = path
+        self.hydromt_path = hydromt_path
+        self.river_name = river_name
         self.origin_crs = origin_crs
         self.roughness = roughness
         self.origin_filename = origin_filename
 
     def terrain_splitting(self) -> None:
         """Split terrain data into DEM and roughness (if any)"""
-        # Get terrain
-        terrain_file_path = list(self.path.glob(f"{self.origin_filename}.nc"))
+        # Get parental directory to terrain files
+        terrain_parent_files = self.hydromt_path / f"river_data/{self.river_name}"
+
+        # Get list of terrain files
+        terrain_file_path = list(terrain_parent_files.glob(f"{self.origin_filename}.nc"))
         terrain = rxr.open_rasterio(terrain_file_path[0])
 
         # Save as tif
@@ -106,7 +117,7 @@ class TerrainFilter:
     def remove_sea(self) -> None:
         """Clip sea area mainly in DEM and roughness"""
         # Get New Zealand shapefile
-        nz_shapefile = self.path / "nz_coastline.shp"
+        nz_shapefile = self.hydromt_path / "nz_coastline.shp"
 
         # Files need changing
         dem = self.path / f"{self.origin_filename}_dem_split.tif"  # Name here is constant

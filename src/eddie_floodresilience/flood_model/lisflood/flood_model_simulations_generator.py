@@ -26,8 +26,11 @@ class FloodModelSimulationsGenerator():
         self,
         flood_model_path: Path,
         catchment_model_path: Path,
+        hydromt_path: Path,
+        river_name: str,
         precipitation_path: Path,
         aoi_boundary: list,
+        adjust_manning: bool,
         start_time: datetime,
         end_time: datetime,
         crs: int = 2193,
@@ -43,11 +46,18 @@ class FloodModelSimulationsGenerator():
             Directory to folder storing terrain data
         catchment_model_path : Path
             Directory to folder storing catchment model results
+        hydromt_path : Path
+            A directory to where all necessary files are stored to run wflow model
+        river_name: str
+            Name of directory to where the river information files are stored
         precipitation_path : Path
             Directory to folder storing precipitation data
         aoi_boundary : list
             Boundaries' coordinates of area of interest.
             Format is [xmin, ymin, xmax, ymax]
+        adjust_manning : bool
+            True means adjusting Manning's n by resampling 4m Manning's n
+            False means no Mannning's n adjustment
         start_time: datetime
             Starting time of the flood event
         end_time: datetime
@@ -64,8 +74,11 @@ class FloodModelSimulationsGenerator():
         """
         self.flood_model_path = flood_model_path
         self.catchment_model_path = catchment_model_path
+        self.hydromt_path = hydromt_path
+        self.river_name = river_name
         self.precipitation_path = precipitation_path
         self.aoi_boundary = aoi_boundary
+        self.adjust_manning = adjust_manning
         self.start_time = start_time
         self.end_time = end_time
         self.crs = crs
@@ -74,7 +87,9 @@ class FloodModelSimulationsGenerator():
 
         # Call out class to generate common terrain data
         self.terrain = TerrainGenerator(
-            self.flood_model_path, 
+            self.flood_model_path,
+            self.hydromt_path,
+            self.river_name,
             self.aoi_boundary,
             self.crs
         )
@@ -87,7 +102,10 @@ class FloodModelSimulationsGenerator():
         # Call out class used to generate terrain data for flood model
         terrain_data_for_flood_model = TerrainFloodModelGenerator(
             self.flood_model_path,
+            self.hydromt_path,
+            self.river_name,
             self.terrain_crs_clipped,
+            self.adjust_manning,
             self.crs
         )
         
@@ -178,6 +196,12 @@ class FloodModelSimulationsGenerator():
         
     def flood_model_executor(self):
         """Generate necessary inputs for flood model"""
+        # Four cases:
+        # 1. Original scenario (polygon=None, vector=None)
+        # 2. Polygon=None, vector=None
+        # 3. Polygon!=None, vector=None
+        # 4. Polygon!=None, vector!=None
+        # This 'if' includes 1, 3, and 4
         if self.polygons is not None or self.vectors is None:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
@@ -194,6 +218,7 @@ class FloodModelSimulationsGenerator():
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
 
+        # This 'else' includes 2
         else:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()

@@ -20,6 +20,8 @@ class TerrainDataWflowGenerator:
     def __init__(
             self,
             terrain_path: Path,
+            hydromt_path: Path,
+            river_name: str,
             outlet_gauge_locations_filename: str,
             resolution: float = 100,
             threshold: int = 1000,
@@ -33,6 +35,10 @@ class TerrainDataWflowGenerator:
         ----------
         terrain_path : Path
             A directory to where the terrain data are stored
+        hydromt_path : Path
+            A directory to where all necessary files are stored to run wflow model
+        river_name : str
+            Name of directory to where the river information files are stored
         outlet_gauge_locations_filename: str
             Filename of outlet gauge locations
         resolution: float = 100
@@ -46,6 +52,8 @@ class TerrainDataWflowGenerator:
             The rate to control river discharge. Default is 1
         """
         self.terrain_path = terrain_path
+        self.hydromt_path = hydromt_path
+        self.river_name = river_name
         self.outlet_gauge_locations_filename = outlet_gauge_locations_filename
         self.resolution = resolution
         self.threshold = threshold
@@ -54,7 +62,11 @@ class TerrainDataWflowGenerator:
         
     def filtered_terrain_generator(self) -> None:
         """Filter terrain data to generate necessary data for wflow model"""
-        filtered_terrain = TerrainFilter(self.terrain_path)
+        filtered_terrain = TerrainFilter(
+            self.terrain_path,
+            self.hydromt_path,
+            self.river_name
+        )
         filtered_terrain.filter_dem_for_wflow()
         
     def stream_topology_generator(self) -> None:
@@ -82,7 +94,7 @@ class TerrainDataWflowGenerator:
     def terrain_for_wflow_preparator(self) -> None:
         """Prepare terrain data for wflow model"""
         terrain_for_wflow = TerrainDataWflowPreparator(self.terrain_path)
-        terrain_for_wflow.terrain_data_for_wflow_generator()
+        terrain_for_wflow.terrain_data_for_wflow_preparator()
         
     def terrain_for_wflow_generator(self) -> None:
         """Generate terrain data for wflow model"""
@@ -97,3 +109,4 @@ class TerrainDataWflowGenerator:
         
         # Generate and prepare terrain data for wflow model
         self.terrain_for_wflow_preparator()
+

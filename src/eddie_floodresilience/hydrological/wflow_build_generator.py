@@ -8,6 +8,7 @@ Created on Thu Apr  9 09:01:33 2026
 import yaml
 from pathlib import Path
 from datetime import datetime
+import json
 
 
 class WflowBuildGenerator():
@@ -19,6 +20,8 @@ class WflowBuildGenerator():
         end_time: datetime,
         resolution: float,
         wflow_model_path: Path,
+        hydromt_path: Path,
+        river_name: str,
         forcing_path: Path
     ) -> None:
         """
@@ -41,6 +44,10 @@ class WflowBuildGenerator():
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         wflow_model_path: Path
             A directory to where the data_catalog.yml is stored and to run wflow model
+        hydromt_path: Path
+            A directory to where all necessary files are stored to run wflow model
+        river_name: str
+            Name of directory to where the river information files are stored
         forcing_path: Path
             A directory to where the forcing files are stored
         """
@@ -48,6 +55,8 @@ class WflowBuildGenerator():
         self.end_time = end_time
         self.resolution = resolution
         self.wflow_model_path = wflow_model_path
+        self.hydromt_path = hydromt_path
+        self.river_name = river_name
         self.forcing_path = forcing_path
 
     def config_section(self) -> dict:
@@ -122,23 +131,30 @@ class WflowBuildGenerator():
         rivers : dict
             A dictionary that contains rivers' section
         """
+        # Set up river path
+        river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
+
+        # Get river information
+        with open(river_path, "r") as f:
+            river_information = json.load(f)['setup_rivers']
+
         # Generate rivers section
         rivers = {
             "setup_rivers": {
                 "hydrography_fn": "merit_hydrox",
                 "river_geom_fn": "hydro_rivers_lin",
-                "river_upa": 0.1,
+                "river_upa": self.resolution / 100,  # whirinaki: 0.1, mataura: 1
                 "rivdph_method": "manning",
-                "min_rivdph": 1,
-                "min_rivwth": 0.05,
-                "slope_len": 2000,
-                "smooth_len": 5000,
+                "min_rivdph": river_information['min_rivdph'],  # mataura: 1
+                "min_rivwth": river_information['min_rivwth'],  # whirinaki: 30, mataura: 0.05
+                "slope_len": self.resolution * 3,
+                "smooth_len": self.resolution * 5,
                 "river_routing": "kinematic-wave"
             }
         }
-        
+
         return rivers
-    
+
     def lakes_section(self) -> dict:
         """
         Write out lakes' section
@@ -308,15 +324,20 @@ class WflowBuildGenerator():
         constant_parameters : dict
             A dictionary that contains constant parameters' section
         """
+        # Read Json file to collect some site information
+        river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
+        with open(river_path, "r") as f:
+            constant_parameters_for_site = json.load(f)['setup_constant_pars']
+
         # Generate constant parameters
         constant_parameters = {
             "setup_constant_pars": {
-                "KsatHorFrac": 1,
+                "KsatHorFrac": constant_parameters_for_site['KsatHorFrac'],
                 "Cfmax": 3.75653,
                 "cf_soil": 0.038,
                 "EoverR": 0.11,
-                "InfiltCapPath": 5,
-                "InfiltCapSoil": 1,
+                "InfiltCapPath": constant_parameters_for_site['InfiltCapPath'],
+                "InfiltCapSoil": constant_parameters_for_site['InfiltCapSoil'], # whirinaki: 1, mataura:300
                 "MaxLeakage": 0,
                 "rootdistpar": -500,
                 "TT": 0,
@@ -344,7 +365,7 @@ class WflowBuildGenerator():
         """
         # Generate "write" section
         write_section = {
-            "write_forcing": {"freq_out": "YE"},
+            "write_forcing": {"freq_out": "D"},
             "write_grid": {},
             "write_geoms": {},
             "write_config": {}

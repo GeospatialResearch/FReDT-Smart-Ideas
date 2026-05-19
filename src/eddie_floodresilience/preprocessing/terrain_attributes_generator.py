@@ -105,9 +105,8 @@ class TerrainAttributesGenerator():
         """
         input_path = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow_coarser.tif"
         output_path_no_deps = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow_coarser_nodeps.tif"
-        output_path_crs = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow_coarser_nodeps_crs.tif"
 
-        if not output_path_crs.is_file():
+        if not output_path_no_deps.is_file():
             # Read the raster using whitebox tool
             raster_no_deps = wbe.read_raster(str(input_path))
 
@@ -124,19 +123,15 @@ class TerrainAttributesGenerator():
                 compress=False
             )
 
-            # Read data using rioxarray to add crs and then overwrite out
-            with rxr.open_rasterio(output_path_no_deps) as raster_no_deps_crs:
-                raster_no_deps_crs = raster_no_deps_crs.rio.write_crs('EPSG:2193')
-                raster_no_deps_crs.rio.to_raster(fr"{self.path}\{self.origin_filename}_{self.raster_name}_for_wflow_coarser_nodeps_crs.tif")
         else:
-            print(f"'{output_path_crs.name}' already exists!")
+            print(f"'{output_path_no_deps.name}' already exists!")
 
     def d8_pointer_generator(self) -> None:
         """
         Generate D8 pointers based on D8 algorithm (O'Callaghan and Mark, 1984) (mainly from DEM)
         https://www.whiteboxgeo.com/manual/wbw-user-manual/book/tool_help.html#d8_pointer
         """
-        input_path = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow_coarser_nodeps_crs.tif"
+        input_path = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow_coarser_nodeps.tif"
         output_path = self.path / f"{self.origin_filename}_d8_pointer.tif"
 
         if not output_path.is_file():
@@ -167,7 +162,7 @@ class TerrainAttributesGenerator():
             If True, flow accumulation under catchment are format will be added
             If False, only flow accumulation under cell format will be generated
         """
-        input_path = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow_coarser_nodeps_crs.tif"
+        input_path = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow_coarser_nodeps.tif"
         flow_path_acc_cells = self.path / f"{self.origin_filename}_flow_acc_d8_cells.tif"
         streams_path = self.path / f"{self.origin_filename}_streams_d8.tif"
         flow_path_acc_area = self.path / f"{self.origin_filename}_flow_acc_d8_area_m2.tif"
@@ -681,7 +676,7 @@ class StreamHydraulicsGenerator():
         d8_pointer = wbe.read_raster(str(d8_pointer_path))
 
         # Read DEM that its depressions are filled
-        dem_no_deps_path = self.path / f"{self.origin_filename}_dem_for_wflow_coarser_nodeps_crs.tif"
+        dem_no_deps_path = self.path / f"{self.origin_filename}_dem_for_wflow_coarser_nodeps.tif"
         dem_no_deps = wbe.read_raster(str(dem_no_deps_path))
 
         # Filter to select only streams inside the watershed
@@ -743,7 +738,7 @@ class StreamHydraulicsGenerator():
         streams_watershed = wbe.read_raster(str(stream_watershed))
 
         # Read DEM that its depressions are filled
-        dem_no_deps_path = self.path / f"{self.origin_filename}_dem_for_wflow_coarser_nodeps_crs.tif"
+        dem_no_deps_path = self.path / f"{self.origin_filename}_dem_for_wflow_coarser_nodeps.tif"
         dem_no_deps = wbe.read_raster(str(dem_no_deps_path))
 
         # Calculate HAND
@@ -951,7 +946,7 @@ class StreamHydraulicsGenerator():
     def stream_slope_linestring_generator(self) -> None:
         """Generate streams' slopes"""
         # Read DEM that its depressions are filled
-        dem_no_deps_path = self.path / f"{self.origin_filename}_dem_for_wflow_coarser_nodeps_crs.tif"
+        dem_no_deps_path = self.path / f"{self.origin_filename}_dem_for_wflow_coarser_nodeps.tif"
         dem_no_deps = wbe.read_raster(str(dem_no_deps_path))
 
         # Generate slope from DEM

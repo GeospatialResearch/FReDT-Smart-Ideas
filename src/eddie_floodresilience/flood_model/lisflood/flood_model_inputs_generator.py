@@ -32,6 +32,8 @@ class TerrainGenerator():
     def __init__(
         self,
         flood_model_path: Path,
+        hydromt_path: Path,
+        river_name: str,
         aoi_boundary: list,
         crs: int = 2193
     ) -> None:
@@ -42,6 +44,10 @@ class TerrainGenerator():
         ----------
         flood_model_path : Path
             Directory to folder storing terrain data
+        hydromt_path : Path
+            A directory to where all necessary files are stored to run wflow model
+        river_name: str
+            Name of directory to where the river information files are stored
         aoi_boundary : list
             Boundaries' coordinates of area of interest.
             Format is [xmin, ymin, xmax, ymax]
@@ -49,6 +55,8 @@ class TerrainGenerator():
             Targeted crs. The default is 2193 for NZTM.            
         """
         self.flood_model_path = flood_model_path
+        self.hydromt_path = hydromt_path
+        self.river_name = river_name
         self.aoi_boundary = box(*aoi_boundary)  # using * to unpack xmin, ymin, xmax, ymax
         self.crs = crs
     
@@ -65,7 +73,7 @@ class TerrainGenerator():
         """
         # The name of terrain here is for easily building up automation
         # It will be coded in the future
-        terrain_path = self.flood_model_path / "8m_geofabric.nc"
+        terrain_path = self.hydromt_path / f"river_data/{self.river_name}/8m_geofabric.nc"
         
         # Read terrain raster
         terrain = xr.open_dataset(terrain_path)
@@ -172,7 +180,10 @@ class TerrainFloodModelGenerator():
     def __init__(
         self,
         flood_model_path: Path,
+        hydromt_path: Path,
+        river_name: str,
         terrain_crs_clipped: xr.Dataset,
+        adjust_manning: bool,
         crs: int = 2193
     ) -> None:
         """
@@ -182,13 +193,23 @@ class TerrainFloodModelGenerator():
         ----------
         flood_model_path : Path
             Directory to folder storing flood model data
+        hydromt_path : Path
+            A directory to where all necessary files are stored to run wflow model
+        river_name: str
+            Name of directory to where the river information files are stored
         terrain_crs_clipped : xr.Dataset
             Clipped terrain data with projection
+        adjust_manning : bool
+            True means adjusting Manning's n by resampling 4m Manning's n
+            False means no Mannning's n adjustment
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.            
         """
         self.flood_model_path = flood_model_path
+        self.hydromt_path = hydromt_path
+        self.river_name = river_name
         self.terrain_crs_clipped = terrain_crs_clipped
+        self.adjust_manning = adjust_manning
         self.crs = crs
         
     def fill_nan_and_write_nodata(
@@ -219,7 +240,7 @@ class TerrainFloodModelGenerator():
     def format_terrain_data_pipeline(
             self,
             variable_name: str
-            ) -> xr.DataArray:
+            ) -> xr.Dataset:
         """
         Format terrain data to be used by flood model, the steps are:
             - drop spatial reference
@@ -234,7 +255,7 @@ class TerrainFloodModelGenerator():
 
         Returns
         -------
-        terrain_variable : xr.DataArray
+        terrain_variable : xr.Dataset
             Specific terrain data that are formatted
         """
         # Get specific terrain
@@ -258,7 +279,9 @@ class TerrainFloodModelGenerator():
         """Generate Strahler order streams raster to filter river in Manning's n"""
         # Split terrain data to collect roughness raster
         TerrainFilter(
-            self.flood_model_path,
+            path=self.flood_model_path,
+            hydromt_path=self.hydromt_path,
+            river_name=self.river_name,
             origin_filename='4m_geofabric'
         ).filter_dem_for_wflow()
 
@@ -300,9 +323,12 @@ class TerrainFloodModelGenerator():
         # Write nodata
         roughness = roughness.rio.write_nodata(-9999)
 
+        # Write crs
+        roughness = roughness.rio.write_crs("EPSG:2193")
+
         # Resample to 8m
         roughness_8m = roughness.rio.reproject(
-            roughness.rio.crs,
+            2193,
             resolution=8,
             resampling=Resampling.nearest
         )
@@ -323,6 +349,9 @@ class TerrainFloodModelGenerator():
 
         # Read strahler
         strahler = rxr.open_rasterio(strahler_path)
+
+        # Assign crs
+        strahler = strahler.rio.write_crs("EPSG:2193")
 
         # Reproject and rescale strahler to roughness 8m
         strahler_8m = strahler.rio.reproject_match(
@@ -356,16 +385,19 @@ class TerrainFloodModelGenerator():
             Manning's n raster converted from roughness length raster
         """
         # Avoid zero division
-        roughness = roughness.where(roughness > 1e-6)
+        roughness = roughness.clip(min=1e-6)
 
         # Avoid invalid log inputs
         ratio = h / roughness
-        ratio_h_roughness = ratio.where(ratio > 1)
+        ratio_h_roughness = ratio.where(ratio > 1, 1)
 
         # Convert roughness length to Manning's n
         numerator = 0.41 * (h ** (1 / 6)) * (ratio_h_roughness - 1)
         denominator = np.sqrt(9.80665) * (1 + ratio_h_roughness * (np.log(ratio_h_roughness) - 1))
         manning_n = numerator / denominator
+
+        # Avoid unreasonable Manning's n
+        manning_n = manning_n.clip(max=0.2)
 
         return manning_n
 
@@ -417,35 +449,55 @@ class TerrainFloodModelGenerator():
 
     def manning_generator(self):
         """Generate clipped Manning's n from 4m to 8m with adjusted river"""
-        # Generate Strahler Order streams and roughness length at 4m
-        self.strahler_for_manning_generator()
+        if self.adjust_manning:
+            # Generate Strahler Order streams and roughness length at 4m
+            self.strahler_for_manning_generator()
 
-        # Resample roughness to 8m
-        roughness_8m = self.resample_roughness()
+            # Resample roughness to 8m
+            roughness_8m = self.resample_roughness()
 
-        # Filter Strahler Order streams
-        strahler_mask_8m = self.strahler_filter_generator(roughness_8m)
+            # Filter Strahler Order streams
+            strahler_mask_8m = self.strahler_filter_generator(roughness_8m)
 
-        # Convert roughness length to Manning's n
-        manning = self.roughness_to_manning(
-            roughness_8m,
-            0.1
-        )
+            # Convert roughness length to Manning's n
+            manning = self.roughness_to_manning(
+                roughness_8m,
+                0.1
+            )
 
-        # Adjust Manning's n
-        adjusted_manning = self.manning_adjustment(
-            strahler_mask_8m,
-            manning
-        )
+            # Adjust Manning's n
+            manning_for_flood = self.manning_adjustment(
+                strahler_mask_8m,
+                manning
+            )
+
+        else:
+            # Roughness path
+            roughness_path = self.flood_model_path / f"8m_geofabric_roughness_split.tif"
+
+            # Read roughness raster
+            roughness = rxr.open_rasterio(roughness_path)
+
+            # Convert -9999 to 0.004
+            roughness = roughness.where(roughness != -9999, 0.003)
+
+            # Write nodata
+            roughness = roughness.rio.write_nodata(-9999)
+
+            # Convert roughness length to Manning's n
+            manning_for_flood = self.roughness_to_manning(
+                roughness,
+                0.5
+            )
 
         # Clip Manning's n
-        clipped_adjusted_manning = adjusted_manning.rio.clip_box(
+        clipped_manning_for_flood = manning_for_flood.rio.clip_box(
             *self.terrain_crs_clipped.rio.bounds()
         )
 
         # Write out
         manning_outpath = self.flood_model_path / "manning.asc"
-        clipped_adjusted_manning.rio.to_raster(manning_outpath)
+        clipped_manning_for_flood.rio.to_raster(manning_outpath)
     
     def write_out_terrain_data(
             self,
@@ -815,4 +867,4 @@ class InjectionPointsFloodModelGenerator():
         self.write_out_rivers_flow_within_time(
             injection_points_flow_df, 
             rivers_flow
-            )
+        )

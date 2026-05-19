@@ -27,6 +27,7 @@ class HydrologicalAndHydrodynamicPipeline:
             outlet_gauge_locations_filename: str,
 
             forcing_name: Union[str, Path],
+            river_name: Union[str, Path],
             precipitation_path: Path,
             start_time: datetime,
             end_time: datetime,
@@ -35,6 +36,7 @@ class HydrologicalAndHydrodynamicPipeline:
             bbox: list,
             num_threads: int,
             flood_aoi_boundary: list,
+            adjust_manning: bool,
 
             polygons: str = None,
             vectors: str = None,
@@ -57,6 +59,8 @@ class HydrologicalAndHydrodynamicPipeline:
         forcing_name: Union[str, Path]
             Name of forcing data. Should be the site name. Ex: 'whirinaki'
             Or a directory to forcing data
+        river_name: Union[str, Path]
+            Name of river data. Should be the site name. Ex: 'whirinaki'
         precipitation_path: Path
             A directory to where the precipitation files are stored
         start_time : str
@@ -76,6 +80,9 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_aoi_boundary : list
             Boundaries' coordinates of area of interest.
             Format is [xmin, ymin, xmax, ymax]
+        adjust_manning : bool
+            True means adjusting Manning's n by resampling 4m Manning's n
+            False means no Mannning's n adjustment
 
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
@@ -109,6 +116,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.bbox = bbox
         self.num_threads = num_threads
         self.flood_aoi_boundary = flood_aoi_boundary
+        self.adjust_manning = adjust_manning
 
         self.polygons = polygons
         self.vectors = vectors
@@ -120,6 +128,11 @@ class HydrologicalAndHydrodynamicPipeline:
         self.crs = crs
         
         self.hydromt_path = Path(r"D:\Digital_Twin_data\necessary_data")
+
+        # River data
+        self.river_name = river_name
+
+        # Forcing data
         if isinstance(forcing_name, str) and not Path(forcing_name).exists():
             self.forcing_path = Path(self.hydromt_path / fr"forcing_data/{forcing_name}/forcing_*.nc")
         else:
@@ -127,7 +140,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
     def total_solutions(self):
         """Develop solutions for flood risk resilience"""
-        if self.polygons is not None:
+        if self.polygons is not None and self.vectors is not None:
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
                 self.hydro_combination_path,
@@ -136,7 +149,23 @@ class HydrologicalAndHydrodynamicPipeline:
             )
             landcover_solution.apply_landcover_solution()
 
-        if self.vectors is not None:
+            # Elevation solution
+            elevation_solution = ElevationSolution(
+                self.hydro_combination_path,
+                self.vectors
+            )
+            elevation_solution.apply_elevation_solution()
+
+        elif self.polygons is not None:
+            # Land cover/natural solution
+            landcover_solution = LandCoverSolution(
+                self.hydro_combination_path,
+                self.hydromt_path,
+                self.polygons
+            )
+            landcover_solution.apply_landcover_solution()
+
+        elif self.vectors is not None:
             # Elevation solution
             elevation_solution = ElevationSolution(
                 self.hydro_combination_path,
@@ -149,6 +178,8 @@ class HydrologicalAndHydrodynamicPipeline:
         # Set up terrain data generation system
         terrain_data = TerrainDataWflowGenerator(
             self.hydro_combination_path,
+            self.hydromt_path,
+            self.river_name,
             self.outlet_gauge_locations_filename,
             self.resolution,
             self.threshold,
@@ -165,6 +196,7 @@ class HydrologicalAndHydrodynamicPipeline:
         wflow_data = WflowSimulationsGenerator(
             self.hydromt_path,
             self.hydro_combination_path,
+            self.river_name,
             self.forcing_path,
             self.start_time,
             self.end_time,
@@ -185,8 +217,11 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_data = FloodModelSimulationsGenerator(
             self.hydro_combination_path,
             self.hydro_combination_path,
+            self.hydromt_path,
+            self.river_name,
             self.precipitation_path,
             self.flood_aoi_boundary,
+            self.adjust_manning,
             self.start_time,
             self.end_time,
             self.crs,
@@ -200,6 +235,8 @@ class HydrologicalAndHydrodynamicPipeline:
     def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
         # The if function here will be modified later
+        # Apply land cover solution
+        # (this would be for both landcover and elevation solutions)
         if self.polygons is not None:
             # Apply solutions
             self.total_solutions()
@@ -210,6 +247,7 @@ class HydrologicalAndHydrodynamicPipeline:
             # Generate flood data
             self.flood_data_pipeline()
 
+        # Apply elevation solution
         elif self.vectors is not None:
             # Apply solutions
             self.total_solutions()
@@ -217,106 +255,46 @@ class HydrologicalAndHydrodynamicPipeline:
             # Generate flood data
             self.flood_data_pipeline()
 
+        # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
-
-            # Generate wflow data
-            self.wflow_data_pipeline()
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
+            #
+            # # Generate wflow data
+            # self.wflow_data_pipeline()
 
             # Generate flood data
             self.flood_data_pipeline()
 
 
-# This is where to check the model
-def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_mataura_path_001")
-    outlet_gauge_locations_filename = 'river_outlet'
-    forcing_name = Path(r"H:\Barra\Mataura\merge_gauges_HIRDS_001")
-    precipitation_path = Path(r"H:\Barra\Mataura\rainfall_gauges_HIRDS")
-    start_time = datetime.fromisoformat("2020-02-03T00:00:00")
-    end_time = datetime.fromisoformat("2020-02-05T00:00:00")
-
-    # subbasin = [173.46365, -35.45662]
-    # bbox = [173.44134, -35.61760, 173.77608, -35.11105]
-
-    subbasin = [1285688.507,4882084.580]
-    bbox = [1639968.20, 6058374.30, 1670723.51, 6114366.30]
-
-    num_threads = 6
-    flood_aoi_boundary = [1276964, 4858876, 1293316, 4893108]
-
-    polygons = None # r'polygons/polygons.shp'
-    vectors = None # r'vectors/vectors.csv'
-    strord = 4
-    resolution = 100
-    threshold = 1000
-    width_rate_control = 1
-    discharge_rate_control = 1
-    crs = 2193
-
-    # Set up hydraulic and hydrodynamic pipeline
-    hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
-        hydro_combination_path,
-        outlet_gauge_locations_filename,
-
-        forcing_name,
-        precipitation_path,
-        start_time,
-        end_time,
-
-        subbasin,
-        bbox,
-        num_threads,
-        flood_aoi_boundary,
-
-        polygons,
-        vectors,
-        strord,
-        resolution,
-        threshold,
-        width_rate_control,
-        discharge_rate_control,
-        crs
-    )
-
-    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
-
-if __name__ == '__main__':
-    main()
-
-
-
-
-
-
-
-
-# WHIRINAKI
 # # This is where to check the model
 # def main():
-#     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_015")
+#     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_mataura_path_005")
 #     outlet_gauge_locations_filename = 'river_outlet'
-#     forcing_name = 'whirinaki' # Path(r"H:\Barra\Whirinaki\merge_gauges_HIRDS_004")
-#     precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
-#     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
-#     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
+#     forcing_name = Path(r"H:\Barra\Mataura\merge_gauges_HIRDS_001") # Path(r"H:\Barra\Mataura\merge_gauges_HIRDS_001")
+#     river_name = 'mataura'
+#     precipitation_path = Path(r"H:\Barra\Mataura\rainfall_gauges_HIRDS")
+#     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+#     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 #
-#     # subbasin = [173.46365, -35.45662]
-#     # bbox = [173.44134, -35.61760, 173.77608, -35.11105]
+#     # # Waikaia
+#     # subbasin = [1275642.504,4927169.561]
+#     # bbox = [1270043.138, 4925363.709, 1294230.110, 4949616.051]
 #
-#     subbasin = [1642072.60, 6076218.85]
-#     bbox = [1639968.20, 6058374.30, 1670723.51, 6114366.30]
+#     # Gore
+#     subbasin = [1285358.922, 4881087.334]
+#     bbox = [1219559.453, 4877267.922, 1330353.463, 4987233.874]
 #
 #     num_threads = 6
-#     flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
+#     flood_aoi_boundary = [1283775.509, 4883609.093, 1288983.743, 4890147.089]
+#     adjust_manning = False
 #
 #     polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
 #     vectors = r'vectors/vectors.csv' # r'vectors/vectors.csv'
 #     strord = 4
-#     resolution = 50
-#     threshold = 1000
-#     width_rate_control = 1 / 20
+#     resolution = 1000
+#     threshold = 25000
+#     width_rate_control = 1
 #     discharge_rate_control = 1
 #     crs = 2193
 #
@@ -326,6 +304,7 @@ if __name__ == '__main__':
 #         outlet_gauge_locations_filename,
 #
 #         forcing_name,
+#         river_name,
 #         precipitation_path,
 #         start_time,
 #         end_time,
@@ -334,6 +313,7 @@ if __name__ == '__main__':
 #         bbox,
 #         num_threads,
 #         flood_aoi_boundary,
+#         adjust_manning,
 #
 #         polygons,
 #         vectors,
@@ -349,3 +329,69 @@ if __name__ == '__main__':
 #
 # if __name__ == '__main__':
 #     main()
+
+
+
+
+
+
+
+
+# WHIRINAKI
+# This is where to check the model
+def main():
+    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_whirinaki_path_001")
+    outlet_gauge_locations_filename = 'river_outlet'
+    forcing_name = 'whirinaki'
+    river_name = 'whirinaki'
+    precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
+    start_time = datetime.fromisoformat("1999-01-20T00:00:00")
+    end_time = datetime.fromisoformat("1999-01-22T12:00:00")
+
+    subbasin = [1642072.60, 6076218.85]
+    bbox = [1639968.20, 6058374.30, 1670723.51, 6114366.30]
+
+    num_threads = 6
+    flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
+    adjust_manning = True
+
+    polygons = None # r'polygons/polygons.shp'
+    vectors = None # r'vectors/vectors.csv'
+    strord = 4
+    resolution = 50
+    threshold = 1000
+    width_rate_control = 1 / 20
+    discharge_rate_control = 1
+    crs = 2193
+
+    # Set up hydraulic and hydrodynamic pipeline
+    hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+        hydro_combination_path,
+        outlet_gauge_locations_filename,
+
+        forcing_name,
+        river_name,
+        precipitation_path,
+        start_time,
+        end_time,
+
+        subbasin,
+        bbox,
+        num_threads,
+        flood_aoi_boundary,
+        adjust_manning,
+
+        polygons,
+        vectors,
+        strord,
+        resolution,
+        threshold,
+        width_rate_control,
+        discharge_rate_control,
+        crs
+    )
+
+    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+
+if __name__ == '__main__':
+    main()

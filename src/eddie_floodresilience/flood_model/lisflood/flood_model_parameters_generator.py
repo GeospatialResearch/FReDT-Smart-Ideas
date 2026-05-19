@@ -101,6 +101,37 @@ class ParametersFloodModelGenerator():
                 )
                 bci_parameter.write(injection_points_text)
 
+    def file_increment_generator(
+            self,
+            filename: str
+    ):
+        """
+        Generate increasing files
+
+        Parameters
+        ----------
+        filename : str
+            Filename accords to scenario and order of that scenario
+
+        Returns
+        -------
+        file_directory : Path
+            A directory to the file which has just been named
+        """
+
+        number_ids = [
+            int(f.stem.split("_")[-1])
+            for f in Path(self.flood_model_path).glob(f"{filename}_*")
+        ]
+
+        # Get next output
+        file_number = max(number_ids, default=0) + 1
+
+        # Output path
+        file_directory = Path(self.flood_model_path) / f"{filename}_{file_number:03d}"
+
+        return file_directory
+
     def bdy_generator(self) -> None:
         """Generate bdy files - where the flow data of injection points are stored"""
         
@@ -122,9 +153,17 @@ class ParametersFloodModelGenerator():
         # At the moment, we use 8m resolution
         # This will be adjusted in the future
         flow_df[flow_columns] = (flow_df[flow_columns] / 8).round(4)
-        
+
+        # Path of flow data (bdy) for flood model
+        if self.polygons is not None:
+            bdy_name = str(
+                self.file_increment_generator(f"bdy_landcover")
+            ) + ".bdy"
+        else:
+            bdy_name = fr"{self.flood_model_path}\bdy.bdy"
+
         # Write out flow data for injection points
-        with open(fr"{self.flood_model_path}\bdy.bdy", "w") as discharge_tide:
+        with open(bdy_name, "w") as discharge_tide:
 
             discharge_tide.write("LISFLOOD-FP setup\n")
 
@@ -156,56 +195,69 @@ class ParametersFloodModelGenerator():
         seconds = int((self.end_time - self.start_time).total_seconds())
         
         return seconds
+
+    def optional_output_generator(self):
+        """
+        Set up options for outputs according to sceanrios
+        and create output directory for flood modelling outputs
+
+        Returns
+        -------
+        output_directory : str
+            String of directory of flood model outputs
+        """
+        # Both landcover and elevation solutions
+        if self.polygons is not None and self.vectors is not None:
+            output = self.file_increment_generator("output_landcover_elevation")
+
+        # Only landcover solution
+        elif self.polygons is not None:
+            output = self.file_increment_generator("output_landcover")
+
+        # Only elevation solution
+        elif self.vectors is not None:
+            output = self.file_increment_generator("output_elevation")
+
+        # Original scenario
+        else:
+            output = Path(fr"{self.flood_model_path}\output")
+
+        # Create output (if not available)
+        output.mkdir(parents=True, exist_ok=True)
+
+        # Get output directory
+        output_directory = str(output)
+
+        return output_directory
         
     def par_generator(self) -> None:
         """Generate par files - where all the parameter data are navigated"""
 
-        if self.polygons is not None and self.vectors is not None:
-            # Extract number ID
-            number_ids = [
-                int(f.stem.split("_")[-1])
-                for f in Path(self.flood_model_path).glob("output_landcover_elevation_*")
-            ]
-
-            # Get next output
-            output_number = max(number_ids, default=0) + 1
-
-            # Write out output
-            output = Path(self.flood_model_path) / f"output_landcover_elevation_{output_number:03d}"
-
-        elif self.polygons is not None:
-            # Path to output for land cover
-            output = str(
-                max(Path(self.flood_model_path).glob("output_landcover_*"),
-                default=Path(self.flood_model_path) / "output_landcover_001")
-            )
-
-        elif self.vectors is not None:
-            # Path to output for elevation
-            output = str(
-                max(Path(self.flood_model_path).glob("output_elevation_*"),
-                default=Path(self.flood_model_path) / "output_elevation_001")
-            )
-
-        else:
-            # Path to output
-            output = fr"{self.flood_model_path}\output"
-
-        # Create output (if not available)
-        Path(output).mkdir(parents=True, exist_ok=True)
+        # Create output directory
+        output_directory = self.optional_output_generator()
         
         # Path to bdy file
-        bdy = fr"{self.flood_model_path}\bdy.bdy"
-        
+        if self.polygons is not None:
+            bdy = str(
+                max(
+                Path(self.flood_model_path).glob("bdy_landcover_*.bdy"),
+                default=Path(self.flood_model_path) / "bdy_landcover_001.bdy"
+                )
+            )
+        else:
+            bdy = fr"{self.flood_model_path}\bdy.bdy"
+
         # Path to bci file
         bci = fr"{self.flood_model_path}\bci.bci"
 
         if self.vectors is not None:
             # Path to DEM
-            z = str(max(
+            z = str(
+                max(
                 Path(self.flood_model_path).glob("z_elevation_*.asc"),
-                default=Path(self.flood_model_path) / "z.asc"
-            ))
+                default=Path(self.flood_model_path) / "z_elevation_001.asc"
+                )
+            )
         else:
             # Path to DEM
             z = fr"{self.flood_model_path}\z.asc"
@@ -222,7 +274,7 @@ class ParametersFloodModelGenerator():
         # Create parameters list
         parameters_list = [
             ('resroot', 'out'),
-            ('dirroot', output),
+            ('dirroot', output_directory),
             ('saveint', 3600),
             ('massint', 100),
             ('sim_time', f'{seconds}'),

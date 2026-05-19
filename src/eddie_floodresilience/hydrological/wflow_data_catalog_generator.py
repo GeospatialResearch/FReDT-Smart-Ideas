@@ -17,6 +17,7 @@ class DataCatalogGenerator():
             hydromt_path: Path,
             wflow_model_path: Path,
             forcing_path: Path,
+            river_name: str,
             polygons: str = None
         ) -> None:
         """
@@ -32,6 +33,8 @@ class DataCatalogGenerator():
             A directory to where the data_catalog.yml is stored and to run wflow model
         forcing_path: Path
             A directory to where the forcing files are stored
+        river_name: str
+            Name of directory to where the river information files are stored
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -39,6 +42,7 @@ class DataCatalogGenerator():
         self.hydromt_path = hydromt_path
         self.wflow_model_path = wflow_model_path
         self.forcing_path = forcing_path
+        self.river_name = river_name
         self.polygons = polygons
         
     def meta_section(self) -> dict:
@@ -358,16 +362,27 @@ class DataCatalogGenerator():
         # At the moment, MODIS LAI is used,
         # but it will be changed into estimation in the future
         # Generate a dictionary of LAI
+        if self.river_name == "whirinaki":
+            crs = 2193
+
+        else:
+            # Mataura
+            crs = 4326
+
+        # Set up lai directory
+        lai_path = str(Path(self.hydromt_path / fr"river_data/{self.river_name}/modis_lai.nc"))
+
+        # Set up lai information for wflow
         lai = {
             "modis_lai": {
-                "crs": 2193,
+                "crs": crs,
                 "data_type": "RasterDataset",
                 "driver": "netcdf",
                 "meta": {
                     "category": "landuse & landcover"
                 },
                 "version": 6,
-                "path": "modis_lai.nc",
+                "path": lai_path,
                 "unit_mult": {
                     "LAI": 0.1
                 }

@@ -22,6 +22,7 @@ class WflowSimulationsGenerator():
         self,
         hydromt_path: Path,
         wflow_model_path: Path,
+        river_name: str,
         forcing_path: Path,
         start_time: datetime,
         end_time: datetime,
@@ -41,6 +42,8 @@ class WflowSimulationsGenerator():
             A directory to where all necessary files are stored to run wflow model
         wflow_model_path: Path
             A directory to where the data_catalog.yml is stored and to run wflow model
+        river_name: str
+            Name of directory to where the river information files are stored
         forcing_path: Path
             A directory to where the forcing files are stored
         start_time : datetime
@@ -68,6 +71,7 @@ class WflowSimulationsGenerator():
         """
         self.hydromt_path = hydromt_path
         self.wflow_model_path = wflow_model_path
+        self.river_name = river_name
         self.forcing_path = forcing_path
         self.start_time = start_time
         self.end_time = end_time
@@ -88,6 +92,7 @@ class WflowSimulationsGenerator():
             self.hydromt_path,
             self.wflow_model_path,
             self.forcing_path,
+            self.river_name,
             self.polygons
         )
         data_catalog.data_catalog_generator()
@@ -98,6 +103,8 @@ class WflowSimulationsGenerator():
             self.end_time,
             self.resolution,
             self.wflow_model_path,
+            self.hydromt_path,
+            self.river_name,
             self.forcing_path
         )
         wflow_build.wflow_build_generator()
@@ -157,7 +164,7 @@ class WflowSimulationsGenerator():
         """Generate wflow model simulation"""
         # Generate files for preprocessing
         self.files_for_preprocessing_generator()
-        
+
         # Preprocessing data for wflow model
         self.preprocessing_command()
         
