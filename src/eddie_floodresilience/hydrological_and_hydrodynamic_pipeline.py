@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Union
 
+from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
@@ -109,7 +110,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.crs = 2193
         self.landcover = landcover
         
-        self.hydromt_path = Path(r"D:/Digital_Twin_data/necessary_data")
+        self.hydromt_path = EnvVariable.HYDROMT_PATH
 
         # River data
         self.river_name = river_name
@@ -370,10 +371,11 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # MATAURA
 def main():
-    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_023")
+    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH
+    outlet_gauge_locations_filename = 'river_outlet'
     forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
     river_name = 'mataura'
-    precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
+    precipitation_path = EnvVariable.PRECIPITATION_PATH
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
