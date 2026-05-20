@@ -28,7 +28,7 @@ class WflowSimulationsGenerator():
         end_time: datetime,
         subbasin: list,
         strord: int,
-        bbox: list,
+        flood_aoi_boundary: list,
         num_threads: int,
         polygons: str = None,
         resolution: float = 0.00045
@@ -58,8 +58,9 @@ class WflowSimulationsGenerator():
             Outlet coordinates
         strord : int
             Minimum stream order
-        bbox : list
-            Given bounding box coordinates that contains the subbasin coordinates
+        flood_aoi_boundary : list
+            Boundaries' coordinates of area of interest.
+            Format is [xmin, ymin, xmax, ymax]
         num_threads : int
             Number of threads that controls how fast the wflow model can run
         polygons : str = None
@@ -78,7 +79,7 @@ class WflowSimulationsGenerator():
         
         self.subbasin = subbasin
         self.strord = strord
-        self.bbox = bbox
+        self.flood_aoi_boundary = flood_aoi_boundary
 
         self.num_threads = num_threads
 
@@ -115,7 +116,7 @@ class WflowSimulationsGenerator():
         region_information = str({
             "subbasin": self.subbasin,
             "strord": self.strord,
-            "bbox": self.bbox
+            "bbox": self.flood_aoi_boundary
         })
 
         # Set up command for preprocessing
@@ -139,7 +140,7 @@ class WflowSimulationsGenerator():
         """Set up simulation command and generate simulation"""
         # Set up path to wflow simulation folder
         wflow_simulation_path = self.wflow_model_path / "wflow_test_full"
-        
+
         # Set up simulation command
         simulation_command = [
             "julia",

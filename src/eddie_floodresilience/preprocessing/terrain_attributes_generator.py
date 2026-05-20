@@ -252,7 +252,7 @@ class TerrainAttributesGenerator():
             wbt.repair_stream_vector_topology(
                 i=str(self.path / f"{self.origin_filename}_streams_watershed_more_info.shp"),
                 output=str(self.path / f"{self.origin_filename}_repaired_streams_watershed_more_info.shp"),
-                dist="50"
+                dist="30"
             )
             
             # Read the repaired streams
@@ -833,7 +833,7 @@ class StreamHydraulicsGenerator():
     def buffer_streams_watershed(
             self,
             streams_watershed_vector_more_info: gpd.GeoDataFrame
-    ) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    ) -> gpd.GeoDataFrame:
         """
         Buffer the stream linestrings to capture stream pixels
 

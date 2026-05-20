@@ -33,7 +33,6 @@ class HydrologicalAndHydrodynamicPipeline:
             end_time: datetime,
             
             subbasin: list,
-            bbox: list,
             num_threads: int,
             flood_aoi_boundary: list,
             adjust_manning: bool,
@@ -73,8 +72,6 @@ class HydrologicalAndHydrodynamicPipeline:
             Normally, it is about 2-3 months.
         subbasin : list
             Outlet coordinates
-        bbox : list
-            Given bounding box coordinates that contains the sub-basin coordinates
         num_threads : int
             Number of threads that controls how fast the wflow model can run
         flood_aoi_boundary : list
@@ -113,7 +110,6 @@ class HydrologicalAndHydrodynamicPipeline:
         self.start_time = start_time
         self.end_time = end_time
         self.subbasin = subbasin
-        self.bbox = bbox
         self.num_threads = num_threads
         self.flood_aoi_boundary = flood_aoi_boundary
         self.adjust_manning = adjust_manning
@@ -127,7 +123,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.discharge_rate_control = discharge_rate_control
         self.crs = crs
         
-        self.hydromt_path = Path(r"D:\Digital_Twin_data\necessary_data")
+        self.hydromt_path = Path(r"D:/Digital_Twin_data/necessary_data")
 
         # River data
         self.river_name = river_name
@@ -202,7 +198,7 @@ class HydrologicalAndHydrodynamicPipeline:
             self.end_time,
             self.subbasin,
             self.strord,
-            self.bbox,
+            self.flood_aoi_boundary,
             self.num_threads,
             self.polygons,
             self.resolution
@@ -267,13 +263,14 @@ class HydrologicalAndHydrodynamicPipeline:
             self.flood_data_pipeline()
 
 
+
 # # This is where to check the model
 # def main():
-#     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_mataura_path_005")
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_007")
 #     outlet_gauge_locations_filename = 'river_outlet'
-#     forcing_name = Path(r"H:\Barra\Mataura\merge_gauges_HIRDS_001") # Path(r"H:\Barra\Mataura\merge_gauges_HIRDS_001")
+#     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
 #     river_name = 'mataura'
-#     precipitation_path = Path(r"H:\Barra\Mataura\rainfall_gauges_HIRDS")
+#     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
 #     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
 #     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 #
@@ -282,17 +279,15 @@ class HydrologicalAndHydrodynamicPipeline:
 #     # bbox = [1270043.138, 4925363.709, 1294230.110, 4949616.051]
 #
 #     # Gore
-#     subbasin = [1285358.922, 4881087.334]
-#     bbox = [1219559.453, 4877267.922, 1330353.463, 4987233.874]
-#
+#     subbasin = [1286569.271, 4883648.652]
 #     num_threads = 6
 #     flood_aoi_boundary = [1283775.509, 4883609.093, 1288983.743, 4890147.089]
 #     adjust_manning = False
 #
-#     polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
-#     vectors = r'vectors/vectors.csv' # r'vectors/vectors.csv'
+#     polygons = None # r'polygons/polygons.shp'
+#     vectors = None # r'vectors/vectors.csv'
 #     strord = 4
-#     resolution = 1000
+#     resolution = 500
 #     threshold = 25000
 #     width_rate_control = 1
 #     discharge_rate_control = 1
@@ -310,7 +305,6 @@ class HydrologicalAndHydrodynamicPipeline:
 #         end_time,
 #
 #         subbasin,
-#         bbox,
 #         num_threads,
 #         flood_aoi_boundary,
 #         adjust_manning,
@@ -340,17 +334,15 @@ class HydrologicalAndHydrodynamicPipeline:
 # WHIRINAKI
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_whirinaki_path_001")
-    outlet_gauge_locations_filename = 'river_outlet'
+    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_whirinaki_path_005")
+    outlet_gauge_locations_filename = 'river_outlet_001'
     forcing_name = 'whirinaki'
     river_name = 'whirinaki'
-    precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
+    precipitation_path = Path(r"H:/Barra/Whirinaki/rainfall_gauges_HIRDS_004")
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
     subbasin = [1642072.60, 6076218.85]
-    bbox = [1639968.20, 6058374.30, 1670723.51, 6114366.30]
-
     num_threads = 6
     flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
     adjust_manning = True
@@ -376,7 +368,6 @@ def main():
         end_time,
 
         subbasin,
-        bbox,
         num_threads,
         flood_aoi_boundary,
         adjust_manning,

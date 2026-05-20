@@ -220,7 +220,7 @@ class ParametersFloodModelGenerator():
 
         # Original scenario
         else:
-            output = Path(self.flood_model_path / "output")
+            output = self.flood_model_path / "output"
 
         # Create output (if not available)
         output.mkdir(parents=True, exist_ok=True)

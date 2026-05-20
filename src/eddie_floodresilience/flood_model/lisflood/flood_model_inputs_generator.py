@@ -626,6 +626,11 @@ class InjectionPointsFloodModelGenerator():
         """
         # Get boundary of bounding box
         boundary = self.terrain_bounding_box.boundary
+
+        # Filter out the invalid river
+        rivers_new_projection = rivers_new_projection[
+            rivers_new_projection['idx'] != rivers_new_projection['idx_ds']
+        ]
         
         # Generate intersection between rivers and DEM bounding box
         intersections = rivers_new_projection.geometry.intersection(boundary)
