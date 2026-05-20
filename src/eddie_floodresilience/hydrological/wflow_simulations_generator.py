@@ -27,7 +27,6 @@ class WflowSimulationsGenerator():
         start_time: datetime,
         end_time: datetime,
         subbasin: list,
-        strord: int,
         flood_aoi_boundary: list,
         num_threads: int,
         polygons: str = None,
@@ -56,8 +55,6 @@ class WflowSimulationsGenerator():
             Normally, it is 12 hours or 1 day.
         subbasin : list
             Outlet coordinates
-        strord : int
-            Minimum stream order
         flood_aoi_boundary : list
             Boundaries' coordinates of area of interest.
             Format is [xmin, ymin, xmax, ymax]
@@ -78,7 +75,6 @@ class WflowSimulationsGenerator():
         self.end_time = end_time
         
         self.subbasin = subbasin
-        self.strord = strord
         self.flood_aoi_boundary = flood_aoi_boundary
 
         self.num_threads = num_threads
@@ -115,7 +111,7 @@ class WflowSimulationsGenerator():
         # Set up region information
         region_information = str({
             "subbasin": self.subbasin,
-            "strord": self.strord,
+            "strord": 4,
             "bbox": self.flood_aoi_boundary
         })
 

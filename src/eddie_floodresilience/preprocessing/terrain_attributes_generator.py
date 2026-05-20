@@ -6,6 +6,7 @@ mainly using Whitebox package.
 from pathlib import Path
 from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
+
 from osgeo import gdal # Import gdal before rasterio
 import xarray as xr
 import rioxarray as rxr
@@ -15,7 +16,8 @@ import geopandas as gpd
 import pandas as pd
 from rasterstats import zonal_stats
 from shapely.geometry import LineString, MultiLineString
-
+from shapely.geometry import Point
+import json
 
 # Create whitebox environment and whitebox tools
 wbe = WbEnvironment()
@@ -516,12 +518,12 @@ class StreamHydraulicsGenerator():
     def __init__(
             self,
             path: Path,
-            outlet_gauge_locations_file: str,
+            hydromt_path: Path,
+            river_name: str,
+            subbasin: list,
             streams_bankfull_stage: float = 1.5,
             resolution: float = 50,
             threshold: int = 1000,
-            width_rate_control: float = 2,
-            discharge_rate_control: float = 1,
             origin_filename: str = '8m_geofabric'
     ) -> None:
         """
@@ -531,8 +533,12 @@ class StreamHydraulicsGenerator():
         -----------
         path : Path
             Common path to directory that stores necessary file for generating hydraulic stream data
-        outlet_gauge_locations_file : str
-            Filename that contains locations of outlet and gauges
+        hydromt_path : Path
+            A directory to where all necessary files are stored to run wflow model
+        river_name: str
+            Name of directory to where the river information files are stored
+        subbasin : list
+            Outlet coordinates
         streams_bankfull_stage : float = 1.5
             The stage to focus on the area that is considered as stream/river area
             or bankfull area comparing with HAND.
@@ -542,21 +548,28 @@ class StreamHydraulicsGenerator():
         threshold : int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
-        width_rate_control : float = 2
-            The rate to control river width. Default is 2
-        discharge_rate_control: float = 1
-            The rate to control river discharge. Default is 1
         origin_filename : str = '8m_geofabric'
             Name of terrain raster filename.
             At the moment, only two names - 8m_geofabric and 4m_geofabric
         """
         self.path = path
+        self.hydromt_path = hydromt_path
+        self.river_name = river_name
         self.streams_bankfull_stage = streams_bankfull_stage
         self.resolution = resolution
         self.threshold = threshold
-        self.width_rate_control = width_rate_control
-        self.discharge_rate_control = discharge_rate_control        
-        self.outlet_gauge_locations_file = outlet_gauge_locations_file
+        self.subbasin = subbasin
+
+        # Set up river path
+        river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
+        # Get river information
+        with open(river_path, "r") as f:
+            river_information = json.load(f)['setup_rivers']
+
+        # Get width and discharge rates
+        self.width_rate_control = river_information['width_rate_control']
+        self.discharge_rate_control = river_information['discharge_rate_control']
+
         self.stream_topology_data = TerrainAttributesGenerator(
             self.path, 
             'dem',
@@ -604,9 +617,16 @@ class StreamHydraulicsGenerator():
         d8_pointer_path = self.path / f"{self.origin_filename}_d8_pointer.tif"
         d8_pointer = wbe.read_raster(str(d8_pointer_path))
 
+        # Write out river outlet point
+        river_outlet = self.path / f"river_outlet.shp"
+        gpd.GeoDataFrame(
+            geometry=[Point(self.subbasin[0], self.subbasin[1])],
+            crs='EPSG:2193'
+        ).to_file(river_outlet)
+
+
         # Extract watershed for specific points of outlet and gauges
-        outlet_gauge_points_path = self.path / f"{self.outlet_gauge_locations_file}.shp"
-        outlet_gauge_points = wbe.read_vector(str(outlet_gauge_points_path))
+        outlet_gauge_points = wbe.read_vector(str(river_outlet))
 
         # Ensure the watershed or streamlines that have points of outlet and gauges
         outlet_gauge_points_on_streams = wbe.jenson_snap_pour_points(

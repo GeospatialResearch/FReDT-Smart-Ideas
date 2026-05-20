@@ -24,7 +24,6 @@ class HydrologicalAndHydrodynamicPipeline:
     def __init__(
             self,
             hydro_combination_path: Path,
-            outlet_gauge_locations_filename: str,
 
             forcing_name: Union[str, Path],
             river_name: Union[str, Path],
@@ -39,12 +38,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
             polygons: str = None,
             vectors: str = None,
-            strord: int = 4,
             resolution: float = 0.00045,
-            threshold: int = 1000,
-            width_rate_control: float = 2,
-            discharge_rate_control: float = 1,
-            crs: int = 2193
+            threshold: int = 1000
         ) -> None:
         """
         Generate hydrological and hydrodynamic results
@@ -53,8 +48,6 @@ class HydrologicalAndHydrodynamicPipeline:
         ----------
         hydro_combination_path : Path
             Directory to folder storing all necessary data
-        outlet_gauge_locations_filename: str
-            Filename of outlet gauge locations
         forcing_name: Union[str, Path]
             Name of forcing data. Should be the site name. Ex: 'whirinaki'
             Or a directory to forcing data
@@ -88,24 +81,15 @@ class HydrologicalAndHydrodynamicPipeline:
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
-        strord : int
-            Minimum stream order
         resolution : float
             Resolution for flow data. 
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
-        width_rate_control: float = 2
-            The rate to control river width. Default is 2
-        discharge_rate_control: float = 1
-            The rate to control river discharge. Default is 1
-        crs : int = 2193
-            Targeted crs. The default is 2193 for NZTM.
         """
         # Set up necessary parameters
         self.hydro_combination_path = hydro_combination_path
-        self.outlet_gauge_locations_filename = outlet_gauge_locations_filename
         self.precipitation_path = precipitation_path
         self.start_time = start_time
         self.end_time = end_time
@@ -116,12 +100,9 @@ class HydrologicalAndHydrodynamicPipeline:
 
         self.polygons = polygons
         self.vectors = vectors
-        self.strord = strord
         self.resolution = resolution
         self.threshold = threshold
-        self.width_rate_control = width_rate_control
-        self.discharge_rate_control = discharge_rate_control
-        self.crs = crs
+        self.crs = 2193
         
         self.hydromt_path = Path(r"D:/Digital_Twin_data/necessary_data")
 
@@ -176,11 +157,9 @@ class HydrologicalAndHydrodynamicPipeline:
             self.hydro_combination_path,
             self.hydromt_path,
             self.river_name,
-            self.outlet_gauge_locations_filename,
+            self.subbasin,
             self.resolution,
-            self.threshold,
-            self.width_rate_control,
-            self.discharge_rate_control
+            self.threshold
         )
         
         # Generate terrain data
@@ -197,7 +176,6 @@ class HydrologicalAndHydrodynamicPipeline:
             self.start_time,
             self.end_time,
             self.subbasin,
-            self.strord,
             self.flood_aoi_boundary,
             self.num_threads,
             self.polygons,
@@ -266,22 +244,17 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # # This is where to check the model
 # def main():
-#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_007")
-#     outlet_gauge_locations_filename = 'river_outlet'
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_008")
 #     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
 #     river_name = 'mataura'
 #     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
 #     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
 #     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 #
-#     # # Waikaia
-#     # subbasin = [1275642.504,4927169.561]
-#     # bbox = [1270043.138, 4925363.709, 1294230.110, 4949616.051]
-#
 #     # Gore
-#     subbasin = [1286569.271, 4883648.652]
+#     subbasin = [1286587.365, 4883716.602]
 #     num_threads = 6
-#     flood_aoi_boundary = [1283775.509, 4883609.093, 1288983.743, 4890147.089]
+#     flood_aoi_boundary = [1283763.983, 4882997.604, 1289715.883, 4891397.604]
 #     adjust_manning = False
 #
 #     polygons = None # r'polygons/polygons.shp'
@@ -289,14 +262,10 @@ class HydrologicalAndHydrodynamicPipeline:
 #     strord = 4
 #     resolution = 500
 #     threshold = 25000
-#     width_rate_control = 1
-#     discharge_rate_control = 1
-#     crs = 2193
 #
 #     # Set up hydraulic and hydrodynamic pipeline
 #     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
 #         hydro_combination_path,
-#         outlet_gauge_locations_filename,
 #
 #         forcing_name,
 #         river_name,
@@ -313,10 +282,7 @@ class HydrologicalAndHydrodynamicPipeline:
 #         vectors,
 #         strord,
 #         resolution,
-#         threshold,
-#         width_rate_control,
-#         discharge_rate_control,
-#         crs
+#         threshold
 #     )
 #
 #     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
@@ -334,32 +300,26 @@ class HydrologicalAndHydrodynamicPipeline:
 # WHIRINAKI
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_whirinaki_path_005")
-    outlet_gauge_locations_filename = 'river_outlet_001'
+    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_whirinaki_path_007")
     forcing_name = 'whirinaki'
     river_name = 'whirinaki'
     precipitation_path = Path(r"H:/Barra/Whirinaki/rainfall_gauges_HIRDS_004")
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
-    subbasin = [1642072.60, 6076218.85]
+    subbasin = [1642044.095, 6076198.040]
     num_threads = 6
-    flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
+    flood_aoi_boundary = [1641148, 6072404, 1642796, 6076268]
     adjust_manning = True
 
     polygons = None # r'polygons/polygons.shp'
     vectors = None # r'vectors/vectors.csv'
-    strord = 4
     resolution = 50
     threshold = 1000
-    width_rate_control = 1 / 20
-    discharge_rate_control = 1
-    crs = 2193
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
         hydro_combination_path,
-        outlet_gauge_locations_filename,
 
         forcing_name,
         river_name,
@@ -374,12 +334,8 @@ def main():
 
         polygons,
         vectors,
-        strord,
         resolution,
-        threshold,
-        width_rate_control,
-        discharge_rate_control,
-        crs
+        threshold
     )
 
     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()

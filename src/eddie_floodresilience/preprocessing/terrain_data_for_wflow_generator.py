@@ -22,11 +22,9 @@ class TerrainDataWflowGenerator:
             terrain_path: Path,
             hydromt_path: Path,
             river_name: str,
-            outlet_gauge_locations_filename: str,
+            subbasin: list,
             resolution: float = 100,
-            threshold: int = 1000,
-            width_rate_control: float = 2,
-            discharge_rate_control: float = 1
+            threshold: int = 1000
         ) -> None:
         """
         Generate terrain data for wflow model
@@ -39,26 +37,20 @@ class TerrainDataWflowGenerator:
             A directory to where all necessary files are stored to run wflow model
         river_name : str
             Name of directory to where the river information files are stored
-        outlet_gauge_locations_filename: str
-            Filename of outlet gauge locations
+        subbasin : list
+            Outlet coordinates
         resolution: float = 100
             Resolution to resample data. Default is 100m in crs 2193)
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
-        width_rate_control: float = 2
-            The rate to control river width. Default is 2
-        discharge_rate_control: float = 1
-            The rate to control river discharge. Default is 1
         """
         self.terrain_path = terrain_path
         self.hydromt_path = hydromt_path
         self.river_name = river_name
-        self.outlet_gauge_locations_filename = outlet_gauge_locations_filename
+        self.subbasin = subbasin
         self.resolution = resolution
         self.threshold = threshold
-        self.width_rate_control = width_rate_control
-        self.discharge_rate_control = discharge_rate_control
         
     def filtered_terrain_generator(self) -> None:
         """Filter terrain data to generate necessary data for wflow model"""
@@ -82,12 +74,12 @@ class TerrainDataWflowGenerator:
         """Generate stream hydraulic for wflow model"""
         stream_hydraulic = StreamHydraulicsGenerator(
             path=self.terrain_path,
-            outlet_gauge_locations_file=self.outlet_gauge_locations_filename,
+            hydromt_path=self.hydromt_path,
+            river_name=self.river_name,
+            subbasin=self.subbasin,
             streams_bankfull_stage=1.5,
             resolution=self.resolution,
-            threshold=self.threshold,
-            width_rate_control=self.width_rate_control,
-            discharge_rate_control=self.discharge_rate_control
+            threshold=self.threshold
         )
         stream_hydraulic.dataframe_stream_bankfull_width_discharge_generator()
         
