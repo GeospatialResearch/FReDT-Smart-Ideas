@@ -9,6 +9,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Union
 
+from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
@@ -127,7 +128,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.discharge_rate_control = discharge_rate_control
         self.crs = crs
         
-        self.hydromt_path = Path(r"D:\Digital_Twin_data\necessary_data")
+        self.hydromt_path = EnvVariable.HYDROMT_PATH
 
         # River data
         self.river_name = river_name
@@ -340,11 +341,11 @@ class HydrologicalAndHydrodynamicPipeline:
 # WHIRINAKI
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_whirinaki_path_001")
+    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH
     outlet_gauge_locations_filename = 'river_outlet'
     forcing_name = 'whirinaki'
     river_name = 'whirinaki'
-    precipitation_path = Path(r"H:\Barra\Whirinaki\rainfall_gauges_HIRDS_004")
+    precipitation_path = EnvVariable.PRECIPITATION_PATH
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 

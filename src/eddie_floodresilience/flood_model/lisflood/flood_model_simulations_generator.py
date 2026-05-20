@@ -18,6 +18,8 @@ from .flood_model_parameters_generator import ParametersFloodModelGenerator
 
 import subprocess
 
+from src.eddie_floodresilience.config import EnvVariable
+
 
 class FloodModelSimulationsGenerator():
     """This class is to generate flood model simulations"""
@@ -170,17 +172,13 @@ class FloodModelSimulationsGenerator():
         """Generate flood simulations by running flood model"""
         # Set up path to log file
         log_file_path = self.flood_model_path / "simulation_log.log"
-        
-        # Set up path to flood model exe
-        # This will be changed into constant local folder in the future
-        flood_model_exe_path = r"C:\Users\mng42\spyder_hydromt\digital_twin_codes\for_lisflood\lisflood_v8_1_0.exe"
-        
+
         # Set up path to parameters' file
         par_file_path = str(self.flood_model_path / "par.par")
         
         # Flood simulation command
         flood_simulation_command = [
-            flood_model_exe_path,
+            EnvVariable.LISFLOOD_PATH,
             "-v",
             par_file_path
         ]
