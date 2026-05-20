@@ -235,7 +235,7 @@ class TerrainAttributesGenerator():
             wbt.repair_stream_vector_topology(
                 i=str(self.path / f"{self.origin_filename}_streams_d8.shp"),
                 output=str(self.path / f"{self.origin_filename}_repaired_streams_d8.shp"),
-                dist="50"
+                dist="30"
             )
             
             # Read the repaired streams
