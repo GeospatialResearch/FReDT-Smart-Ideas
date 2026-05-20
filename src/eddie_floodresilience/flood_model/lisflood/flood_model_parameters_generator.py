@@ -52,7 +52,7 @@ class ParametersFloodModelGenerator():
         """
         self.flood_model_path = flood_model_path
         self.terrain_bounding_box = terrain_bounding_box
-        self.injection_points_flow = pd.read_csv(fr"{self.flood_model_path}\injection_points_flow.csv")
+        self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
         self.start_time = start_time
         self.end_time = end_time
         self.polygons = polygons
@@ -65,11 +65,11 @@ class ParametersFloodModelGenerator():
         # The tide data will be added in the future
         
         # Read and add crs injection point shapefiles
-        injection_points = gpd.read_file(fr"{self.flood_model_path}\injection_points.shp")
+        injection_points = gpd.read_file(self.flood_model_path / "injection_points.shp")
         injection_points = injection_points.to_crs(2193)
         
         # Write out files
-        with open(fr"{self.flood_model_path}\bci.bci", "w") as bci_parameter:
+        with open(self.flood_model_path / "bci.bci", "w") as bci_parameter:
             # Set up boundaries before creating the bci files
             # It is set to Northern direction at the moment
             # It will be changed into automatic step
@@ -160,7 +160,7 @@ class ParametersFloodModelGenerator():
                 self.file_increment_generator(f"bdy_landcover")
             ) + ".bdy"
         else:
-            bdy_name = fr"{self.flood_model_path}\bdy.bdy"
+            bdy_name = str(self.flood_model_path / "bdy.bdy")
 
         # Write out flow data for injection points
         with open(bdy_name, "w") as discharge_tide:
@@ -220,7 +220,7 @@ class ParametersFloodModelGenerator():
 
         # Original scenario
         else:
-            output = Path(fr"{self.flood_model_path}\output")
+            output = Path(self.flood_model_path / "output")
 
         # Create output (if not available)
         output.mkdir(parents=True, exist_ok=True)
@@ -245,10 +245,10 @@ class ParametersFloodModelGenerator():
                 )
             )
         else:
-            bdy = fr"{self.flood_model_path}\bdy.bdy"
+            bdy = str(self.flood_model_path / "bdy.bdy")
 
         # Path to bci file
-        bci = fr"{self.flood_model_path}\bci.bci"
+        bci = str(self.flood_model_path / "bci.bci")
 
         if self.vectors is not None:
             # Path to DEM
@@ -260,13 +260,13 @@ class ParametersFloodModelGenerator():
             )
         else:
             # Path to DEM
-            z = fr"{self.flood_model_path}\z.asc"
+            z = str(self.flood_model_path / "z.asc")
 
         # Path to Manning's n
-        n = fr"{self.flood_model_path}\manning.asc"
+        n = str(self.flood_model_path / "manning.asc")
         
         # Path to precipitation
-        precipitation = fr"{self.flood_model_path}\precipitation_dynamic.nc"
+        precipitation = str(self.flood_model_path / "precipitation_dynamic.nc")
         
         # Simulated time in seconds
         seconds = self.simulated_seconds_generator()
@@ -290,7 +290,7 @@ class ParametersFloodModelGenerator():
         parameters_array = np.array(parameters_list)
 
         # Write PAR file
-        with open(fr"{self.flood_model_path}\par.par", "w") as parameters:
+        with open(self.flood_model_path / "par.par", "w") as parameters:
             for each_parameter in range(parameters_array.shape[0]):
                 data_parameter = parameters_array[each_parameter]
                 text_parameter = '{0[0]:<20}{0[1]}\n'.format(data_parameter)

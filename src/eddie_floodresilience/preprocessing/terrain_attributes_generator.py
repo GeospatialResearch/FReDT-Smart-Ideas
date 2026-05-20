@@ -845,7 +845,7 @@ class StreamHydraulicsGenerator():
             Buffered streams vector within watershed that can intersect with pixels
         """
         # Read HAND raster
-        hand = rxr.open_rasterio(fr"{self.path}\{self.origin_filename}_hand.tif").squeeze()
+        hand = rxr.open_rasterio(self.path / f"{self.origin_filename}_hand.tif").squeeze()
 
         # Buffer by half raster pixel
         # To explain, linestrings have no width and might not be aligned well with the raster.

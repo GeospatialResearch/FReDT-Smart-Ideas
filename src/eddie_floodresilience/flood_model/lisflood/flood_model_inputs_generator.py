@@ -843,7 +843,8 @@ class InjectionPointsFloodModelGenerator():
         """
         # Generate rivers with new projection
         rivers_new_projection = self.reproject_rivers()
-        
+        # Remove the extra drainage point where idx == idx_dst and linestring geometry does not exist
+        rivers_new_projection = rivers_new_projection[rivers_new_projection["idx"] != rivers_new_projection["idx_ds"]]
         # Generate intersections between rivers and DEM bounding box
         intersections = self.intersect_rivers_and_dem_bounding_box(rivers_new_projection)
         

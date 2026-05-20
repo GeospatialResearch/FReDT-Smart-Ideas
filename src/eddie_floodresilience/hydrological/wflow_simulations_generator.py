@@ -140,20 +140,17 @@ class WflowSimulationsGenerator():
         # Set up path to wflow simulation folder
         wflow_simulation_path = self.wflow_model_path / "wflow_test_full"
         
-        # Change backslash style
-        wflow_simulation_path = str(wflow_simulation_path).replace("\\", "/")
-        
         # Set up simulation command
         simulation_command = [
             "julia",
             "-t", str(self.num_threads),
             "-e",
-            f'cd("{wflow_simulation_path}"); using Wflow; Wflow.run("wflow_sbm.toml")'
+            f'cd("{wflow_simulation_path.as_posix()}"); using Wflow; Wflow.run("wflow_sbm.toml")'
         ]
 
         # Run the command and write output to log
-        with open(fr"{wflow_simulation_path}\wflow_run.log", "w") as f:
-            process = subprocess.run(
+        with open(wflow_simulation_path / "wflow_run.log", "w") as f:
+            process = subprocess.check_call(
                 simulation_command, 
                 stdout=f, 
                 stderr=subprocess.STDOUT, 
