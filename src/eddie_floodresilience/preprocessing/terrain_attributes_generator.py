@@ -425,6 +425,10 @@ class StreamTopologyGenerator():
             how='left'
         )
 
+        # Write out merged points
+        points_merge_crs = points_merge.set_crs("EPSG:2193")
+        points_merge_crs.to_file(self.path / f"{self.origin_filename}_points_merge_strahler_uparea.shp")
+
         # After raster-to-point conversions and merging, duplicate FIDs are produced
         # which leads to multiple rows with the same FID in the merged dataframe.
         # Hence, the agg function is used to select the max values for both
@@ -492,7 +496,7 @@ class StreamTopologyGenerator():
         Generate river outlet based on streams' strahler order and upper catchment area
         """
         # Read streams data that has upper catchment area
-        streams_d8_area_strahler = gpd.read_file(self.path / f"{self.origin_filename}_streams_d8_area_strahler.shp")
+        points_merge = gpd.read_file(self.path / f"{self.origin_filename}_points_merge_strahler_uparea.shp")
 
         # Set up flood aoi boundary polygon
         flood_aoi_boundary_polygon = box(
@@ -502,51 +506,26 @@ class StreamTopologyGenerator():
             self.flood_aoi_boundary[3]
         )
 
-        # Collect all the streams that intersect the boundary
-        streams_in_boundary = streams_d8_area_strahler[
-            streams_d8_area_strahler.intersects(flood_aoi_boundary_polygon)
-        ].copy()
-
-        # Select the main river (where the river outlet point is/ river mouth linestring)
-        main_stream = streams_in_boundary.sort_values(
-            by='uparea',
-            ascending=False
-        ).head(1)
-
-        # Get shapely geometry grom the main river
-        geom_of_main_river = main_stream.geometry.iloc[0]
-
-        # Sample points on the main river
-        n_points = 50  # at the moment, 50 is fine, but can change
-        points_on_main_river = [
-            geom_of_main_river.interpolate(i / (n_points - 1), normalized=True)
-            for i in range(n_points)
+        # Clip points within flood aoi boundary
+        points_merge_clip = points_merge[
+            points_merge.within(flood_aoi_boundary_polygon)
         ]
 
-        # Set up GeoDataFrame for these points
-        points_on_main_river_gdf = gpd.GeoDataFrame(
-            geometry=points_on_main_river,
-            crs=2193
-        )
+        # Get the maximum strahler order
+        max_strahler = points_merge_clip['strahler'].max()
 
-        # Select points within flood aoi boundary
-        points_on_main_river_in_boundary = points_on_main_river_gdf[
-            points_on_main_river_gdf.intersects(flood_aoi_boundary_polygon)
+        # Filter only the maximum strahler order which is the main river
+        main_river = points_merge_clip[
+            points_merge_clip['strahler'] == max_strahler
         ]
 
-        # Calculate distance to flodo aoi boundary
-        points_on_main_river_in_boundary_copy = points_on_main_river_in_boundary.copy()
-        points_on_main_river_in_boundary_copy['dist'] = points_on_main_river_in_boundary.distance(
-            flood_aoi_boundary_polygon.boundary
-        )
+        # Select the point that has the largest upper catchment area which is the river outlet
+        river_outlet = main_river.loc[
+            [main_river['upstream_a'].idxmax()]
+        ]
 
-        # Get river outlet
-        river_outlet = points_on_main_river_in_boundary_copy.sort_values("dist").iloc[0:1]
-
-        # Write out river outlet
-        river_outlet.to_file(
-            self.path / f"river_outlet.shp"
-        )
+        # Write out to file
+        river_outlet.to_file(self.path / f"river_outlet.shp")
 
     def dataframe_upstream_area_strahler_geometry_generator(
             self,

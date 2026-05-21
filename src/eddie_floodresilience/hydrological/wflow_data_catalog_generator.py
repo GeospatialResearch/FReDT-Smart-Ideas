@@ -175,34 +175,6 @@ class DataCatalogGenerator():
         }
         
         return landcover
-        
-    def gauges_section(self) -> dict:
-        """
-        Write out gauges section
-        
-        Returns
-        -------
-        gauges : dict
-            A dictionary contains information of gauges
-        """
-        # At the moment the name grdc and other information is kept fixed for basic automation,
-        # it will be changed in the future.
-        # Generate a dictionary with gauges' information
-        gauges = {
-            "grdc": {
-                "crs": 4326,
-                "data_type": "GeoDataFrame",
-                "driver": "csv",
-                "meta": {
-                    "category": "observed data",
-                    "source_info": "GRDC-Station Catalogue",
-                    "source_url": "https://portal.grdc.bafg.de/applications/public.html"
-                },
-                "path": "grdc.csv"
-            }
-        }
-        
-        return gauges
     
     def lakes_section(self) -> dict:
         """
@@ -409,7 +381,6 @@ class DataCatalogGenerator():
                 self.meta_section(),
                 self.orography_section(),
                 self.landcover_section(),
-                self.gauges_section(),
                 self.lakes_section(),
                 self.terrain_section(),
                 self.basin_section(),
@@ -423,7 +394,6 @@ class DataCatalogGenerator():
                 self.forcing_section(),
                 self.orography_section(),
                 self.landcover_section(),
-                self.gauges_section(),
                 self.lakes_section(),
                 self.terrain_section(),
                 self.basin_section(),

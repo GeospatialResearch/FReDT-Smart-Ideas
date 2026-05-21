@@ -52,7 +52,7 @@ class WflowBuildGenerator():
         forcing_path: Path
             A directory to where the forcing files are stored
         """
-        self.start_time = start_time.replace(year=start_time.year - 1)
+        self.start_time = start_time - relativedelta(months=3)
         self.end_time = end_time
         self.resolution = resolution
         self.wflow_model_path = wflow_model_path
@@ -86,17 +86,7 @@ class WflowBuildGenerator():
                 "water_mass_balance__flag": True,
                 "output.path": "output.nc",
                 "output.compressionlevel": 1,
-                "netcdf.path": "output_scalar.nc",
-                "output.vertical.actevap": "actevap",
-                "output.vertical.satwaterdepth": "satwaterdepth",
-                "output.vertical.ustoredepth": "ustoredepth",
-                "output.vertical.total_storage": "total_storage",
-                "output.lateral.land.h": "h_land",
-                "output.lateral.land.h_av": "h_av_land",
-                "output.lateral.river.h": "h_river",
-                "output.lateral.river.h_av": "h_av_river",
-                "output.lateral.river.q": "q_river",
-                "output.lateral.river.q_av": "q_av_river"
+                "output.lateral.river.q": "q_river"
             }
         }
         
@@ -144,7 +134,7 @@ class WflowBuildGenerator():
             "setup_rivers": {
                 "hydrography_fn": "merit_hydrox",
                 "river_geom_fn": "hydro_rivers_lin",
-                "river_upa": self.resolution / 100,  # whirinaki: 0.1, mataura: 1
+                "river_upa": 10,  # whirinaki: 0.1, mataura: 1
                 "rivdph_method": "manning",
                 "min_rivdph": river_information['min_rivdph'],  # mataura: 1
                 "min_rivwth": river_information['min_rivwth'],  # whirinaki: 30, mataura: 0.05
@@ -234,26 +224,6 @@ class WflowBuildGenerator():
         }
         
         return soil
-    
-    def gauges_section(self) -> dict:
-        """
-        Write out gauges' section
-        
-        Returns
-        -------
-        gauges : dict
-            A dictionary that contains gauges' section
-        """
-        # Generate gauges' section
-        gauges = {
-            "setup_gauges": {
-                "gauges_fn": "grdc",
-                "snap_to_river": True,
-                "derive_subcatch": False
-            }
-        }
-        
-        return gauges
 
     def precipitation_section(self) -> dict:
         """
@@ -396,7 +366,6 @@ class WflowBuildGenerator():
                 self.landcover_section(),
                 self.lai_section(),
                 self.soil_section(),
-                self.gauges_section(),
                 self.constant_parameters_section(),
                 self.write_section()
             ]
@@ -409,7 +378,6 @@ class WflowBuildGenerator():
                 self.landcover_section(),
                 self.lai_section(),
                 self.soil_section(),
-                self.gauges_section(),
                 self.precipitation_section(),
                 self.temperature_section(),
                 self.potential_evaporation_section(),
