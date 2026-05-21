@@ -541,7 +541,7 @@ class StreamTopologyGenerator():
         )
 
         # Get river outlet
-        river_outlet = points_on_main_river_in_boundary_copy.sort_values("dist").iloc[2:3]
+        river_outlet = points_on_main_river_in_boundary_copy.sort_values("dist").iloc[0]
 
         # Write out river outlet
         river_outlet.to_file(
