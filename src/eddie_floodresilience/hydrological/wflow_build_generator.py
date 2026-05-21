@@ -52,7 +52,7 @@ class WflowBuildGenerator():
         forcing_path: Path
             A directory to where the forcing files are stored
         """
-        self.start_time = start_time - relativedelta(months=6)
+        self.start_time = start_time.replace(year=start_time.year - 1)
         self.end_time = end_time
         self.resolution = resolution
         self.wflow_model_path = wflow_model_path
