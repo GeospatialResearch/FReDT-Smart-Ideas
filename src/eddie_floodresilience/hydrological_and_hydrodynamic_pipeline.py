@@ -15,13 +15,13 @@ from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolutio
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
-from src.eddie_floodresilience.flood_model.lisflood.flood_model_simulations_generator import FloodModelSimulationsGenerator
-
+from src.eddie_floodresilience.flood_model.lisflood.flood_model_simulations_generator import \
+    FloodModelSimulationsGenerator
 
 
 class HydrologicalAndHydrodynamicPipeline:
     """This class is to generate hydrological and hydrodynamic results"""
-    
+
     def __init__(
             self,
             hydro_combination_path: Path,
@@ -32,7 +32,7 @@ class HydrologicalAndHydrodynamicPipeline:
             precipitation_path: Path,
             start_time: datetime,
             end_time: datetime,
-            
+
             subbasin: list,
             bbox: list,
             num_threads: int,
@@ -47,7 +47,7 @@ class HydrologicalAndHydrodynamicPipeline:
             width_rate_control: float = 2,
             discharge_rate_control: float = 1,
             crs: int = 2193
-        ) -> None:
+    ) -> None:
         """
         Generate hydrological and hydrodynamic results
         
@@ -127,7 +127,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.width_rate_control = width_rate_control
         self.discharge_rate_control = discharge_rate_control
         self.crs = crs
-        
+
         self.hydromt_path = EnvVariable.HYDROMT_PATH
 
         # River data
@@ -187,10 +187,10 @@ class HydrologicalAndHydrodynamicPipeline:
             self.width_rate_control,
             self.discharge_rate_control
         )
-        
+
         # Generate terrain data
         terrain_data.terrain_for_wflow_generator()
-        
+
     def wflow_data_pipeline(self):
         """Generate wflow model data for flood model"""
         # Set up wflow model data generation system
@@ -208,10 +208,10 @@ class HydrologicalAndHydrodynamicPipeline:
             self.polygons,
             self.resolution
         )
-        
+
         # Generate wflow model data
         wflow_data.wflow_model_simulations_pipeline()
-        
+
     def flood_data_pipeline(self):
         """Generate flood model data"""
         # Set up flood model data generation system
@@ -229,10 +229,10 @@ class HydrologicalAndHydrodynamicPipeline:
             self.polygons,
             self.vectors
         )
-        
+
         # Generate flood model data
         flood_data.flood_model_executor()
-        
+
     def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
         # The if function here will be modified later
@@ -332,12 +332,6 @@ class HydrologicalAndHydrodynamicPipeline:
 #     main()
 
 
-
-
-
-
-
-
 # WHIRINAKI
 # This is where to check the model
 def main():
@@ -356,8 +350,8 @@ def main():
     flood_aoi_boundary = [1641145.361, 6072406.885, 1642792.613, 6076268]
     adjust_manning = True
 
-    polygons = None # r'polygons/polygons.shp'
-    vectors = None # r'vectors/vectors.csv'
+    polygons = None  # r'polygons/polygons.shp'
+    vectors = None  # r'vectors/vectors.csv'
     strord = 4
     resolution = 50
     threshold = 1000
@@ -393,6 +387,7 @@ def main():
     )
 
     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+
 
 if __name__ == '__main__':
     main()
