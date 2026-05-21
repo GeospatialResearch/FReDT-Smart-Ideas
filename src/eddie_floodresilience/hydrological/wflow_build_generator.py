@@ -8,6 +8,7 @@ Created on Thu Apr  9 09:01:33 2026
 import yaml
 from pathlib import Path
 from datetime import datetime
+from dateutil.relativedelta import relativedelta
 import json
 
 
@@ -51,7 +52,7 @@ class WflowBuildGenerator():
         forcing_path: Path
             A directory to where the forcing files are stored
         """
-        self.start_time = start_time.replace(year=start_time.year - 1)
+        self.start_time = start_time - relativedelta(months=6)
         self.end_time = end_time
         self.resolution = resolution
         self.wflow_model_path = wflow_model_path

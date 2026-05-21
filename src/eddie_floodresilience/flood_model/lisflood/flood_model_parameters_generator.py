@@ -345,10 +345,10 @@ class ParametersFloodModelGenerator():
         parameters_list = [
             ('resroot', 'out'),
             ('dirroot', output_directory),
-            ('saveint', 3600),
-            ('massint', 100),
+            ('saveint', 21600),
+            ('massint', 500),
             ('sim_time', f'{seconds}'),
-            ('initial_tstep', 2),
+            ('initial_tstep', 5),
             ('bcifile', bci),
             ('bdyfile', bdy),
             ('DEMFile', z),
