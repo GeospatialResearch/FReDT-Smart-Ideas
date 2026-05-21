@@ -7,6 +7,7 @@ Created on Thu Apr  9 08:43:08 2026
 
 from pathlib import Path
 from datetime import datetime
+import geopandas as gpd
 
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
@@ -26,7 +27,6 @@ class WflowSimulationsGenerator():
         forcing_path: Path,
         start_time: datetime,
         end_time: datetime,
-        subbasin: list,
         flood_aoi_boundary: list,
         num_threads: int,
         polygons: str = None,
@@ -53,8 +53,6 @@ class WflowSimulationsGenerator():
             Ending time of simulation
             This should include some periods of time after the flood event.
             Normally, it is 12 hours or 1 day.
-        subbasin : list
-            Outlet coordinates
         flood_aoi_boundary : list
             Boundaries' coordinates of area of interest.
             Format is [xmin, ymin, xmax, ymax]
@@ -73,8 +71,7 @@ class WflowSimulationsGenerator():
         self.forcing_path = forcing_path
         self.start_time = start_time
         self.end_time = end_time
-        
-        self.subbasin = subbasin
+
         self.flood_aoi_boundary = flood_aoi_boundary
 
         self.num_threads = num_threads
@@ -108,9 +105,24 @@ class WflowSimulationsGenerator():
         
     def preprocessing_command(self) -> None:
         """Set up preprocessing command and preprocess data for wflow model"""
+        # Get subbasin river outlet
+        subbasin_river_outlet = gpd.read_file(
+            self.wflow_model_path / 'river_outlet.shp'
+        )
+
+        # Get subbasin river outlet coordinates
+        subbasin_river_outlet_coords = list(
+            subbasin_river_outlet.geometry.iloc[0].coords
+        )[0]
+
+        # Make sure it is in list style
+        subbasin_river_outlet_coords_list = [
+            subbasin_river_outlet_coords[0], subbasin_river_outlet_coords[1]
+        ]
+
         # Set up region information
         region_information = str({
-            "subbasin": self.subbasin,
+            "subbasin": subbasin_river_outlet_coords_list,
             "strord": 4,
             "bbox": self.flood_aoi_boundary
         })

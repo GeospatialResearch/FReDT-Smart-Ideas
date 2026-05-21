@@ -16,7 +16,7 @@ import geopandas as gpd
 import pandas as pd
 from rasterstats import zonal_stats
 from shapely.geometry import LineString, MultiLineString
-from shapely.geometry import Point
+from shapely.geometry import Point, box
 import json
 
 # Create whitebox environment and whitebox tools
@@ -363,6 +363,7 @@ class StreamTopologyGenerator():
     def __init__(
             self,
             path: Path,
+            flood_aoi_boundary: list,
             resolution: float = 50,
             threshold: int = 1000,
             origin_filename: str = '8m_geofabric'
@@ -374,6 +375,9 @@ class StreamTopologyGenerator():
         ----------
         path: str
             Path to the directory that contains necessary files to generate stream data
+        flood_aoi_boundary : list
+            Boundaries' coordinates of area of interest.
+            Format is [xmin, ymin, xmax, ymax]
         resolution: float = 100
             Resolution to resample data. Default is 100m
         threshold: int = 1000
@@ -384,6 +388,7 @@ class StreamTopologyGenerator():
             At the moment, only two names - 8m_geofabric and 4m_geofabric
         """
         self.path = path
+        self.flood_aoi_boundary = flood_aoi_boundary
         self.resolution = resolution
         self.threshold = threshold
         self.origin_filename = origin_filename
@@ -482,6 +487,67 @@ class StreamTopologyGenerator():
         stream_output_path = self.path / f"{self.origin_filename}_streams_d8_area_strahler.shp"
         streams_rename.to_file(stream_output_path)
 
+    def river_outlet_generator(self):
+        """
+        Generate river outlet based on streams' strahler order and upper catchment area
+        """
+        # Read streams data that has upper catchment area
+        streams_d8_area_strahler = gpd.read_file(self.path / f"{self.origin_filename}_streams_d8_area_strahler.shp")
+
+        # Set up flood aoi boundary polygon
+        flood_aoi_boundary_polygon = box(
+            self.flood_aoi_boundary[0],
+            self.flood_aoi_boundary[1],
+            self.flood_aoi_boundary[2],
+            self.flood_aoi_boundary[3]
+        )
+
+        # Collect all the streams that intersect the boundary
+        streams_in_boundary = streams_d8_area_strahler[
+            streams_d8_area_strahler.intersects(flood_aoi_boundary_polygon)
+        ].copy()
+
+        # Select the main river (where the river outlet point is/ river mouth linestring)
+        main_stream = streams_in_boundary.sort_values(
+            by='uparea',
+            ascending=False
+        ).head(1)
+
+        # Get shapely geometry grom the main river
+        geom_of_main_river = main_stream.geometry.iloc[0]
+
+        # Sample points on the main river
+        n_points = 50  # at the moment, 50 is fine, but can change
+        points_on_main_river = [
+            geom_of_main_river.interpolate(i / (n_points - 1), normalized=True)
+            for i in range(n_points)
+        ]
+
+        # Set up GeoDataFrame for these points
+        points_on_main_river_gdf = gpd.GeoDataFrame(
+            geometry=points_on_main_river,
+            crs=2193
+        )
+
+        # Select points within flood aoi boundary
+        points_on_main_river_in_boundary = points_on_main_river_gdf[
+            points_on_main_river_gdf.intersects(flood_aoi_boundary_polygon)
+        ]
+
+        # Calculate distance to flodo aoi boundary
+        points_on_main_river_in_boundary_copy = points_on_main_river_in_boundary.copy()
+        points_on_main_river_in_boundary_copy['dist'] = points_on_main_river_in_boundary.distance(
+            flood_aoi_boundary_polygon.boundary
+        )
+
+        # Get river outlet
+        river_outlet = points_on_main_river_in_boundary_copy.sort_values("dist").iloc[2:3]
+
+        # Write out river outlet
+        river_outlet.to_file(
+            self.path / f"river_outlet.shp"
+        )
+
     def dataframe_upstream_area_strahler_geometry_generator(
             self,
     ) -> None:
@@ -511,6 +577,9 @@ class StreamTopologyGenerator():
         # with dataframe of stream geometry and write out
         self.merge_upstream_area_strahler_stream_geometry(df_upstream_area_strahler)
 
+        # Generate river outlet
+        self.river_outlet_generator()
+
 
 class StreamHydraulicsGenerator():
     """This class is to generate hydraulic stream attributes"""
@@ -520,7 +589,6 @@ class StreamHydraulicsGenerator():
             path: Path,
             hydromt_path: Path,
             river_name: str,
-            subbasin: list,
             streams_bankfull_stage: float = 1.5,
             resolution: float = 50,
             threshold: int = 1000,
@@ -537,8 +605,6 @@ class StreamHydraulicsGenerator():
             A directory to where all necessary files are stored to run wflow model
         river_name: str
             Name of directory to where the river information files are stored
-        subbasin : list
-            Outlet coordinates
         streams_bankfull_stage : float = 1.5
             The stage to focus on the area that is considered as stream/river area
             or bankfull area comparing with HAND.
@@ -558,7 +624,6 @@ class StreamHydraulicsGenerator():
         self.streams_bankfull_stage = streams_bankfull_stage
         self.resolution = resolution
         self.threshold = threshold
-        self.subbasin = subbasin
 
         # Set up river path
         river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
@@ -617,13 +682,8 @@ class StreamHydraulicsGenerator():
         d8_pointer_path = self.path / f"{self.origin_filename}_d8_pointer.tif"
         d8_pointer = wbe.read_raster(str(d8_pointer_path))
 
-        # Write out river outlet point
+        # Get river outlet path
         river_outlet = self.path / f"river_outlet.shp"
-        gpd.GeoDataFrame(
-            geometry=[Point(self.subbasin[0], self.subbasin[1])],
-            crs='EPSG:2193'
-        ).to_file(river_outlet)
-
 
         # Extract watershed for specific points of outlet and gauges
         outlet_gauge_points = wbe.read_vector(str(river_outlet))

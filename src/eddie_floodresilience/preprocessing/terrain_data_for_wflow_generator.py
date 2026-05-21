@@ -21,8 +21,8 @@ class TerrainDataWflowGenerator:
             self,
             terrain_path: Path,
             hydromt_path: Path,
+            flood_aoi_boundary: list,
             river_name: str,
-            subbasin: list,
             resolution: float = 100,
             threshold: int = 1000
         ) -> None:
@@ -35,10 +35,11 @@ class TerrainDataWflowGenerator:
             A directory to where the terrain data are stored
         hydromt_path : Path
             A directory to where all necessary files are stored to run wflow model
+        flood_aoi_boundary : list
+            Boundaries' coordinates of area of interest.
+            Format is [xmin, ymin, xmax, ymax]
         river_name : str
             Name of directory to where the river information files are stored
-        subbasin : list
-            Outlet coordinates
         resolution: float = 100
             Resolution to resample data. Default is 100m in crs 2193)
         threshold: int = 1000
@@ -47,8 +48,8 @@ class TerrainDataWflowGenerator:
         """
         self.terrain_path = terrain_path
         self.hydromt_path = hydromt_path
+        self.flood_aoi_boundary = flood_aoi_boundary
         self.river_name = river_name
-        self.subbasin = subbasin
         self.resolution = resolution
         self.threshold = threshold
         
@@ -65,6 +66,7 @@ class TerrainDataWflowGenerator:
         """Generate stream topology for wflow model"""
         stream_topology = StreamTopologyGenerator(
             self.terrain_path,
+            self.flood_aoi_boundary,
             self.resolution,
             self.threshold
         )
@@ -76,7 +78,6 @@ class TerrainDataWflowGenerator:
             path=self.terrain_path,
             hydromt_path=self.hydromt_path,
             river_name=self.river_name,
-            subbasin=self.subbasin,
             streams_bankfull_stage=1.5,
             resolution=self.resolution,
             threshold=self.threshold

@@ -30,8 +30,7 @@ class HydrologicalAndHydrodynamicPipeline:
             precipitation_path: Path,
             start_time: datetime,
             end_time: datetime,
-            
-            subbasin: list,
+
             num_threads: int,
             flood_aoi_boundary: list,
             adjust_manning: bool,
@@ -63,8 +62,6 @@ class HydrologicalAndHydrodynamicPipeline:
             Ending time of simulation
             This should include some periods of time after the flood event.
             Normally, it is about 2-3 months.
-        subbasin : list
-            Outlet coordinates
         num_threads : int
             Number of threads that controls how fast the wflow model can run
         flood_aoi_boundary : list
@@ -93,7 +90,6 @@ class HydrologicalAndHydrodynamicPipeline:
         self.precipitation_path = precipitation_path
         self.start_time = start_time
         self.end_time = end_time
-        self.subbasin = subbasin
         self.num_threads = num_threads
         self.flood_aoi_boundary = flood_aoi_boundary
         self.adjust_manning = adjust_manning
@@ -156,8 +152,8 @@ class HydrologicalAndHydrodynamicPipeline:
         terrain_data = TerrainDataWflowGenerator(
             self.hydro_combination_path,
             self.hydromt_path,
+            self.flood_aoi_boundary,
             self.river_name,
-            self.subbasin,
             self.resolution,
             self.threshold
         )
@@ -175,7 +171,6 @@ class HydrologicalAndHydrodynamicPipeline:
             self.forcing_path,
             self.start_time,
             self.end_time,
-            self.subbasin,
             self.flood_aoi_boundary,
             self.num_threads,
             self.polygons,
@@ -252,7 +247,6 @@ class HydrologicalAndHydrodynamicPipeline:
 #     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 #
 #     # Gore
-#     subbasin = [1286587.365, 4883716.602]
 #     num_threads = 6
 #     flood_aoi_boundary = [1283763.983, 4882997.604, 1289715.883, 4891397.604]
 #     adjust_manning = False
@@ -273,7 +267,6 @@ class HydrologicalAndHydrodynamicPipeline:
 #         start_time,
 #         end_time,
 #
-#         subbasin,
 #         num_threads,
 #         flood_aoi_boundary,
 #         adjust_manning,
@@ -307,12 +300,11 @@ def main():
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
-    subbasin = [1642044.095, 6076198.040]
     num_threads = 6
     flood_aoi_boundary = [1641148, 6072404, 1642796, 6076268]
     adjust_manning = True
 
-    polygons = None # r'polygons/polygons.shp'
+    polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
     vectors = None # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
@@ -327,7 +319,6 @@ def main():
         start_time,
         end_time,
 
-        subbasin,
         num_threads,
         flood_aoi_boundary,
         adjust_manning,

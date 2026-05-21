@@ -198,11 +198,11 @@ class FloodModelSimulationsGenerator():
         """Generate necessary inputs for flood model"""
         # Four cases:
         # 1. Original scenario (polygon=None, vector=None)
-        # 2. Polygon=None, vector=None
+        # 2. Polygon=None, vector!=None
         # 3. Polygon!=None, vector=None
         # 4. Polygon!=None, vector!=None
-        # This 'if' includes 1, 3, and 4
-        if self.polygons is not None or self.vectors is None:
+        # This 'if' includes 1
+        if self.polygons is None and self.vectors is None:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
 
@@ -211,6 +211,17 @@ class FloodModelSimulationsGenerator():
 
             # Generate precipitation data for flood model
             self.precipitation_data_for_flood_model_generator()
+
+            # Generate parameter files for flood model
+            self.parameters_files_for_flood_model_generator()
+
+            # Generate simulations by running flood model
+            self.flood_model_simulations_generator()
+
+        # This 'elif' includes 3 and 4
+        elif self.polygons is not None or self.vectors is None:
+            # Generate injection points for flood model
+            self.injection_points_for_flood_model_generator()
 
             # Generate parameter files for flood model
             self.parameters_files_for_flood_model_generator()

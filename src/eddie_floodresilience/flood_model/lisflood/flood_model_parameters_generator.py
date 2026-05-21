@@ -57,6 +57,54 @@ class ParametersFloodModelGenerator():
         self.end_time = end_time
         self.polygons = polygons
         self.vectors = vectors
+
+    def move_points_inside_aoi(
+            self,
+            aoi_coords,
+            xy_coords,
+            buffer_distance,
+            tolerance
+    ):
+        """
+        Move points inside aoi
+
+        Parameters
+        ----------
+        aoi_coords : list
+            Coordinates of area of interest
+        xy_coords : list
+            Coordinates of x and y. X and y of each injection point
+        buffer_distance : float
+            Amount that the points are moved inside
+        tolerance : float
+            How much differences in distance between injection points and coordinates of area of interest
+
+        Returns
+        -------
+        xy_coords : list
+            New coordinates of x and y. X and y of each injection point
+        """
+        # Extract each x and y
+        x, y = xy_coords
+
+        # Extract xmin, ymin, xmax, ymax
+        xmin, ymin, xmax, ymax = aoi_coords
+
+        # Move points inside DEM
+        if abs(y - ymax) <= tolerance:
+            y -= buffer_distance
+
+        elif abs(y - ymin) <= tolerance:
+            y += buffer_distance
+
+        elif abs(x - xmax) <= tolerance:
+            x -= buffer_distance
+
+        elif abs(x - xmin) <= tolerance:
+            x += buffer_distance
+
+        return x, y
+
         
     def bci_generator(self) -> None:
         """Generate bci files - where the locations of injection points are defined"""
@@ -71,18 +119,29 @@ class ParametersFloodModelGenerator():
         # Write out files
         with open(self.flood_model_path / "bci.bci", "w") as bci_parameter:
             # Set up boundaries before creating the bci files
-            # It is set to Northern direction at the moment
-            # It will be changed into automatic step
-            edge_coordinates = [
-                'N', 
-                self.terrain_bounding_box.bounds[0],
-                self.terrain_bounding_box.bounds[2],
-                'FREE', ''
+            xmin = self.terrain_bounding_box.bounds[0]
+            ymin = self.terrain_bounding_box.bounds[1]
+            xmax = self.terrain_bounding_box.bounds[2]
+            ymax = self.terrain_bounding_box.bounds[3]
+
+            # Add coordinates to boundary directions
+            boundary_edges = [
+                ['N', xmin, xmax, 'FREE', ''],
+                ['S', xmin, xmax, 'FREE', ''],
+                ['E', ymin, ymax, 'FREE', ''],
+                ['W', ymin, ymax, 'FREE', '']
             ]
-            edge_text = '{0[0]:<5}{0[1]:<20}{0[2]:<20}{0[3]:<7}{0[4]:<5}\n'.format(edge_coordinates)
-            bci_parameter.write(edge_text)
+
+            # Write into bci file
+            for edge_coordinates in boundary_edges:
+                edge_text = ('{0[0]:<5}{0[1]:<20}{0[2]:<20}{0[3]:<7}{0[4]:<5}\n').format(edge_coordinates)
+                bci_parameter.write(edge_text)
             
             # Get injection points ID from injection_points_flow data
+            buffer_distance = 10
+            tolerance = 1
+
+            # Get injection points ID
             injection_points_id = [
                 int(col.split('_')[1]) for col in self.injection_points_flow.columns if col.startswith('Q_')
             ]
@@ -90,15 +149,26 @@ class ParametersFloodModelGenerator():
             # Write out injection points coordinates
             for each_id in injection_points_id:
                 injection_points_id = injection_points[injection_points['FID'] == f'Q_{each_id}'].iloc[0]
+
+                # Get xy coordinates and aoi coordinates
+                xy_coords = [injection_points_id.geometry.x, injection_points_id.geometry.y]
+                aoi_coords = [xmin, ymin, xmax, ymax]
+
+                # Move points inside area of interest
+                x, y = self.move_points_inside_aoi(aoi_coords, xy_coords, buffer_distance, tolerance)
+
+                # Set up coordinates text for points
                 injection_points_boundary = [
                     'P', 
-                    injection_points_id.geometry.x, 
-                    injection_points_id.geometry.y,
+                    x,
+                    y,
                     'QVAR', f"Q_{each_id}"
                 ]
                 injection_points_text = '{0[0]:<5}{0[1]:<20}{0[2]:<20}{0[3]:<7}{0[4]:<5}\n'.format(
                     injection_points_boundary
                 )
+
+                # Write inside bci file
                 bci_parameter.write(injection_points_text)
 
     def file_increment_generator(
