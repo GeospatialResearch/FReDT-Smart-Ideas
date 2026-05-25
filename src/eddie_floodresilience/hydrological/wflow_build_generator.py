@@ -23,7 +23,8 @@ class WflowBuildGenerator():
         wflow_model_path: Path,
         hydromt_path: Path,
         river_name: str,
-        forcing_path: Path
+        forcing_path: Path,
+        polygons: str = None
     ) -> None:
         """
         Generate wflow_build.yml for preprocessing data for wflow.
@@ -51,14 +52,18 @@ class WflowBuildGenerator():
             Name of directory to where the river information files are stored
         forcing_path: Path
             A directory to where the forcing files are stored
+        polygons : str = None
+            Name of polygon file that is used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
         """
-        self.start_time = start_time - relativedelta(months=3)
+        self.start_time = start_time - relativedelta(months=2)
         self.end_time = end_time
         self.resolution = resolution
         self.wflow_model_path = wflow_model_path
         self.hydromt_path = hydromt_path
         self.river_name = river_name
         self.forcing_path = forcing_path
+        self.polygons = polygons
 
     def config_section(self) -> dict:
         """
@@ -75,20 +80,43 @@ class WflowBuildGenerator():
         else:
             input_path_forcing = "era5_hourly_new.nc"
 
-        # Generate configuration section
-        config = {
-            "setup_config": {
-                "starttime": self.start_time,
-                "endtime": self.end_time,
-                "timestepsecs": 3600,
-                "input.path_forcing": input_path_forcing,
-                # Extra parameters
-                "water_mass_balance__flag": True,
-                "output.path": "output.nc",
-                "output.compressionlevel": 1,
-                "output.lateral.river.q": "q_river"
+        if self.polygons is not None:
+            # Generate configuration section
+            config = {
+                "setup_config": {
+                    "starttime": self.start_time,
+                    "endtime": self.end_time,
+                    "timestepsecs": 3600,
+                    "input.path_forcing": input_path_forcing
+                }
             }
-        }
+
+        else:
+
+            # Generate configuration section
+            config = {
+                "setup_config": {
+                    "starttime": self.start_time,
+                    "endtime": self.end_time,
+                    "timestepsecs": 3600,
+                    "input.path_forcing": input_path_forcing,
+                    # Extra parameters
+                    "water_mass_balance__flag": True,
+                    "output.path": "output.nc",
+                    "output.compressionlevel": 1,
+                    "output.lateral.river.q": "q_river",
+
+                    "model.masswasting": False,
+                    "model.snow": False,
+                    "model.reinit": True,
+                    "model.sizeinmetres": True,
+                    "model.kin_wave_iteration": False,
+                    "model.kw_river_tstep": 600,
+                    "model.kw_land_tstep": 3600,
+                    "model.min_streamorder_land": 2,
+                    "model.min_streamorder_river": 3
+                }
+            }
         
         return config
     
@@ -334,13 +362,21 @@ class WflowBuildGenerator():
         write : dict
             A dictionary that contains conditions for some files to be written
         """
-        # Generate "write" section
-        write_section = {
-            "write_forcing": {"freq_out": "D"},
-            "write_grid": {},
-            "write_geoms": {},
-            "write_config": {}
-        }
+        if self.polygons is not None:
+            # Generate "write" section
+            write_section = {
+                "write_grid": {},
+                "write_geoms": {},
+                "write_config": {}
+            }
+        else:
+            # Generate "write" section
+            write_section = {
+                "write_forcing": {"freq_out": "D"},
+                "write_grid": {},
+                "write_geoms": {},
+                "write_config": {}
+            }
         
         return write_section
     
@@ -357,33 +393,41 @@ class WflowBuildGenerator():
         wflow_build = {}
         
         # Set up sections list
-        if str(self.forcing_path).endswith(".nc"):
+        if self.polygons is not None:
             sections_list = [
                 self.config_section(),
-                self.basemaps_section(),
-                self.rivers_section(),
-                self.lakes_section(),
                 self.landcover_section(),
                 self.lai_section(),
-                self.soil_section(),
-                self.constant_parameters_section(),
                 self.write_section()
             ]
         else:
-            sections_list = [
-                self.config_section(),
-                self.basemaps_section(),
-                self.rivers_section(),
-                self.lakes_section(),
-                self.landcover_section(),
-                self.lai_section(),
-                self.soil_section(),
-                self.precipitation_section(),
-                self.temperature_section(),
-                self.potential_evaporation_section(),
-                self.constant_parameters_section(),
-                self.write_section()
-            ]
+            if str(self.forcing_path).endswith(".nc"):
+                sections_list = [
+                    self.config_section(),
+                    self.basemaps_section(),
+                    self.rivers_section(),
+                    self.lakes_section(),
+                    self.landcover_section(),
+                    self.lai_section(),
+                    self.soil_section(),
+                    self.constant_parameters_section(),
+                    self.write_section()
+                ]
+            else:
+                sections_list = [
+                    self.config_section(),
+                    self.basemaps_section(),
+                    self.rivers_section(),
+                    self.lakes_section(),
+                    self.landcover_section(),
+                    self.lai_section(),
+                    self.soil_section(),
+                    self.precipitation_section(),
+                    self.temperature_section(),
+                    self.potential_evaporation_section(),
+                    self.constant_parameters_section(),
+                    self.write_section()
+                ]
         
         # Generate wflow build section
         for each_section in sections_list:
@@ -403,9 +447,22 @@ class WflowBuildGenerator():
         wflow_build : dict
             A dictionary contains information of all sections
         """
-        # Set up output filename
-        output_filename = self.wflow_model_path / "wflow_build.yml"
-        
+        if self.polygons is not None:
+            # Find existing file
+            existing_file = sorted(
+                self.wflow_model_path.glob("wflow_build_landcover_*.yml")
+            )
+
+            # Set ID for file
+            number = len(existing_file) + 1
+
+            # Create file name
+            output_filename = self.wflow_model_path / f"wflow_build_landcover_{number:03d}.yml"
+
+        else:
+            # Set up output filename
+            output_filename = self.wflow_model_path / "wflow_build.yml"
+
         # Geenrate content for wflow_build.yml
         with open(output_filename, "w") as output_file:
             yaml.dump(

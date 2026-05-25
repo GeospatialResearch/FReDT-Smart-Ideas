@@ -374,33 +374,43 @@ class DataCatalogGenerator():
         """
         # Set up data_catalog dictionary
         data_catalog = {}
-        
-        # Set up list of all sections
-        if str(self.forcing_path).endswith(".nc"):
+
+        # If update land cover
+        if self.polygons is not None:
             sections_list = [
                 self.meta_section(),
-                self.orography_section(),
                 self.landcover_section(),
-                self.lakes_section(),
-                self.terrain_section(),
-                self.basin_section(),
-                self.rivers_section(),
-                self.soilgrids_section(),
                 self.lai_section()
             ]
+
+        # If not, means start from beginning
         else:
-            sections_list = [
-                self.meta_section(),
-                self.forcing_section(),
-                self.orography_section(),
-                self.landcover_section(),
-                self.lakes_section(),
-                self.terrain_section(),
-                self.basin_section(),
-                self.rivers_section(),
-                self.soilgrids_section(),
-                self.lai_section()
-            ]
+            # Set up list of all sections
+            if str(self.forcing_path).endswith(".nc"):
+                sections_list = [
+                    self.meta_section(),
+                    self.orography_section(),
+                    self.landcover_section(),
+                    self.lakes_section(),
+                    self.terrain_section(),
+                    self.basin_section(),
+                    self.rivers_section(),
+                    self.soilgrids_section(),
+                    self.lai_section()
+                ]
+            else:
+                sections_list = [
+                    self.meta_section(),
+                    self.forcing_section(),
+                    self.orography_section(),
+                    self.landcover_section(),
+                    self.lakes_section(),
+                    self.terrain_section(),
+                    self.basin_section(),
+                    self.rivers_section(),
+                    self.soilgrids_section(),
+                    self.lai_section()
+                ]
         
         # Generate a dictionary of data_catalog
         for each_section in sections_list:
@@ -420,8 +430,21 @@ class DataCatalogGenerator():
         data_catalog : dict
             A dictionary contains information of all sections
         """
-        # Set up output filename
-        output_filename = self.wflow_model_path / "data_catalog.yml"
+        if self.polygons is not None:
+            # Find existing file
+            existing_file = sorted(
+                self.wflow_model_path.glob("data_catalog_landcover_*.yml")
+            )
+
+            # Set ID for file
+            number = len(existing_file) + 1
+
+            # Create file name
+            output_filename = self.wflow_model_path / f"data_catalog_landcover_{number:03d}.yml"
+
+        else:
+            # Set up output filename
+            output_filename = self.wflow_model_path / "data_catalog.yml"
         
         # Write out data_catalog.yml
         with open(output_filename, "w") as output_file:

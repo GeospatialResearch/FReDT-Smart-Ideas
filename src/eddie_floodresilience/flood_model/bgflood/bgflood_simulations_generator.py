@@ -7,35 +7,35 @@ Created on Tue Apr  7 21:12:29 2026
 
 from pathlib import Path
 from datetime import datetime
+import shutil
 
-from .flood_model_inputs_generator import TerrainGenerator, \
-                                          TerrainFloodModelGenerator, \
-                                          InjectionPointsFloodModelGenerator
-                            
-from .flood_model_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 
-from .flood_model_parameters_generator import ParametersFloodModelGenerator
+from .bgflood_inputs_generator import TerrainGenerator, InjectionPointsFloodModelGenerator
+
+from .bgflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
+
+from .bgflood_parameters_generator import ParametersFloodModelGenerator
 
 import subprocess
 
 
-class FloodModelSimulationsGenerator():
+class BGFloodModelSimulationsGenerator():
     """This class is to generate flood model simulations"""
-    
+
     def __init__(
-        self,
-        flood_model_path: Path,
-        catchment_model_path: Path,
-        hydromt_path: Path,
-        river_name: str,
-        precipitation_path: Path,
-        aoi_boundary: list,
-        adjust_manning: bool,
-        start_time: datetime,
-        end_time: datetime,
-        crs: int = 2193,
-        polygons: int = None,
-        vectors: str = None
+            self,
+            flood_model_path: Path,
+            catchment_model_path: Path,
+            hydromt_path: Path,
+            river_name: str,
+            precipitation_path: Path,
+            aoi_boundary: list,
+            adjust_manning: bool,
+            start_time: datetime,
+            end_time: datetime,
+            crs: int = 2193,
+            polygons: str = None,
+            vectors: str = None
     ) -> None:
         """
         Generate flood model simulations
@@ -91,29 +91,16 @@ class FloodModelSimulationsGenerator():
             self.hydromt_path,
             self.river_name,
             self.aoi_boundary,
+            self.polygons,
+            self.vectors,
             self.crs
         )
-        
+
         # Generate common terrain data
         self.terrain_bounding_box, self.terrain_crs_clipped = self.terrain.terrain_data_generator()
-        
-    def terrain_data_for_flood_model_generator(self):
-        """Generate terrain data for flood model (LISFLOOD-FP)"""
-        # Call out class used to generate terrain data for flood model
-        terrain_data_for_flood_model = TerrainFloodModelGenerator(
-            self.flood_model_path,
-            self.hydromt_path,
-            self.river_name,
-            self.terrain_crs_clipped,
-            self.adjust_manning,
-            self.crs
-        )
-        
-        # Generate terrain data for flood model
-        terrain_data_for_flood_model.execute_terrain_data_generator()
-    
+
     def injection_points_for_flood_model_generator(self):
-        """Generate injection points for flood model (LISFLOOD-FP)"""
+        """Generate injection points for flood model (BG_Flood)"""
         # Call out class used to generate injection points for flood model
         injection_points_for_flood_model = InjectionPointsFloodModelGenerator(
             self.flood_model_path,
@@ -121,38 +108,50 @@ class FloodModelSimulationsGenerator():
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
+            self.polygons,
             self.crs
         )
-        
+
         # Generate injection points for flood model
         injection_points_for_flood_model.injection_points_flow_generator()
-        
+
     def precipitation_data_for_flood_model_generator(self):
         """Generate precipitation data for flood model"""
         # Call out class used to generate precipitation data
-        precipitation_generator = PrecipitationGenerator(
-            self.flood_model_path,
-            self.precipitation_path,
-            self.terrain_bounding_box,
-            self.start_time,
-            self.end_time,
-            self.crs
+        # Path to precipitation file
+        precipitation_file = (
+                self.flood_model_path / "precipitation_dynamic.nc"
         )
-        
-        # Generate precipitation data
-        precipitation_data = precipitation_generator.precipitation_data_generator()
-        
-        # Call out class used to generate precipitation data for flood model
-        precipitation_data_for_flood_model = PrecipitationFloodModelGenerator(
-            self.flood_model_path,
-            precipitation_data
-        )
-        
-        # Generate precipitation data for flood model
-        precipitation_data_for_flood_model.precipitation_for_flood_model_generator()
-        
-    def parameters_files_for_flood_model_generator(self):
+
+        # Check if file already exists
+        if precipitation_file.exists():
+            pass
+        else:
+            precipitation_generator = PrecipitationGenerator(
+                self.flood_model_path,
+                self.precipitation_path,
+                self.terrain_bounding_box,
+                self.start_time,
+                self.end_time,
+                self.crs
+            )
+
+            # Generate precipitation data
+            precipitation_data = precipitation_generator.precipitation_data_generator()
+
+            # Call out class used to generate precipitation data for flood model
+            precipitation_data_for_flood_model = PrecipitationFloodModelGenerator(
+                self.flood_model_path,
+                precipitation_data
+            )
+
+            # Generate precipitation data for flood model
+            precipitation_data_for_flood_model.precipitation_for_flood_model_generator()
+
+    def parameter_data_for_flood_model_generator(self):
+        """Generate paramter data for flood model"""
         """Generate parameters files for flood model"""
+
         # Call out class used to generate parameter files
         parameters_files_generator = ParametersFloodModelGenerator(
             self.flood_model_path,
@@ -162,38 +161,69 @@ class FloodModelSimulationsGenerator():
             self.polygons,
             self.vectors
         )
-        
+
         # Generate parameter files
-        parameters_files_generator.parameters_files_generator()
-        
+        parameters_files_generator.parameter_files_generator()
+
+    def find_output_folder_path(self):
+        """Find output folder path"""
+        # Output folder paht to store BG flood programme
+        # Polygons for land cover solutions
+        if self.polygons is not None and self.vectors is not None:
+            output_folder_path = max(
+                Path(self.flood_model_path).glob("output_landcover_elevation_*"),
+                default=Path(self.flood_model_path) / "output_landcover_elevation_001"
+            )
+        elif self.polygons is not None:
+            output_folder_path = max(
+                Path(self.flood_model_path).glob("output_landcover_*"),
+                default=Path(self.flood_model_path) / "output_landcover_001"
+            )
+        elif self.vectors is not None:
+            output_folder_path = max(
+                Path(self.flood_model_path).glob("output_elevation_*"),
+                default=Path(self.flood_model_path) / "output_elevation_001"
+            )
+        else:
+            output_folder_path = max(
+                Path(self.flood_model_path).glob("output_*"),
+                default=Path(self.flood_model_path) / "output"
+            )
+
+        return output_folder_path
+
     def flood_model_simulations_generator(self):
         """Generate flood simulations by running flood model"""
         # Set up path to log file
         log_file_path = self.flood_model_path / "simulation_log.log"
-        
+
+        # Get the output folder path
+        output_folder_path = self.find_output_folder_path()
+
         # Set up path to flood model exe
         # This will be changed into constant local folder in the future
-        flood_model_exe_path = r"C:\Users\mng42\spyder_hydromt\digital_twin_codes\for_lisflood\lisflood_v8_1_0.exe"
-        
-        # Set up path to parameters' file
-        par_file_path = str(self.flood_model_path / "par.par")
-        
-        # Flood simulation command
-        flood_simulation_command = [
+        flood_model_exe_path = self.hydromt_path / "BG_flood.exe"
+
+        # Copy executable into scenario folder
+        shutil.copy2(
             flood_model_exe_path,
-            "-v",
-            par_file_path
+            output_folder_path / "BG_flood.exe"
+        )
+
+        # BG flood command
+        bg_flood_command = [
+            str(output_folder_path / "BG_flood.exe")
         ]
-        
-        # Generate flood model simulations
+
+        # Run simulation
         with open(log_file_path, "w") as log_file:
-            subprocess.run(
-                flood_simulation_command,
+            subprocess.check_call(
+                bg_flood_command,
+                cwd=output_folder_path,
                 stdout=log_file,
-                stderr=subprocess.STDOUT,  # add error into log file if appears
-                check=True
+                stderr=log_file
             )
-        
+
     def flood_model_executor(self):
         """Generate necessary inputs for flood model"""
         # Four cases:
@@ -203,17 +233,14 @@ class FloodModelSimulationsGenerator():
         # 4. Polygon!=None, vector!=None
         # This 'if' includes 1
         if self.polygons is None and self.vectors is None:
-            # Generate terrain data for flood model
-            self.terrain_data_for_flood_model_generator()
-
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
+            # Generate parameter files for flood model
+            self.parameter_data_for_flood_model_generator()
+
             # Generate precipitation data for flood model
             self.precipitation_data_for_flood_model_generator()
-
-            # Generate parameter files for flood model
-            self.parameters_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
@@ -224,19 +251,15 @@ class FloodModelSimulationsGenerator():
             self.injection_points_for_flood_model_generator()
 
             # Generate parameter files for flood model
-            self.parameters_files_for_flood_model_generator()
+            self.parameter_data_for_flood_model_generator()
 
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
 
         # This 'else' includes 2
         else:
-            # Generate terrain data for flood model
-            self.terrain_data_for_flood_model_generator()
-
             # Generate parameter files for flood model
-            self.parameters_files_for_flood_model_generator()
+            self.parameter_data_for_flood_model_generator()
 
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
-        

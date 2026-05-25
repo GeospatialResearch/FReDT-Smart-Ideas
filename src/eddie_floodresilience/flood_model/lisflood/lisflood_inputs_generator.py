@@ -560,6 +560,7 @@ class InjectionPointsFloodModelGenerator():
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
+        polygons: str = None,
         crs: int = 2193
     ) -> None:
         """
@@ -577,6 +578,9 @@ class InjectionPointsFloodModelGenerator():
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details. Format is Dataframe that contains rivers' flow data at injection points
+        polygons : str = None
+            Name of polygon file that is used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         """
@@ -585,6 +589,7 @@ class InjectionPointsFloodModelGenerator():
         self.terrain_bounding_box = terrain_bounding_box
         self.start_time = start_time
         self.end_time = end_time
+        self.polygons = polygons
         self.crs = crs
         
     def reproject_rivers(self) -> gpd.GeoDataFrame:
@@ -596,9 +601,17 @@ class InjectionPointsFloodModelGenerator():
         rivers_new_projection : gpd.GeoDataFrame
             River geodataframe with new crs (2193 for NZTM)
         """
+        if self.polygons is not None:
+            wflow_test_full_folder = str(max(
+                Path(self.catchment_model_path).glob("wflow_test_full_landcover_*"),
+                default=Path(self.catchment_model_path) / "wflow_test_full_landcover_001"
+            ))
+        else:
+            wflow_test_full_folder = "wflow_test_full"
+
         # Get river path from wflow model folder
-        river_path = self.catchment_model_path / "wflow_test_full/staticgeoms/rivers.geojson"
-        
+        river_path = self.catchment_model_path / wflow_test_full_folder / r"staticgeoms/rivers.geojson"
+
         # Read river file
         rivers = gpd.read_file(river_path)
         
@@ -748,9 +761,17 @@ class InjectionPointsFloodModelGenerator():
         rivers_flow : xr.DataArray
             Rivers' flow data extracted from catchment model outputs
         """
-        # Set path to rivers' data 
-        rivers_data_path = self.catchment_model_path / "wflow_test_full/run_default/output.nc"
-        
+        if self.polygons is not None:
+            wflow_test_full_folder = str(max(
+                Path(self.catchment_model_path).glob("wflow_test_full_landcover_*"),
+                default=Path(self.catchment_model_path) / "wflow_test_full_landcover_001"
+            ))
+        else:
+            wflow_test_full_folder = "wflow_test_full"
+
+        # Set path to rivers' data
+        rivers_data_path = self.catchment_model_path / wflow_test_full_folder / r"run_default/output.nc"
+
         # Read rives' data from catchment model output
         rivers_data = xr.open_dataset(rivers_data_path)
         rivers_flow = rivers_data['q_river']

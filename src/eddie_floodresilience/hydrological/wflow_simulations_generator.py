@@ -99,44 +99,79 @@ class WflowSimulationsGenerator():
             self.wflow_model_path,
             self.hydromt_path,
             self.river_name,
-            self.forcing_path
+            self.forcing_path,
+            self.polygons
         )
         wflow_build.wflow_build_generator()
         
     def preprocessing_command(self) -> None:
         """Set up preprocessing command and preprocess data for wflow model"""
-        # Get subbasin river outlet
-        subbasin_river_outlet = gpd.read_file(
-            self.wflow_model_path / 'river_outlet.shp'
-        )
+        if self.polygons is not None:
+            # Find existing file
+            existing_file = sorted(
+                self.wflow_model_path.glob("wflow_test_full_landcover_*")
+            )
 
-        # Get subbasin river outlet coordinates
-        subbasin_river_outlet_coords = list(
-            subbasin_river_outlet.geometry.iloc[0].coords
-        )[0]
+            # Set ID for file
+            number = len(existing_file) + 1
 
-        # Make sure it is in list style
-        subbasin_river_outlet_coords_list = [
-            subbasin_river_outlet_coords[0], subbasin_river_outlet_coords[1]
-        ]
+            # Create folder name
+            output_foldername = f"wflow_test_full_landcover_{number:03d}"
 
-        # Set up region information
-        region_information = str({
-            "subbasin": subbasin_river_outlet_coords_list,
-            "strord": 4,
-            "bbox": self.flood_aoi_boundary
-        })
+            # Find wflow build file
+            wflow_build_file = str(max(
+                Path(self.wflow_model_path).glob("wflow_build_landcover_*.yml"),
+                default=Path(self.wflow_model_path) / "wflow_build_landcover_001.yml"
+            ))
 
-        # Set up command for preprocessing
-        preprocessing_command_list = [
-            "hydromt", "build", "wflow",
-            f"{self.wflow_model_path}/wflow_test_full",
-            "-r", region_information,
-            "-i", f"{self.wflow_model_path}/wflow_build.yml",
-            "-d", f"{self.wflow_model_path}/data_catalog.yml",
-            "--fo",
-            "-vv"
-        ]
+            # Find data catalog file
+            data_catalog_file = str(max(
+                Path(self.wflow_model_path).glob("data_catalog_landcover_*.yml"),
+                default=Path(self.wflow_model_path) / "data_catalog_landcover_001.yml"
+            ))
+
+            preprocessing_command_list = [
+                "hydromt", "update", "wflow",
+                str(self.wflow_model_path / "wflow_test_full"),
+                "-o", str(self.wflow_model_path / output_foldername),
+                "-i", str(self.wflow_model_path / wflow_build_file),
+                "-d", str(self.wflow_model_path / data_catalog_file),
+                "-vv"
+            ]
+
+        else:
+            # Get subbasin river outlet
+            subbasin_river_outlet = gpd.read_file(
+                self.wflow_model_path / 'river_outlet.shp'
+            )
+
+            # Get subbasin river outlet coordinates
+            subbasin_river_outlet_coords = list(
+                subbasin_river_outlet.geometry.iloc[0].coords
+            )[0]
+
+            # Make sure it is in list style
+            subbasin_river_outlet_coords_list = [
+                subbasin_river_outlet_coords[0], subbasin_river_outlet_coords[1]
+            ]
+
+            # Set up region information
+            region_information = str({
+                "subbasin": subbasin_river_outlet_coords_list,
+                "strord": 4,
+                "bbox": self.flood_aoi_boundary
+            })
+
+            # Set up command for preprocessing
+            preprocessing_command_list = [
+                "hydromt", "build", "wflow",
+                f"{self.wflow_model_path}/wflow_test_full",
+                "-r", region_information,
+                "-i", f"{self.wflow_model_path}/wflow_build.yml",
+                "-d", f"{self.wflow_model_path}/data_catalog.yml",
+                "--fo",
+                "-vv"
+            ]
 
         # Preprocess data
         subprocess.run(
@@ -147,7 +182,29 @@ class WflowSimulationsGenerator():
     def simulation_command(self) -> None:
         """Set up simulation command and generate simulation"""
         # Set up path to wflow simulation folder
-        wflow_simulation_path = self.wflow_model_path / "wflow_test_full"
+        if self.polygons is not None:
+            # Set up folder
+            output_foldername = str(max(
+                Path(self.wflow_model_path).glob("wflow_test_full_landcover_*"),
+                default=Path(self.wflow_model_path) / "wflow_test_full_landcover_001"
+            ))
+
+            wflow_simulation_path = self.wflow_model_path / output_foldername
+
+            # Set up log
+            existing_log = sorted(
+                self.wflow_model_path.glob("wflow_run_landcover_*.log")
+            )
+
+            # Set ID for file
+            number = len(existing_log) + 1
+
+            # Create folder name
+            output_log = f"wflow_run_landcover_{number:03d}.log"
+
+        else:
+            wflow_simulation_path = self.wflow_model_path / "wflow_test_full"
+            output_log = f"wflow_run.log"
 
         # Set up simulation command
         simulation_command = [
@@ -158,7 +215,7 @@ class WflowSimulationsGenerator():
         ]
 
         # Run the command and write output to log
-        with open(wflow_simulation_path / "wflow_run.log", "w") as f:
+        with open(wflow_simulation_path / output_log, "w") as f:
             process = subprocess.check_call(
                 simulation_command, 
                 stdout=f, 

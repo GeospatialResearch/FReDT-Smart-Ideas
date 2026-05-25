@@ -14,7 +14,8 @@ from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolutio
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
-from src.eddie_floodresilience.flood_model.lisflood.flood_model_simulations_generator import FloodModelSimulationsGenerator
+from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
+from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import LisFloodModelSimulationsGenerator
 
 
 
@@ -34,6 +35,7 @@ class HydrologicalAndHydrodynamicPipeline:
             num_threads: int,
             flood_aoi_boundary: list,
             adjust_manning: bool,
+            flood_model: str,
 
             polygons: str = None,
             vectors: str = None,
@@ -70,6 +72,8 @@ class HydrologicalAndHydrodynamicPipeline:
         adjust_manning : bool
             True means adjusting Manning's n by resampling 4m Manning's n
             False means no Mannning's n adjustment
+        flood_model : str
+            Either "lisflood-fp" or "bg-flood"
 
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
@@ -93,6 +97,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.num_threads = num_threads
         self.flood_aoi_boundary = flood_aoi_boundary
         self.adjust_manning = adjust_manning
+        self.flood_model = flood_model
 
         self.polygons = polygons
         self.vectors = vectors
@@ -125,6 +130,7 @@ class HydrologicalAndHydrodynamicPipeline:
             # Elevation solution
             elevation_solution = ElevationSolution(
                 self.hydro_combination_path,
+                self.flood_model,
                 self.vectors
             )
             elevation_solution.apply_elevation_solution()
@@ -142,6 +148,7 @@ class HydrologicalAndHydrodynamicPipeline:
             # Elevation solution
             elevation_solution = ElevationSolution(
                 self.hydro_combination_path,
+                self.flood_model,
                 self.vectors
             )
             elevation_solution.apply_elevation_solution()
@@ -183,21 +190,38 @@ class HydrologicalAndHydrodynamicPipeline:
     def flood_data_pipeline(self):
         """Generate flood model data"""
         # Set up flood model data generation system
-        flood_data = FloodModelSimulationsGenerator(
-            self.hydro_combination_path,
-            self.hydro_combination_path,
-            self.hydromt_path,
-            self.river_name,
-            self.precipitation_path,
-            self.flood_aoi_boundary,
-            self.adjust_manning,
-            self.start_time,
-            self.end_time,
-            self.crs,
-            self.polygons,
-            self.vectors
-        )
-        
+        if self.flood_model == 'lisflood-fp':
+            flood_data = LisFloodModelSimulationsGenerator(
+                self.hydro_combination_path,
+                self.hydro_combination_path,
+                self.hydromt_path,
+                self.river_name,
+                self.precipitation_path,
+                self.flood_aoi_boundary,
+                self.adjust_manning,
+                self.start_time,
+                self.end_time,
+                self.crs,
+                self.polygons,
+                self.vectors
+            )
+
+        else:
+            flood_data = BGFloodModelSimulationsGenerator(
+                self.hydro_combination_path,
+                self.hydro_combination_path,
+                self.hydromt_path,
+                self.river_name,
+                self.precipitation_path,
+                self.flood_aoi_boundary,
+                self.adjust_manning,
+                self.start_time,
+                self.end_time,
+                self.crs,
+                self.polygons,
+                self.vectors
+            )
+
         # Generate flood model data
         flood_data.flood_model_executor()
         
@@ -239,19 +263,20 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # This is where to check the model
 def main():
-    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_009")
-    forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_013")
+    forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
     river_name = 'mataura'
     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
     # Gore
-    num_threads = 4
+    num_threads = 8
     flood_aoi_boundary = [1283763.983, 4882997.604, 1289715.883, 4891397.604]
     adjust_manning = False
+    flood_model = 'bg-flood'
 
-    polygons = None # r'polygons/polygons.shp'
+    polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
     vectors = None # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
@@ -269,6 +294,7 @@ def main():
         num_threads,
         flood_aoi_boundary,
         adjust_manning,
+        flood_model,
 
         polygons,
         vectors,

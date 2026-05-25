@@ -30,7 +30,7 @@ class LandCoverSolution():
         Change the land cover based on polygons.
         This class relates to functions:
         - landcover_section in wflow_data_catalog_generator.py
-        - par_generator in flood_model_parameters_generator.py
+        - par_generator in lisflood_parameters_generator.py
         - hydrological_and_hydrodynamic_simulation_generator in hydrological_and_hydrodynamic_pipeline.py
 
         Parameters
@@ -142,19 +142,22 @@ class ElevationSolution():
     def __init__(
             self,
             hydro_combination_path: Path,
+            flood_model: str,
             vectors: str = None
     ) -> None:
         """
         Change the elevation based on the vector.
         This class relates to functions:
-        - flood_model_executor in flood_model_simulations_generator.py
-        - par_generator in flood_model_parameters_generator.py
+        - flood_model_executor in lisflood_simulations_generator.py
+        - par_generator in lisflood_parameters_generator.py
         - hydrological_and_hydrodynamic_simulation_generator in hydrological_and_hydrodynamic_pipeline.py
 
         Parameters
         ----------
         hydro_combination_path : Path
             Directory to folder storing all necessary data
+        flood_model : str
+            Either "lisflood-fp" or "bg-flood"
         vectors : str = None
             Name of dataframe that contains 'vector_path', 'value', 'distance' columns:
             - 'vector_path': Column that stores directories to specific vectors
@@ -163,9 +166,16 @@ class ElevationSolution():
         """
         self.hydro_combination_path = hydro_combination_path
         self.vectors = pd.read_csv(self.hydro_combination_path / vectors)
+        self.flood_model = flood_model
 
-        with rxr.open_rasterio(self.hydro_combination_path / "z.asc") as dem:
-            self.dem = dem.squeeze().load()
+        if flood_model == "lisflood-fp":
+            with rxr.open_rasterio(self.hydro_combination_path / "z.asc") as dem:
+                self.dem = dem.squeeze().load()
+
+        else:
+            terrain_data = xr.open_dataset(self.hydro_combination_path / "8m_geofabric_clipped.nc")
+            self.dem = terrain_data.z.squeeze()
+            self.roughness_length = terrain_data.zo.squeeze()
 
     def rasterize_vector(self, vector_path):
         """
@@ -315,22 +325,47 @@ class ElevationSolution():
         # Change elevation data
         modified_dem = self.change_elevation()
 
-        # Find existing elevation files
-        existing_z_files = sorted(
-            self.hydro_combination_path.glob("z_elevation_*.asc")
-        )
+        if self.flood_model == "lisflood-fp":
+            # Find existing elevation files
+            existing_z_files = sorted(
+                self.hydro_combination_path.glob("z_elevation_*.asc")
+            )
 
-        # Decide the number of output file
-        # based on the number of running the model
-        number = len(existing_z_files) + 1
+            # Decide the number of output file
+            # based on the number of running the model
+            number = len(existing_z_files) + 1
 
-        # Create filename
-        output_name = f"z_elevation_{number:03d}.asc"
+            # Create filename
+            output_name = f"z_elevation_{number:03d}.asc"
 
-        # Write out
-        modified_dem.rio.to_raster(
-            self.hydro_combination_path / output_name,
-            compress="LZW",
-            tiled=True
-        )
+            # Write out
+            modified_dem.rio.to_raster(
+                self.hydro_combination_path / output_name,
+                compress="LZW",
+                tiled=True
+            )
 
+        else:
+            # Find existing elevation files
+            existing_z_files = sorted(
+                self.hydro_combination_path.glob("8m_geofabric_clipped_elevation_*.nc")
+            )
+
+            # Decide the number of output file
+            # based on the number of running the model
+            number = len(existing_z_files) + 1
+
+            # Create filename
+            output_name = f"8m_geofabric_clipped_elevation_{number:03d}.nc"
+
+            # Merge z and zo
+            terrain_data = xr.Dataset({
+                "z": modified_dem,
+                "zo": self.roughness_length
+            })
+
+            # Add CRS
+            terrain_data.rio.write_crs("EPSG:2193", inplace=True)
+
+            # Write out
+            terrain_data.to_netcdf(self.hydro_combination_path / output_name)
