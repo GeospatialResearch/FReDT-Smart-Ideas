@@ -73,7 +73,7 @@ class Whirinaki1999ScenarioProcessService(Process):
         scenario_id = check_cache_task.get()
 
         if scenario_id is None:
-            modelling_task = smartidea_tasks.create_model_whirinaki_1999()
+            modelling_task = smartidea_tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999()
             scenario_id = modelling_task.get()
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria

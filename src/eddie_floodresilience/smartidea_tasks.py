@@ -31,6 +31,7 @@ import xarray
 from eddie.digitaltwin import cache_new_results, check_cache_results, retrieve_from_instructions, setup_environment
 from eddie.digitaltwin.utils import setup_logging
 from eddie.tasks import OnFailureStateTask, add_base_data_to_db, app, wkt_to_gdf  # pylint: disable=cyclic-import
+from src.eddie_floodresilience import hydrological_and_hydrodynamic_pipeline
 from src.eddie_floodresilience.dynamic_boundary_conditions.rainfall import main_rainfall
 from src.eddie_floodresilience.dynamic_boundary_conditions.river import main_river
 from src.eddie_floodresilience.dynamic_boundary_conditions.tide import main_tide_slr
@@ -77,6 +78,9 @@ def on_startup(sender: Consumer, **_kwargs: None) -> None:  # pylint: disable=mi
         sender.app.send_task("eddie.tasks.add_base_data_to_db", args=[aoi_wkt, base_data_parameters], connection=conn)
         # Send a task to ensure lidar datasets are evaluated.
         sender.app.send_task("src.eddie_floodresilience.tasks.ensure_lidar_datasets_initialised")
+
+def create_hydrological_and_hydrodynamic_model_whirinaki_1999() -> int:
+    hydrological_and_hydrodynamic_pipeline.main()
 
 
 def create_model_for_area(selected_polygon_wkt: str, scenario_options: dict) -> result.GroupResult:

@@ -53,16 +53,16 @@ dependencies:
   - rioxarray
   - scrapy==2.11.1
   - twisted==22.10.0
-  - whitebox
-  - whitebox_tools
+  - whitebox==2.3.6
+  - whitebox_tools==2.4.0
   - sqlalchemy==2.0.48
   - xarray
   - pip:
-      - whitebox-workflows
       - geovoronoi==0.4.0
       - gunicorn==25.1.0
       - git+https://github.com/LukeParky/NewZeaLiDAR.git@update_sqlalchemy
       - git+https://github.com/GeospatialResearch/OWSLib.git
       - pywps==4.7.0 # pywps is available in conda but our fork of OWSLib is required for bounding boxes
+      - whitebox-workflows==1.3.5
 
 prefix:
