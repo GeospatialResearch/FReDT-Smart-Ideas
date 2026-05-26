@@ -18,7 +18,7 @@ DATETIME_FORMAT = "%Y-%m-%d %H_%M_%S"
 def create_hhp(num_threads: int, resolution: int) -> HydrologicalAndHydrodynamicPipeline:
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH
     outlet_gauge_locations_filename = 'river_outlet'
-    forcing_name = Path(r"R:\DigitalTwins\smartideas\Barra\Whirinaki\merge_gauges_HIRDS_004")
+    forcing_name = 'whirinaki'
     river_name = 'whirinaki'
     precipitation_path = EnvVariable.PRECIPITATION_PATH
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
