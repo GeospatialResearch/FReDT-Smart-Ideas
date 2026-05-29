@@ -4,8 +4,6 @@ Created on Thu Mar 26 22:33:14 2026
 
 @author: mng42
 """
-from typing import Any
-
 from osgeo import gdal  # Import gdal before rasterio
 import rioxarray as rxr
 import xarray as xr
@@ -239,31 +237,124 @@ class InjectionPointsandStreamlinesAligner():
 
         return dem_clip
 
-    def find_lowest_cell(
+    def get_coords_grids_from_dem(
             self,
-            values: np.ndarray
-    ) -> Any:
+            dem_clip: xr.DataArray
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
-        Find grid cell with the lowest elevation
+        Create coordinate grids from DEM coordinates
+
+        Parameters
+        ----------
+        dem_clip : xr.DataArray
+            DEM clipped to the geometry
+
+        Returns
+        -------
+        x_array_coord : np.ndarray
+            Meshgrid arrays of x coordinates
+        y_array_coord : np.ndarray
+            Meshgrid arrays of y coordinates
+        """
+        # Extract x, y coordinates from DEM that is clipped around geometry
+        x_coord = dem_clip.x.values
+        y_coord = dem_clip.y.values
+
+        x_array_coord, y_array_coord = np.meshgrid(x_coord, y_coord)
+
+        return x_array_coord, y_array_coord
+
+    def distance_between_cell_and_point(
+            self,
+            x_array_coord: np.ndarray,
+            y_array_coord: np.ndarray,
+            point: Point
+    ):
+        """
+        Compute Euclidean distance from each DEM cell to the original injection points
+
+        Parameters
+        ----------
+        x_array_coord : np.ndarray
+            Meshgrid arrays of x coordinates
+        y_array_coord : np.ndarray
+            Meshgrid arrays of y coordinates
+        point : Point
+            Original injection point
+
+        Returns
+        -------
+        distance : np.ndarray
+            Distance grid
+        """
+        # Calculate the distance
+        distance = np.sqrt(
+            (x_array_coord - point.x) ** 2 +
+            (y_array_coord - point.y) ** 2
+        )
+
+        return distance
+
+    def compute_weighted_score(
+            self,
+            values: np.ndarray,
+            distances: np.ndarray,
+            elevation_weight: float,
+            distance_weight: float
+    ) -> np.ndarray:
+        """
+        Compute score weighted by elevation and distance.
+        (The target is to find the lowest score)
 
         Parameters
         ----------
         values : np.ndarray
+            DEM cell values
+        distances : np.ndarray
+            Distance grid from original point
+        elevation_weight : float
+            Weight values that control the influence of elevation.
+            Default is 1
+        distance_weight : float
+            Weight values that control the influence of distance.
+            Larger values prefer cells closer to the original injection point.
+            Default is 0.01
+
+        Returns
+        -------
+        np.ndarray
+            Computed score grid.
+        """
+        # Compute score
+        score = elevation_weight * values + distance_weight * distances
+
+        # Ignore nans
+        score[np.isnan(values)] = np.nan
+
+        return score
+
+    def find_best_cell(
+            self,
+            score: np.ndarray
+    ) -> tuple[int, int]:
+        """
+        Find grid cell with the lowest score
+
+        Parameters
+        ----------
+        score : np.ndarray
             Combined score grid
 
         Returns
         -------
-        row_column_position : Any
+        row_column_position : tuple[int, int]
             Row and column indexes
         """
-        # Find the lowest cell
-        lowest_elevation_index = np.nanargmin(values)
+        # Find the best cell
+        best_index = np.nanargmin(score)
 
         # Find the row nad column position in the grid
-        row_column_position = np.unravel_index(
-            lowest_elevation_index,
-            values.shape
-        )
+        row_column_position = np.unravel_index(best_index, score.shape)
 
         return row_column_position
 
@@ -302,7 +393,9 @@ class InjectionPointsandStreamlinesAligner():
             self,
             point: Point,
             dem: xr.DataArray,
-            buffer_distance: float = 100
+            buffer_distance: float = 100,
+            elevation_weight: float = 1,
+            distance_weight: float = 0.01
     ) -> Point:
         """
         Snap a point to a nearby low-elevation DEM grid cell.
@@ -317,16 +410,23 @@ class InjectionPointsandStreamlinesAligner():
         buffer_distance : float = 100
             Search radius around the point (metres).
             Default is 100
+        elevation_weight : float
+            Weight values that control the influence of elevation.
+            Default is 1.
+        distance_weight : float = 0.05
+            Controls balance between lower elevation and closer distance.
+            Larger values prefer closer cells.
+            Default is 0.01
 
         Returns
         -------
         snapped_point : Point
             Snapped point geometry.
         """
-        # Create searching geometry
+        # Create search area
         buffer_geom = point.buffer(buffer_distance)
 
-        # Clip DEM to the geometry that is just created
+        # Clip DEM
         dem_clip = self.clip_dem_around_geometry(
             dem,
             buffer_geom
@@ -335,8 +435,26 @@ class InjectionPointsandStreamlinesAligner():
         # Extract elevation values
         values = dem_clip.values
 
+        # Coordinate grids
+        x_array_coord, y_array_coord = self.get_coords_grids_from_dem(dem_clip)
+
+        # Distance grid
+        distances = self.distance_between_cell_and_point(
+            x_array_coord,
+            y_array_coord,
+            point
+        )
+
+        # Combined score
+        score = self.compute_weighted_score(
+            values,
+            distances,
+            elevation_weight,
+            distance_weight
+        )
+
         # Best cell
-        row_idx, column_idx = self.find_lowest_cell(values)
+        row_idx, column_idx = self.find_best_cell(score)
 
         # Snapped injection point
         snapped_injection_point = self.convert_index_to_point(
@@ -349,7 +467,9 @@ class InjectionPointsandStreamlinesAligner():
 
     def snap_multiple_injection_points(
             self,
-            buffer_distance: float = 200
+            buffer_distance: float = 100,
+            elevation_weight: float = 1,
+            distance_weight: float = 0.01
     ) -> gpd.GeoDataFrame:
         """
         Snap multiple injection points to nearby low-elevation cells
@@ -359,6 +479,12 @@ class InjectionPointsandStreamlinesAligner():
         buffer_distance : float = 100
             Search radius around each point (metres).
             Default is 100
+        elevation_weight : float
+            Weight values that control the influence of elevation.
+            Default is 1.
+        distance_weight : float = 0.01
+            Controls preference for closer cells.
+            Default is 0.01
 
         Returns
         -------
@@ -373,7 +499,9 @@ class InjectionPointsandStreamlinesAligner():
             snapped_point = self.snap_one_point(
                 point=row.geometry,
                 dem=self.dem,
-                buffer_distance=buffer_distance
+                buffer_distance=buffer_distance,
+                elevation_weight=elevation_weight,
+                distance_weight=distance_weight
             )
 
             # Add to new geometries
@@ -597,7 +725,9 @@ class InjectionPointsFloodModelGenerator():
 
         # Align injection points with streamlines by snapping
         new_injection_points = injection_points_and_streamlines_aligner.snap_multiple_injection_points(
-            buffer_distance=200
+            buffer_distance=300,
+            elevation_weight=2,
+            distance_weight=0.001
         ).to_crs("EPSG:2193")
 
         return new_injection_points

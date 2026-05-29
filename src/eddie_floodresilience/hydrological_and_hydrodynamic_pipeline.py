@@ -250,21 +250,70 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
 
-            # Generate wflow data
-            self.wflow_data_pipeline()
+            # # Generate wflow data
+            # self.wflow_data_pipeline()
 
             # Generate flood data
             self.flood_data_pipeline()
 
 
 
-# # This is where to check the model
+# OTAUTAU
+def main():
+    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_otautau_path_007")
+    forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    river_name = 'otautau'
+    precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
+    start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+    end_time = datetime.fromisoformat("2020-02-05T00:00:00")
+
+    # Gore
+    num_threads = 8
+    flood_aoi_boundary = [1212679.030, 4876273.859, 1215401.674, 4880224.019]
+    adjust_manning = False
+    flood_model = 'bg-flood'
+
+    polygons = None # r'polygons/polygons.shp'
+    vectors = None # r'vectors/vectors.csv'
+    resolution = 200
+    threshold = 25000
+
+    # Set up hydraulic and hydrodynamic pipeline
+    hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+        hydro_combination_path,
+
+        forcing_name,
+        river_name,
+        precipitation_path,
+        start_time,
+        end_time,
+
+        num_threads,
+        flood_aoi_boundary,
+        adjust_manning,
+        flood_model,
+
+        polygons,
+        vectors,
+        resolution,
+        threshold
+    )
+
+    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+# # WAIMEA
 # def main():
-#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_013")
-#     forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_waimea_path_003")
+#     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
 #     river_name = 'mataura'
 #     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
 #     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
@@ -272,11 +321,11 @@ class HydrologicalAndHydrodynamicPipeline:
 #
 #     # Gore
 #     num_threads = 8
-#     flood_aoi_boundary = [1283763.983, 4882997.604, 1289715.883, 4891397.604]
+#     flood_aoi_boundary = [1274171.417, 4896113.968, 1279068.442, 4899628.700]
 #     adjust_manning = False
 #     flood_model = 'bg-flood'
 #
-#     polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
+#     polygons = None # r'polygons/polygons.shp'
 #     vectors = None # r'vectors/vectors.csv'
 #     resolution = 200
 #     threshold = 25000
@@ -306,56 +355,101 @@ class HydrologicalAndHydrodynamicPipeline:
 #
 # if __name__ == '__main__':
 #     main()
+#
 
 
 
+# # MATAURA
+# def main():
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_020")
+#     forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+#     river_name = 'mataura'
+#     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
+#     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+#     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
+#
+#     # Gore
+#     num_threads = 8
+#     flood_aoi_boundary = [1283763.983, 4882997.604, 1289535.012, 4890957.772]
+#     adjust_manning = False
+#     flood_model = 'lisflood-fp'
+#
+#     polygons = None # r'polygons/polygons.shp'
+#     vectors = None # r'vectors/vectors.csv'
+#     resolution = 200
+#     threshold = 25000
+#
+#     # Set up hydraulic and hydrodynamic pipeline
+#     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+#         hydro_combination_path,
+#
+#         forcing_name,
+#         river_name,
+#         precipitation_path,
+#         start_time,
+#         end_time,
+#
+#         num_threads,
+#         flood_aoi_boundary,
+#         adjust_manning,
+#         flood_model,
+#
+#         polygons,
+#         vectors,
+#         resolution,
+#         threshold
+#     )
+#
+#     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+#
+# if __name__ == '__main__':
+#     main()
+#
 
 
 
+# # WHIRINAKI
+# # This is where to check the model
+# def main():
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_whirinaki_path_011")
+#     forcing_name = 'whirinaki'
+#     river_name = 'whirinaki'
+#     precipitation_path = Path(r"H:/Barra/Whirinaki/rainfall_gauges_HIRDS_004")
+#     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
+#     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
+#
+#     num_threads = 8
+#     flood_aoi_boundary = [1641148, 6072404, 1642796, 6076268]
+#     adjust_manning = True
+#     flood_model = 'lisflood-fp'
+#
+#     polygons = None # r'polygons/polygons.shp'
+#     vectors = None # r'vectors/vectors.csv'
+#     resolution = 50
+#     threshold = 1000
+#
+#     # Set up hydraulic and hydrodynamic pipeline
+#     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+#         hydro_combination_path,
+#
+#         forcing_name,
+#         river_name,
+#         precipitation_path,
+#         start_time,
+#         end_time,
+#
+#         num_threads,
+#         flood_aoi_boundary,
+#         adjust_manning,
+#         flood_model,
+#
+#         polygons,
+#         vectors,
+#         resolution,
+#         threshold
+#     )
+#
+#     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
 
-
-# WHIRINAKI
-# This is where to check the model
-def main():
-    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_whirinaki_path_011")
-    forcing_name = 'whirinaki'
-    river_name = 'whirinaki'
-    precipitation_path = Path(r"H:/Barra/Whirinaki/rainfall_gauges_HIRDS_004")
-    start_time = datetime.fromisoformat("1999-01-20T00:00:00")
-    end_time = datetime.fromisoformat("1999-01-22T12:00:00")
-
-    num_threads = 8
-    flood_aoi_boundary = [1641148, 6072404, 1642796, 6076268]
-    adjust_manning = True
-    flood_model = 'lisflood-fp'
-
-    polygons = None # r'polygons/polygons.shp'
-    vectors = None # r'vectors/vectors.csv'
-    resolution = 50
-    threshold = 1000
-
-    # Set up hydraulic and hydrodynamic pipeline
-    hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
-        hydro_combination_path,
-
-        forcing_name,
-        river_name,
-        precipitation_path,
-        start_time,
-        end_time,
-
-        num_threads,
-        flood_aoi_boundary,
-        adjust_manning,
-        flood_model,
-
-        polygons,
-        vectors,
-        resolution,
-        threshold
-    )
-
-    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
-
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()

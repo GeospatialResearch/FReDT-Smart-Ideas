@@ -148,6 +148,7 @@ class DataCatalogGenerator():
         # Polygons for land cover solutions
         if self.polygons is None:
             landcover_file = 'original_globcover.tif'
+            # landcover_file = 'LCDB_raster.tif'
         else:
             landcover_file = max(
                 Path(self.hydromt_path).glob("globcover_*.tif"),

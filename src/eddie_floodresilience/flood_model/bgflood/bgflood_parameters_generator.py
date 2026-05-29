@@ -69,8 +69,8 @@ class ParametersFloodModelGenerator():
         self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
         # Add column that converts time to seconds
         self.injection_points_flow['time_in_second'] = np.arange(
-            3600,
-            3600 * (len(self.injection_points_flow) + 1),
+            0,
+            3600 * (len(self.injection_points_flow)),
             3600
         )
 
@@ -107,8 +107,6 @@ class ParametersFloodModelGenerator():
 
         self.output_folder = self.flood_model_path / f"{output_name}_{next_id:03d}"
         self.output_folder.mkdir(exist_ok=False)
-
-
 
     def flow_text_file_generator(self):
         """Generate flow text data for BG-Flood"""
@@ -155,9 +153,6 @@ class ParametersFloodModelGenerator():
         with open(self.flood_model_path / f"{self.output_folder}/{direction}_bnd.txt", "w") as f:
             # write header
             f.write("# Water level boundary\n")
-
-            # first line MUST be "0 0"
-            f.write("0\t0\n")
 
             # loop through your dataframe
             for t in self.injection_points_flow["time_in_second"]:
@@ -336,12 +331,13 @@ class ParametersFloodModelGenerator():
         cfmap = {terrain_name}?zo;
         outfile = output.nc;
         outvars = hmax;
-        rainfile = {str(self.flood_model_path / "precipitation_dynamic.nc")}?depth;
         top = top_bnd.txt,2;
         bottom = bottom_bnd.txt,2;
         right = right_bnd.txt,2;
         left = left_bnd.txt,2;
         """)
+
+        # rainfile = {str(self.flood_model_path / "precipitation_dynamic.nc")}?depth;
 
         # Set up output path
         output_path = self.flood_model_path / f"{self.output_folder}/BG_param.txt"

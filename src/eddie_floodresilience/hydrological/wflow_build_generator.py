@@ -206,7 +206,7 @@ class WflowBuildGenerator():
         landcover = {
             "setup_lulcmaps": {
                 "lulc_fn": "globcover_2009",
-                "lulc_mapping_fn": "globcover_mapping_default"
+                "lulc_mapping_fn": "globcover_mapping_default" # "globcover_mapping_default"
             }
         }
         
@@ -346,7 +346,6 @@ class WflowBuildGenerator():
                 "G_Cfmax": 5.3,
                 "G_SIfrac": 0.002,
                 "G_TT": 1.3,
-                "f": 20
             }
         }
         
