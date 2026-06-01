@@ -8,7 +8,7 @@ Created on Tue Apr  7 21:12:29 2026
 from pathlib import Path
 from datetime import datetime
 
-from .lisflood_inputs_generator import TerrainGenerator, \
+from .lisflood_inputs_generator_DISTANCE_EDGES import TerrainGenerator, \
                                           TerrainFloodModelGenerator, \
                                           InjectionPointsFloodModelGenerator
                             
@@ -210,8 +210,8 @@ class LisFloodModelSimulationsGenerator():
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
-            # Generate precipitation data for flood model
-            self.precipitation_data_for_flood_model_generator()
+            # # Generate precipitation data for flood model
+            # self.precipitation_data_for_flood_model_generator()
 
             # Generate parameter files for flood model
             self.parameters_files_for_flood_model_generator()

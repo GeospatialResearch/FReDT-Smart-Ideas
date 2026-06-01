@@ -130,7 +130,8 @@ class TerrainFilter:
     def nodata_filling(self) -> None:
         """Fill nodata value with -9999"""
         # Fill the nodata value
-        dem_nosea = rxr.open_rasterio(self.path / f"{self.origin_filename}_dem_split.tif")  # Name here is constant
+        dem_nosea = rxr.open_rasterio(self.path / f"{self.origin_filename}_dem_split.tif",
+                                      chunks={"x": 4096, "y": 4096})  # Name here is constant
         dem_replace_nodata = dem_nosea.fillna(-9999)
         dem_write_nodata = dem_replace_nodata.rio.write_nodata(-9999)
         dem_write_nodata.rio.to_raster(self.path / f"{self.origin_filename}_dem_for_wflow.tif")  # Name here is constant
@@ -138,7 +139,12 @@ class TerrainFilter:
         roughness_nosea = rxr.open_rasterio(self.path / f"{self.origin_filename}_roughness_split.tif")  # Name here is constant
         roughness_replace_nodata = roughness_nosea.fillna(-9999)
         roughness_write_nodata = roughness_replace_nodata.rio.write_nodata(-9999)
-        roughness_write_nodata.rio.to_raster(self.path / f"{self.origin_filename}_roughness_for_wflow.tif")  # Name here is constant
+        roughness_write_nodata.rio.to_raster(
+            self.path / f"{self.origin_filename}_roughness_for_wflow.tif", # Name here is contstant
+            tiled=True,
+            windowed=True,
+            lock=False,
+        )
 
     def filter_dem_for_wflow(self) -> None:
         """Convert DEM into version that can be used by wflow"""

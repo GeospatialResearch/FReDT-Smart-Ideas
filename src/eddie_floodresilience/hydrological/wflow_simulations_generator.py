@@ -30,7 +30,8 @@ class WflowSimulationsGenerator():
         flood_aoi_boundary: list,
         num_threads: int,
         polygons: str = None,
-        resolution: float = 0.00045
+        resolution: float = 0.00045,
+        landcover: str = 'globcover'
     ) -> None:
         """
         Generate wflow model simulations
@@ -64,6 +65,8 @@ class WflowSimulationsGenerator():
         resolution : float
             Resolution for flow data. 
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
+        landcover : str = 'globcover'
+            Name of land cover dataset. Default is 'globcover'
         """
         self.hydromt_path = hydromt_path
         self.wflow_model_path = wflow_model_path
@@ -78,6 +81,7 @@ class WflowSimulationsGenerator():
 
         self.polygons = polygons
         self.resolution = resolution
+        self.landcover = landcover
         
     def files_for_preprocessing_generator(self) -> None:
         """Generate files for preprocessing"""
@@ -87,7 +91,8 @@ class WflowSimulationsGenerator():
             self.wflow_model_path,
             self.forcing_path,
             self.river_name,
-            self.polygons
+            self.polygons,
+            self.landcover
         )
         data_catalog.data_catalog_generator()
         
@@ -100,7 +105,8 @@ class WflowSimulationsGenerator():
             self.hydromt_path,
             self.river_name,
             self.forcing_path,
-            self.polygons
+            self.polygons,
+            self.landcover
         )
         wflow_build.wflow_build_generator()
         

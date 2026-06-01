@@ -10,7 +10,7 @@ from datetime import datetime
 import shutil
 
 
-from .bgflood_inputs_generator_DISTANCE import TerrainGenerator, InjectionPointsFloodModelGenerator
+from .bgflood_inputs_generator_DISTANCE_EDGES import TerrainGenerator, InjectionPointsFloodModelGenerator
 
 from .bgflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 

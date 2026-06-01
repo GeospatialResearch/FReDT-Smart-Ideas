@@ -8,6 +8,7 @@ from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
 
 from osgeo import gdal # Import gdal before rasterio
+import subprocess
 import xarray as xr
 import rioxarray as rxr
 import numpy as np
@@ -88,6 +89,50 @@ class TerrainAttributesGenerator():
                 cell_size=self.resolution,
                 method=resampling_method
             )
+        else:
+            print(f"'{output_path.name}' already exists!")
+
+    def raster_resampling_using_gdal(
+            self,
+            resampling_method: str = 'nn'
+    ) -> None:
+        """
+        Resample raster to a given resolution using GDAL (memory efficient).
+        This function will be merged with the function above
+
+        Parameters
+        ----------
+        resampling_method : str = 'nn'
+            Method to resample resolutions. There are three methods:
+                - 'nn': nearest neighbour
+                - 'bi-linear': bilinear
+                - 'cc': cubic spline
+        """
+        output_path = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow_coarser.tif"
+        input_path = self.path / f"{self.origin_filename}_{self.raster_name}_for_wflow.tif"
+
+        # Map wbt method names to GDAL method names
+        method_map = {
+            'nn': 'near',
+            'bi-linear': 'bilinear',
+            'cc': 'cubicspline'
+        }
+        gdal_method = method_map.get(resampling_method, 'near')
+
+        if not output_path.is_file():
+            cmd = [
+                "gdalwarp",
+                "-tr", str(self.resolution), str(self.resolution),  # target resolution
+                "-r", gdal_method,  # resampling method
+                "-co", "TILED=YES",  # tiled output
+                "-co", "COMPRESS=DEFLATE",  # compress to save disk
+                "-co", "BIGTIFF=IF_SAFER",  # handle large files
+                "-wm", "512",  # working memory in MB
+                str(input_path),
+                str(output_path)
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+
         else:
             print(f"'{output_path.name}' already exists!")
 

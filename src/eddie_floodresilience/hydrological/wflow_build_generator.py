@@ -24,7 +24,8 @@ class WflowBuildGenerator():
         hydromt_path: Path,
         river_name: str,
         forcing_path: Path,
-        polygons: str = None
+        polygons: str = None,
+        landcover: str = 'globcover'
     ) -> None:
         """
         Generate wflow_build.yml for preprocessing data for wflow.
@@ -55,6 +56,8 @@ class WflowBuildGenerator():
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
+        landcover : str = 'globcover'
+            Name of land cover dataset. Default is global cover
         """
         self.start_time = start_time - relativedelta(months=2)
         self.end_time = end_time
@@ -64,6 +67,7 @@ class WflowBuildGenerator():
         self.river_name = river_name
         self.forcing_path = forcing_path
         self.polygons = polygons
+        self.landcover = landcover
 
     def config_section(self) -> dict:
         """
@@ -81,15 +85,26 @@ class WflowBuildGenerator():
             input_path_forcing = "era5_hourly_new.nc"
 
         if self.polygons is not None:
-            # Generate configuration section
-            config = {
-                "setup_config": {
-                    "starttime": self.start_time,
-                    "endtime": self.end_time,
-                    "timestepsecs": 3600,
-                    "input.path_forcing": input_path_forcing
+            if str(self.forcing_path).endswith(".nc"):
+                # Generate configuration section
+                config = {
+                    "setup_config": {
+                        "starttime": self.start_time,
+                        "endtime": self.end_time,
+                        "timestepsecs": 3600,
+                        "input.path_forcing": str(self.forcing_path)
+                    }
                 }
-            }
+            else:
+                # Generate configuration section
+                config = {
+                    "setup_config": {
+                        "starttime": self.start_time,
+                        "endtime": self.end_time,
+                        "timestepsecs": 3600,
+                        "input.path_forcing": str(self.wflow_model_path / "wflow_test_full" / "era5_hourly_new_*.nc")
+                    }
+                }
 
         else:
 
@@ -202,11 +217,16 @@ class WflowBuildGenerator():
         lulc : dict
             A dictionary that contains landcover's section
         """
+        if self.landcover == 'globcover':
+            landcover_mapping = "globcover_mapping_default"
+        else:
+            landcover_mapping = str(self.hydromt_path / "lcdb_mapping.csv")
+
         # Generate landuse/landcover's section
         landcover = {
             "setup_lulcmaps": {
-                "lulc_fn": "globcover_2009",
-                "lulc_mapping_fn": "globcover_mapping_default" # "globcover_mapping_default"
+                "lulc_fn": "landcover",
+                "lulc_mapping_fn": landcover_mapping
             }
         }
         
@@ -225,7 +245,7 @@ class WflowBuildGenerator():
         lai = {
             "setup_laimaps": {
                 "lai_fn": "modis_lai",
-                "lulc_fn": "globcover_2009",
+                "lulc_fn": "lcdb_2023",
                 "lulc_sampling_method": "any",
                 "lulc_zero_classes": [200, 210, 220],
                 "buffer": 2

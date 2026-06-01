@@ -138,8 +138,8 @@ class ParametersFloodModelGenerator():
                 bci_parameter.write(edge_text)
             
             # Get injection points ID from injection_points_flow data
-            buffer_distance = 10
-            tolerance = 1
+            buffer_distance = 12
+            tolerance = 5
 
             # Get injection points ID
             injection_points_id = [
@@ -352,8 +352,8 @@ class ParametersFloodModelGenerator():
             ('bcifile', bci),
             ('bdyfile', bdy),
             ('DEMFile', z),
-            ('manningfile', n),
-            ('dynamicrainfile', precipitation)
+            ('manningfile', n)
+            # ('dynamicrainfile', precipitation)
         ]
         
         # Write into array

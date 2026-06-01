@@ -18,7 +18,8 @@ class DataCatalogGenerator():
             wflow_model_path: Path,
             forcing_path: Path,
             river_name: str,
-            polygons: str = None
+            polygons: str = None,
+            landcover: str = 'globcover'
         ) -> None:
         """
         Generate data_catalog.yml for preprocessing data for wflow.
@@ -38,12 +39,15 @@ class DataCatalogGenerator():
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
+        landcover : str = 'globcover'
+            Name of land cover. Default is 'globcover'
         """
         self.hydromt_path = hydromt_path
         self.wflow_model_path = wflow_model_path
         self.forcing_path = forcing_path
         self.river_name = river_name
         self.polygons = polygons
+        self.landcover = landcover
         
     def meta_section(self) -> dict:
         """
@@ -147,21 +151,29 @@ class DataCatalogGenerator():
         """
         # Polygons for land cover solutions
         if self.polygons is None:
-            landcover_file = 'original_globcover.tif'
-            # landcover_file = 'LCDB_raster.tif'
+            if self.landcover == 'globcover':
+                landcover_file = 'original_globcover.tif'
+            else:
+                landcover_file = 'lcdb_2023_50m_fixed_nodata.tif'
         else:
-            landcover_file = max(
-                Path(self.hydromt_path).glob("globcover_*.tif"),
-                default=Path(self.hydromt_path) / "globcover_001.tif"
-            ).name
+            if self.landcover == 'globcover':
+                landcover_file = max(
+                    Path(self.hydromt_path).glob("globcover_*.tif"),
+                    default=Path(self.hydromt_path) / "globcover_001.tif"
+                ).name
+            else:
+                landcover_file = max(
+                    Path(self.hydromt_path).glob("lcdb_*.tif"),
+                    default=Path(self.hydromt_path) / "lcdb_001.tif"
+                ).name
 
         # At the moment the name globcover and other information is kept fixed for basic automation,
         # it might be changed in the future.
         # NOTE: the information is not from globcover - it is LCDB converted to globcover
         # Generate a dictionary with landcover information
         landcover = {
-            "globcover_2009": {
-                "crs": 4326,
+            "landcover": {
+                "crs": 2193,
                 "data_type": "RasterDataset",
                 "driver": "raster",
                 "meta": {

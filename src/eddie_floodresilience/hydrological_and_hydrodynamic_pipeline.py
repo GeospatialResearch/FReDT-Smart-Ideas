@@ -40,7 +40,8 @@ class HydrologicalAndHydrodynamicPipeline:
             polygons: str = None,
             vectors: str = None,
             resolution: float = 0.00045,
-            threshold: int = 1000
+            threshold: int = 1000,
+            landcover: str = 'globcover'
         ) -> None:
         """
         Generate hydrological and hydrodynamic results
@@ -88,6 +89,8 @@ class HydrologicalAndHydrodynamicPipeline:
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
+        landcover: str = 'globcover'
+            Name of land cover dataset. Default is 'globcover'
         """
         # Set up necessary parameters
         self.hydro_combination_path = hydro_combination_path
@@ -104,6 +107,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.resolution = resolution
         self.threshold = threshold
         self.crs = 2193
+        self.landcover = landcover
         
         self.hydromt_path = Path(r"D:/Digital_Twin_data/necessary_data")
 
@@ -181,7 +185,8 @@ class HydrologicalAndHydrodynamicPipeline:
             self.flood_aoi_boundary,
             self.num_threads,
             self.polygons,
-            self.resolution
+            self.resolution,
+            self.landcover
         )
         
         # Generate wflow model data
@@ -252,7 +257,7 @@ class HydrologicalAndHydrodynamicPipeline:
         else:
             # # Generate terrain data for wflow and flood models
             # self.terrain_data_pipeline()
-
+            #
             # # Generate wflow data
             # self.wflow_data_pipeline()
 
@@ -261,25 +266,128 @@ class HydrologicalAndHydrodynamicPipeline:
 
 
 
-# OTAUTAU
+# # OTAUTAU
+# def main():
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_otautau_path_009")
+#     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+#     river_name = 'otautau'
+#     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
+#     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+#     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
+#
+#     # Gore
+#     num_threads = 8
+#     flood_aoi_boundary = [1211523.632, 4876273.859, 1215360.720, 4880693.039]
+#     adjust_manning = False
+#     flood_model = 'bg-flood'
+#
+#     polygons = None # r'polygons/polygons.shp'
+#     vectors = None # r'vectors/vectors.csv'
+#     resolution = 200
+#     threshold = 25000
+#     landcover = 'globcover'
+#
+#     # Set up hydraulic and hydrodynamic pipeline
+#     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+#         hydro_combination_path,
+#
+#         forcing_name,
+#         river_name,
+#         precipitation_path,
+#         start_time,
+#         end_time,
+#
+#         num_threads,
+#         flood_aoi_boundary,
+#         adjust_manning,
+#         flood_model,
+#
+#         polygons,
+#         vectors,
+#         resolution,
+#         threshold,
+#         landcover
+#     )
+#
+#     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+#
+# if __name__ == '__main__':
+#     main()
+
+
+
+
+# # WAIMEA
+# def main():
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_waimea_path_005")
+#     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+#     river_name = 'waimea'
+#     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
+#     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+#     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
+#
+#     # Gore
+#     num_threads = 8
+#     flood_aoi_boundary = [1274171.417, 4896113.968, 1279068.442, 4899628.700]
+#     adjust_manning = False
+#     flood_model = 'lisflood-fp'
+#
+#     polygons = None # r'polygons/polygons.shp'
+#     vectors = None # r'vectors/vectors.csv'
+#     resolution = 200
+#     threshold = 25000
+#     landcover = 'globcover'
+#
+#     # Set up hydraulic and hydrodynamic pipeline
+#     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+#         hydro_combination_path,
+#
+#         forcing_name,
+#         river_name,
+#         precipitation_path,
+#         start_time,
+#         end_time,
+#
+#         num_threads,
+#         flood_aoi_boundary,
+#         adjust_manning,
+#         flood_model,
+#
+#         polygons,
+#         vectors,
+#         resolution,
+#         threshold,
+#         landcover
+#     )
+#
+#     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+#
+# if __name__ == '__main__':
+#     main()
+
+
+
+
+# MATAURA
 def main():
-    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_otautau_path_007")
-    forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
-    river_name = 'otautau'
+    hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_023")
+    forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    river_name = 'mataura'
     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
     # Gore
     num_threads = 8
-    flood_aoi_boundary = [1212679.030, 4876273.859, 1215401.674, 4880224.019]
+    flood_aoi_boundary = [1283763.983, 4882997.604, 1289535.012, 4890957.772]
     adjust_manning = False
-    flood_model = 'bg-flood'
+    flood_model = 'lisflood-fp'
 
     polygons = None # r'polygons/polygons.shp'
     vectors = None # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
+    landcover = 'globcover'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -299,7 +407,8 @@ def main():
         polygons,
         vectors,
         resolution,
-        threshold
+        threshold,
+        landcover
     )
 
     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
@@ -307,104 +416,6 @@ def main():
 if __name__ == '__main__':
     main()
 
-
-
-
-# # WAIMEA
-# def main():
-#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_waimea_path_003")
-#     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
-#     river_name = 'mataura'
-#     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
-#     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
-#     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
-#
-#     # Gore
-#     num_threads = 8
-#     flood_aoi_boundary = [1274171.417, 4896113.968, 1279068.442, 4899628.700]
-#     adjust_manning = False
-#     flood_model = 'bg-flood'
-#
-#     polygons = None # r'polygons/polygons.shp'
-#     vectors = None # r'vectors/vectors.csv'
-#     resolution = 200
-#     threshold = 25000
-#
-#     # Set up hydraulic and hydrodynamic pipeline
-#     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
-#         hydro_combination_path,
-#
-#         forcing_name,
-#         river_name,
-#         precipitation_path,
-#         start_time,
-#         end_time,
-#
-#         num_threads,
-#         flood_aoi_boundary,
-#         adjust_manning,
-#         flood_model,
-#
-#         polygons,
-#         vectors,
-#         resolution,
-#         threshold
-#     )
-#
-#     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
-#
-# if __name__ == '__main__':
-#     main()
-#
-
-
-
-# # MATAURA
-# def main():
-#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_mataura_path_020")
-#     forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
-#     river_name = 'mataura'
-#     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
-#     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
-#     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
-#
-#     # Gore
-#     num_threads = 8
-#     flood_aoi_boundary = [1283763.983, 4882997.604, 1289535.012, 4890957.772]
-#     adjust_manning = False
-#     flood_model = 'lisflood-fp'
-#
-#     polygons = None # r'polygons/polygons.shp'
-#     vectors = None # r'vectors/vectors.csv'
-#     resolution = 200
-#     threshold = 25000
-#
-#     # Set up hydraulic and hydrodynamic pipeline
-#     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
-#         hydro_combination_path,
-#
-#         forcing_name,
-#         river_name,
-#         precipitation_path,
-#         start_time,
-#         end_time,
-#
-#         num_threads,
-#         flood_aoi_boundary,
-#         adjust_manning,
-#         flood_model,
-#
-#         polygons,
-#         vectors,
-#         resolution,
-#         threshold
-#     )
-#
-#     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
-#
-# if __name__ == '__main__':
-#     main()
-#
 
 
 
@@ -427,6 +438,7 @@ if __name__ == '__main__':
 #     vectors = None # r'vectors/vectors.csv'
 #     resolution = 50
 #     threshold = 1000
+#     landcover = 'globcover'
 #
 #     # Set up hydraulic and hydrodynamic pipeline
 #     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -446,7 +458,8 @@ if __name__ == '__main__':
 #         polygons,
 #         vectors,
 #         resolution,
-#         threshold
+#         threshold,
+#         landcover
 #     )
 #
 #     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
