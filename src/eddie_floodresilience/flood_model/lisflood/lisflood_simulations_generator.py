@@ -8,7 +8,7 @@ Created on Tue Apr  7 21:12:29 2026
 from pathlib import Path
 from datetime import datetime
 
-from .lisflood_inputs_generator_DISTANCE_EDGES import TerrainGenerator, \
+from .lisflood_inputs_generator import TerrainGenerator, \
                                           TerrainFloodModelGenerator, \
                                           InjectionPointsFloodModelGenerator
                             

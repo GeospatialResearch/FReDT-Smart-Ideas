@@ -237,8 +237,8 @@ class ParametersFloodModelGenerator():
         x, y = self.move_points_inside_aoi(
             list(self.terrain_bounding_box.bounds),
             [x, y],
-            buffer_distance=10,
-            tolerance=1
+            buffer_distance=12,
+            tolerance=5
         )
 
         # Calculate pixel bounds
