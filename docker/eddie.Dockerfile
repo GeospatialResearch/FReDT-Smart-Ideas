@@ -60,13 +60,18 @@ ADD --chmod=555 https://github.com/gruntwork-io/health-checker/releases/download
  /usr/local/bin/health-checker
 
 RUN <<EOF
+    set -ex
     # Install dependencies
     apt-get update
     apt-get install -y --no-install-recommends \
       acl \
       ca-certificates \
       curl \
-      gettext-base
+      gettext-base \
+      wget
+
+    curl -fsSL https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-1.12.6-linux-x86_64.tar.gz | tar -xz -C /opt/
+
     # Cleanup image and remove junk
     rm -fr /var/lib/apt/lists/*
     # Remove unused packages. Keep curl for health checking in docker-compose
@@ -89,8 +94,15 @@ RUN <<EOF
     done
 EOF
 
+ENV PATH="/opt/julia-1.12.6/bin:$PATH"
+ENV JULIA_DEPOT_PATH="/opt/julia"
+
+# Install Julia package Wflow
+RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="0.8.1")'
+
 # Copy python virtual environment from build layer
-COPY --chown=root:root --chmod=555 --from=build /venv /venv
+# todo find better way than chmod 777 for allowing whitebox
+COPY --chown=root:root --chmod=777 --from=build /venv /venv
 
 # Copy source files and essential runtime files
 COPY --chown=root:root --chmod=444 selected_polygon.geojson .

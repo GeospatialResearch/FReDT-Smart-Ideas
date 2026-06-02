@@ -9,11 +9,11 @@ from pathlib import Path
 from datetime import datetime
 from typing import Union
 
+import geopandas as gpd
+
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
-
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
-
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import LisFloodModelSimulationsGenerator
@@ -38,7 +38,7 @@ class HydrologicalAndHydrodynamicPipeline:
             adjust_manning: bool,
             flood_model: str,
 
-            polygons: str = None,
+            polygons: gpd.GeoDataFrame | None = None,
             vectors: str = None,
             resolution: float = 0.00045,
             threshold: int = 1000,
@@ -77,8 +77,8 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_model : str
             Either "lisflood-fp" or "bg-flood"
 
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataFrame | None = None
+            Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
         vectors : str = None
             Name of vector file that is used to change the elevation information.
@@ -370,7 +370,9 @@ class HydrologicalAndHydrodynamicPipeline:
 
 
 # MATAURA
-def main():
+def main(landcover_scenario_gdf: gpd.GeoDataFrame | None = None):
+    print("main started")
+
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH
     outlet_gauge_locations_filename = 'river_outlet'
     forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
@@ -385,7 +387,7 @@ def main():
     adjust_manning = False
     flood_model = 'bg-flood'
 
-    polygons = r'polygons_upstream_thick/polygons.shp' # r'polygons/polygons.shp'
+    polygons = None
     vectors = None # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000

@@ -60,25 +60,6 @@ class DepthTimePlot(NamedTuple):
     times: List[float]
 
 
-@signals.worker_ready.connect
-def on_startup(sender: Consumer, **_kwargs: None) -> None:  # pylint: disable=missing-param-doc
-    """
-    Initialise database, runs when Celery instance is ready.
-
-    Parameters
-    ----------
-    sender : Consumer
-        The Celery worker node instance
-    """
-    with sender.app.connection() as conn:
-        # Gather area of interest from file.
-        aoi_wkt = gpd.read_file("selected_polygon.geojson").to_crs(4326).geometry[0].wkt
-        # Send a task to initialise this area of interest.
-        base_data_parameters = DEFAULT_MODULES_TO_PARAMETERS[retrieve_from_instructions]
-        sender.app.send_task("eddie.tasks.add_base_data_to_db", args=[aoi_wkt, base_data_parameters], connection=conn)
-        # Send a task to ensure lidar datasets are evaluated.
-        sender.app.send_task("src.eddie_floodresilience.tasks.ensure_lidar_datasets_initialised")
-
 def create_hydrological_and_hydrodynamic_model_whirinaki_1999() -> int:
     hydrological_and_hydrodynamic_pipeline.main()
 

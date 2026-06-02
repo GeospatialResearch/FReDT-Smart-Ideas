@@ -21,12 +21,13 @@ from datetime import datetime
 import json
 from urllib.parse import urlencode
 
-from pywps import BoundingBoxInput, ComplexOutput, Format, LiteralInput, Process, WPSRequest
+from pywps import BoundingBoxInput, ComplexInput, ComplexOutput, Format, LiteralInput, Process, WPSRequest
 from pywps.response.execute import ExecuteResponse
 from shapely import box
 
-from src.eddie_floodresilience import smartidea_tasks
+from src.eddie_floodresilience import tasks
 from src.eddie_floodresilience.config import EnvVariable as EnvVar
+from src.eddie_floodresilience.solutions.total_solutions import GLOBCOVER_CLASSES
 
 
 class Whirinaki1999ScenarioProcessService(Process):
@@ -38,7 +39,20 @@ class Whirinaki1999ScenarioProcessService(Process):
         """Define inputs and outputs of the WPS process, and assign process handler."""
         # Create bounding box WPS inputs
         inputs = [
-
+            ComplexInput(
+                'location',
+                'New Land Cover Area',
+                supported_formats=[
+                    Format(mime_type='application/vnd.geo+json',
+                           schema='http://geojson.org/geojson-spec.html#geojson')],
+                workdir='workdir'
+            ),
+            LiteralInput(
+                "landcover",
+                "Landcover Class",
+                data_type="string",
+                allowed_values=list(GLOBCOVER_CLASSES.keys())
+            ),
         ]
         # Create area WPS outputs
         outputs = [
@@ -69,12 +83,12 @@ class Whirinaki1999ScenarioProcessService(Process):
         response : ExecuteResponse
             The WPS response, containing output data.
         """
-        check_cache_task = tasks.check_cache.delay()
-        scenario_id = check_cache_task.get()
-
-        if scenario_id is None:
-            modelling_task = smartidea_tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999()
-            scenario_id = modelling_task.get()
+        location_geojson_str = request.inputs["location"][0].data
+        landcover_type_name = request.inputs["landcover"][0].data
+        print("Starting task")
+        modelling_task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999.delay(location_geojson_str,
+                                                                                               landcover_type_name)
+        scenario_id = modelling_task.get()
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id))
