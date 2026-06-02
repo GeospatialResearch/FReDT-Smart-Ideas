@@ -11,11 +11,23 @@ import numpy as np
 from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
 
+GLOBCOVER_CLASSES: dict[str, int] = {
+    "Evergreen Forest": 40,
+    "Dense Deciduous Forest": 50,
+    "Deciduous Forest": 60,
+    "Needleleaf Forest": 70,
+    "Grassland Mosaic": 120,
+    "Shrubland": 130,
+    "Grassland": 140,
+    "Bare Land": 200,
+}
+
 wbe = WbEnvironment()
 wbe.verbose = True
 wbe.max_procs = -1
 
 wbt = WhiteboxTools()
+
 
 class LandCoverSolution():
     """This class is to change the land cover based on polygons"""
@@ -24,7 +36,7 @@ class LandCoverSolution():
             self,
             hydro_combination_path: Path,
             hydromt_path: Path,
-            polygons: str = None
+            polygons: gpd.GeoDataFrame | None = None
     ) -> None:
         """
         Change the land cover based on polygons.
@@ -39,7 +51,7 @@ class LandCoverSolution():
             Directory to folder storing all necessary data
         hydromt_path : Path
             A directory to where all necessary files are stored to run wflow model
-        polygons : str = None
+        polygons : gpd.GeoDataFrame = None
             Polygons that are used to change the landcover information
         """
         self.hydro_combination_path = hydro_combination_path
@@ -69,7 +81,8 @@ class LandCoverSolution():
         """
         # Copy original land cover data to not be affected by the change
         modified_landcover = current_landcover.copy()
-
+        polygons["landcover"] = polygons["landcover_name"].map(GLOBCOVER_CLASSES)
+        
         # Create rasterization shapes
         shapes = [
             (geom, value)
@@ -101,13 +114,9 @@ class LandCoverSolution():
         with rxr.open_rasterio(self.hydromt_path / r'original_globcover.tif') as current_landcover:
             current_landcover = current_landcover.squeeze().load()
 
-        # Read polygons
-        polygons_path = self.hydro_combination_path / self.polygons
-        polygons = gpd.read_file(polygons_path)
-
         # Convert crs
         # This step will be removed in future
-        polygons_crs = polygons.to_crs(4326)
+        polygons_crs = self.polygons.to_crs(4326)
 
         # Rasterize and apply new values to current land cover
         modified_landcover = self.rasterize_polygons(

@@ -7,7 +7,7 @@ from flask import Blueprint, jsonify, make_response, Response
 
 from eddie.check_celery_alive import check_celery_alive
 from src.eddie_floodresilience import tasks
-from src.eddie_floodresilience.flood_model.hydraulic_and_hydrodynamic_service import Whirinaki1999ScenarioProcessService
+from src.eddie_floodresilience.hydrological_and_hydrodynamic_service import Whirinaki1999ScenarioProcessService
 
 os.environ.pop("Path", None)
 # See issue https://github.com/GeospatialResearch/eddie_floodresilience/issues/1 for reason behind disabled QA
@@ -18,11 +18,11 @@ processes = [
     Whirinaki1999ScenarioProcessService()
 ]
 
-process_descriptor = {process.identifier: process.abstract for process in processes}
-service = Service(processes, ['src/pywps.cfg'])
 for working_dir in ["workdir", "outputs", "logs"]:
     path = pathlib.Path("./tmp/pywps") / working_dir
     path.mkdir(exist_ok=True, parents=True)
+process_descriptor = {process.identifier: process.abstract for process in processes}
+service = Service(processes, ['src/pywps.cfg'])
 
 
 @blueprint.route('/wps', methods=['GET', 'POST'])
