@@ -245,7 +245,7 @@ class WflowBuildGenerator():
         lai = {
             "setup_laimaps": {
                 "lai_fn": "modis_lai",
-                "lulc_fn": "lcdb_2023",
+                "lulc_fn": "landcover",
                 "lulc_sampling_method": "any",
                 "lulc_zero_classes": [200, 210, 220],
                 "buffer": 2

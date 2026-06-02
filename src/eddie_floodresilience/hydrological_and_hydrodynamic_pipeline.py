@@ -255,11 +255,11 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # # Generate terrain data for wflow and flood models
-            # self.terrain_data_pipeline()
-            #
-            # # Generate wflow data
-            # self.wflow_data_pipeline()
+            # Generate terrain data for wflow and flood models
+            self.terrain_data_pipeline()
+
+            # Generate wflow data
+            self.wflow_data_pipeline()
 
             # Generate flood data
             self.flood_data_pipeline()
@@ -381,9 +381,9 @@ def main():
     num_threads = 8
     flood_aoi_boundary = [1283763.983, 4882997.604, 1289535.012, 4890957.772]
     adjust_manning = False
-    flood_model = 'lisflood-fp'
+    flood_model = 'bg-flood'
 
-    polygons = None # r'polygons/polygons.shp'
+    polygons = r'polygons_upstream_thick/polygons.shp' # r'polygons/polygons.shp'
     vectors = None # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
