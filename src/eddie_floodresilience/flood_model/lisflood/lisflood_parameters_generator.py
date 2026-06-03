@@ -266,7 +266,7 @@ class ParametersFloodModelGenerator():
         
         return seconds
 
-    def optional_output_generator(self):
+    def optional_output_generator(self) -> str:
         """
         Set up options for outputs according to sceanrios
         and create output directory for flood modelling outputs

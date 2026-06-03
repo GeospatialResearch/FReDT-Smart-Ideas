@@ -58,8 +58,8 @@ class Whirinaki1999ScenarioProcessService(Process):
         outputs = [
             ComplexOutput("floodDepth", "Maximum Flood Depth",
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
-            ComplexOutput("floodedBuildings", "Flooded Buildings",
-                          supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
+            # ComplexOutput("floodedBuildings", "Flooded Buildings",
+            #               supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
         ]
 
         # Initialise the process
@@ -92,7 +92,7 @@ class Whirinaki1999ScenarioProcessService(Process):
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id))
-        response.outputs['floodedBuildings'].data = json.dumps(building_flood_status_catalog(scenario_id))
+        # response.outputs['floodedBuildings'].data = json.dumps(building_flood_status_catalog(scenario_id))
 
 
 def building_flood_status_catalog(scenario_id: int) -> dict:

@@ -15,8 +15,11 @@ from .lisflood_inputs_generator import TerrainGenerator, \
 from .lisflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 
 from .lisflood_parameters_generator import ParametersFloodModelGenerator
+from .. import serve_model
 
 import subprocess
+
+from eddie import geoserver
 
 from src.eddie_floodresilience.config import EnvVariable
 
@@ -227,6 +230,7 @@ class LisFloodModelSimulationsGenerator():
 
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
+            self.serve_flood_model_outputs(self.flood_model_path / "output")
 
         # This 'else' includes 2
         else:
@@ -238,4 +242,17 @@ class LisFloodModelSimulationsGenerator():
 
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
-        
+            # todo apply this elsewhere too
+            self.serve_flood_model_outputs(self.flood_model_path / "output")
+
+    def serve_flood_model_outputs(self, output_directory: Path):
+        max_file = output_directory / "out.max"
+        max_gtiff = serve_model.asc_to_gtiff(max_file)
+        db_name = EnvVariable.POSTGRES_DB
+        # Assign a new workspace name based on the db_name, to prevent name clashes if running multiple databases
+        workspace_name = f"{db_name}-dt-model-outputs"
+        geoserver.create_workspace_if_not_exists(workspace_name)
+        layer_name = f"output_-1"
+        geoserver.add_gtiff_to_geoserver(max_gtiff, workspace_name, layer_name)
+        serve_model.create_viridis_style_if_not_exists()
+
