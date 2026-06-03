@@ -25,6 +25,7 @@ import os
 import pathlib
 from xml.sax import saxutils
 
+import rasterio as rio
 from sqlalchemy.engine import Connection
 import xarray as xr
 
@@ -176,3 +177,21 @@ def add_model_output_to_geoserver(model_output_path: pathlib.Path, model_id: int
     # We can remove the temporary raster
     gtiff_filepath.unlink()
     create_viridis_style_if_not_exists()
+
+
+def asc_to_gtiff(asc_path: pathlib.Path) -> pathlib.Path:
+    gtiff_filepath = asc_path.with_suffix(".tif")
+
+    with rio.open(asc_path) as src:
+        # Read the first band's data into a numpy array
+        asc_data = src.read(1)
+
+        # Extract metadata profile and update driver to GTiff
+        meta = src.meta.copy()
+        meta.update(driver='GTiff', crs=rio.crs.CRS.from_epsg(2193))
+
+        # Write data to a new GTiff
+        with rio.open(gtiff_filepath, 'w', **meta) as dst:
+            dst.write(asc_data, 1)
+
+    return gtiff_filepath
