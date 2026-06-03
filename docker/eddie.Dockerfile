@@ -49,7 +49,7 @@ RUN <<EOF
     /venv/bin/conda-unpack
 EOF
 
-FROM lparkinson/bg_flood:v0.9 AS runtime
+FROM lparkinson/bg_flood:v1.0 AS runtime
 # BG_Flood stage for running the digital twin. Reduces image size significantly if we use a multi-stage build
 WORKDIR /app
 
@@ -65,6 +65,7 @@ RUN <<EOF
     apt-get update
     apt-get install -y --no-install-recommends \
       acl \
+      build-essential \
       ca-certificates \
       curl \
       gettext-base \
@@ -101,7 +102,6 @@ ENV JULIA_DEPOT_PATH="/opt/julia"
 
 # Install Julia package Wflow
 RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="0.8.1")'
-RUN apt-get update && apt-get install -y --no-install-recommends build-essential
 
 
 # Copy python virtual environment from build layer
