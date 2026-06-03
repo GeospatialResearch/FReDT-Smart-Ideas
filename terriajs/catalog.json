@@ -11,7 +11,7 @@
       "name": "Model a land cover change flood scenario",
       "description": "Model a land cover change scenario that will impact the flood scenario",
       "url": "$BACKEND_URL/wps",
-      "identifier": "fredt"
+      "identifier": "whirinaki1999"
     },
     {
       "type": "wms",
