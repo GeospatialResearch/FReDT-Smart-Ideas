@@ -68,6 +68,8 @@ RUN <<EOF
       ca-certificates \
       curl \
       gettext-base \
+      libnetcdf-dev \
+      libnuma-dev \
       wget
 
     curl -fsSL https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-1.12.6-linux-x86_64.tar.gz | tar -xz -C /opt/
@@ -99,6 +101,8 @@ ENV JULIA_DEPOT_PATH="/opt/julia"
 
 # Install Julia package Wflow
 RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="0.8.1")'
+RUN apt-get update && apt-get install -y --no-install-recommends build-essential
+
 
 # Copy python virtual environment from build layer
 # todo find better way than chmod 777 for allowing whitebox
