@@ -16,6 +16,9 @@ from .bgflood_precipitation import PrecipitationGenerator, PrecipitationFloodMod
 
 from .bgflood_parameters_generator import ParametersFloodModelGenerator
 
+from src.eddie_floodresilience.config import EnvVariable
+
+import platform
 import subprocess
 
 
@@ -200,22 +203,31 @@ class BGFloodModelSimulationsGenerator():
         # Get the output folder path
         output_folder_path = self.find_output_folder_path()
 
-        # Set up path to flood model exe
-        # This will be changed into constant local folder in the future
-        flood_model_exe_path = self.hydromt_path / "BG_flood.exe"
+        # Identify the BG-Flood Model executable, accounting for OS differences
+        operating_system = platform.system()
+        match operating_system:
+            case "Windows":
+                flood_model_exe_path = EnvVariable.FLOOD_MODEL_DIR / "BG_flood.exe"
+            case "Linux":
+                flood_model_exe_path = EnvVariable.FLOOD_MODEL_DIR / "BG_Flood"
+            case _:
+                flood_model_exe_path = EnvVariable.FLOOD_MODEL_DIR / "BG_Flood"
+                print(f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
+                print(f"Attempting to run BG_Flood linux script in {operating_system}")
 
         # Copy executable into scenario folder
-        shutil.copy2(
+        output_executable = output_folder_path / flood_model_exe_path.name
+        shutil.copyfile(
             flood_model_exe_path,
-            output_folder_path / "BG_flood.exe"
-        )
+            output_executable
+        )  # todo shutil.copyfile is used instead of copy2 because of some kind of mysterious linux permissions bug
 
         # BG flood command
         bg_flood_command = [
-            str(output_folder_path / "BG_flood.exe")
+            output_executable
         ]
-
         # Run simulation
+        print("Running BG Flood simulation")
         with open(log_file_path, "w") as log_file:
             subprocess.check_call(
                 bg_flood_command,
