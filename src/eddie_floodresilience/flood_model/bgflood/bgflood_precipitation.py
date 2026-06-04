@@ -13,7 +13,10 @@ import netCDF4
 import numpy as np
 from pathlib import Path
 from datetime import datetime
-
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 class PrecipitationGenerator():
     """This class is to generate precipitation"""
@@ -61,6 +64,7 @@ class PrecipitationGenerator():
         precipitation_subset : xr.Dataset
             Precipitation data within given time
         """
+        log.debug("Extracting precipitation data")
 
         # Extract time information (month and year) from start_time.
         # This is just within a month.
@@ -103,6 +107,7 @@ class PrecipitationGenerator():
         formatted_precipitation_subset : xr.Dataset
             Formatted precipitation for easy processing within given time
         """
+        log.debug("Formatting precipitation data")
         # Rename variable
         precipitation_subset = precipitation_subset.rename({
             'pr': 'rainfall_depth'
@@ -178,6 +183,7 @@ class PrecipitationGenerator():
         clipped_precipitation : xr.Dataset
             Clipped precipitation data
         """
+        log.debug("Clipping precipitation data")
         # Generate padding box
         precipitation_padding_box = self.padding_box_generator(padding_value)
 
@@ -211,6 +217,7 @@ class PrecipitationGenerator():
         reprojected_precipitation_data : xr.Dataset
             Reprojected precipitation data
         """
+        log.debug("Reprojecting precipitation data")
         # Reproject precipitation data to padding box of terrain data
         reprojected_precipitation_data = precipitation_data.rio.reproject(
             dst_crs='EPSG:2193',
@@ -258,6 +265,7 @@ class PrecipitationGenerator():
         None.
 
         """
+        log.debug("Writing out precipitation data")
         # Create fine precipitation folder
         fine_precipitation_folder = self.flood_model_path / "precipitation"
         fine_precipitation_folder.mkdir(
@@ -313,6 +321,7 @@ class PrecipitationGenerator():
         combined_precipitation_timestep : xr.Dataset
             Precipitation that combines all timesteps
         """
+        log.debug("Combinging precipitation timesteps")
         # Collect all files of precipitation timesteps
         precipitation_timesteps_files = self.collect_precipitation_timesteps()
 

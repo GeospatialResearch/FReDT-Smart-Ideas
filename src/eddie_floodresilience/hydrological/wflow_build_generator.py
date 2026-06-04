@@ -10,7 +10,10 @@ from pathlib import Path
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 import json
-
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 class WflowBuildGenerator():
     """This class is to generate wflow_build.yml for preprocessing data for wflow"""
@@ -408,9 +411,10 @@ class WflowBuildGenerator():
         wflow_build : dict
             A dictionary that contains wflow build's section
         """
+        log.debug("Setting up wflow build config")
         # Set up wflow build dictionary
         wflow_build = {}
-        
+
         # Set up sections list
         if self.polygons is not None:
             sections_list = [
@@ -466,6 +470,7 @@ class WflowBuildGenerator():
         wflow_build : dict
             A dictionary contains information of all sections
         """
+
         if self.polygons is not None:
             # Find existing file
             existing_file = sorted(
@@ -482,6 +487,7 @@ class WflowBuildGenerator():
             # Set up output filename
             output_filename = self.wflow_model_path / "wflow_build.yml"
 
+        log.debug(f"Writing out {output_filename}")
         # Geenrate content for wflow_build.yml
         with open(output_filename, "w") as output_file:
             yaml.dump(
