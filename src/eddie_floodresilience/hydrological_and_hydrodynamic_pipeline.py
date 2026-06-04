@@ -19,6 +19,10 @@ from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
 
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 class HydrologicalAndHydrodynamicPipeline:
     """This class is to generate hydrological and hydrodynamic results"""

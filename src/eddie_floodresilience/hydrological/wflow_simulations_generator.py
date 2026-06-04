@@ -14,7 +14,10 @@ from .wflow_build_generator import WflowBuildGenerator
 
 
 import subprocess
-
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 class WflowSimulationsGenerator():
     """This class is to generate wflow model simulations"""
@@ -112,6 +115,7 @@ class WflowSimulationsGenerator():
         
     def preprocessing_command(self) -> None:
         """Set up preprocessing command and preprocess data for wflow model"""
+        log.debug("Preprocessing data for wflow model")
         if self.polygons is not None:
             # Find existing file
             existing_file = sorted(
@@ -212,6 +216,7 @@ class WflowSimulationsGenerator():
             wflow_simulation_path = self.wflow_model_path / "wflow_test_full"
             output_log = f"wflow_run.log"
 
+        log.info("Running wflow simulation.")
         # Set up simulation command
         simulation_command = [
             "julia",

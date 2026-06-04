@@ -19,7 +19,10 @@ import subprocess
 import rioxarray as rxr
 
 from pathlib import Path
-
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 def value_change(
         shapefile_path: Path,
         file_need_changing: str,

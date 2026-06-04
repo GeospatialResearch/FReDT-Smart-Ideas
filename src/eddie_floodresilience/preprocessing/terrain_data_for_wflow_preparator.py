@@ -13,7 +13,10 @@ import pyflwdir
 from hydromt import flw
 
 from pathlib import Path
-
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 class TerrainDataWflowPreparator:
     """This class is to prepare terrain data for wflow"""

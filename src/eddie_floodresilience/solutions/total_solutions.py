@@ -21,6 +21,10 @@ GLOBCOVER_CLASSES: dict[str, int] = {
     "Grassland": 140,
     "Bare Land": 200,
 }
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+import logging
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 wbe = WbEnvironment()
 wbe.verbose = True

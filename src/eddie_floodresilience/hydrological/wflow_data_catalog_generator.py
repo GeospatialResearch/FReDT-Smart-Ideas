@@ -7,7 +7,10 @@ Created on Wed Apr  8 10:00:00 2026
 
 import yaml
 from pathlib import Path
-
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 class DataCatalogGenerator():
     """This class is to generate data_catalog.yml for preprocessing data for wflow"""
@@ -470,6 +473,7 @@ class DataCatalogGenerator():
     def data_catalog_generator(self):
         """Generate data_catalog.yml file"""
         # Set up content for data_catalog file
+        log.debug(f"Generating data_catalog.yml file")
         data_catalog = self.data_catalog_section()
         
         # Write data_catalog file

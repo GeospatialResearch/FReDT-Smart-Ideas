@@ -22,7 +22,10 @@ from src.eddie_floodresilience.config import EnvVariable
 import platform
 import subprocess
 
-
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 class BGFloodModelSimulationsGenerator():
     """This class is to generate flood model simulations"""
 
@@ -213,8 +216,8 @@ class BGFloodModelSimulationsGenerator():
                 flood_model_exe_path = EnvVariable.FLOOD_MODEL_DIR / "BG_Flood"
             case _:
                 flood_model_exe_path = EnvVariable.FLOOD_MODEL_DIR / "BG_Flood"
-                print(f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
-                print(f"Attempting to run BG_Flood linux script in {operating_system}")
+                log.warning(f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
+                log.warning(f"Attempting to run BG_Flood linux script in {operating_system}")
 
         # Copy executable into scenario folder
         output_executable = output_folder_path / flood_model_exe_path.name
@@ -228,7 +231,7 @@ class BGFloodModelSimulationsGenerator():
             output_executable
         ]
         # Run simulation
-        print("Running BG Flood simulation")
+        log.info("Running BG Flood simulation")
         with open(log_file_path, "w") as log_file:
             subprocess.check_call(
                 bg_flood_command,

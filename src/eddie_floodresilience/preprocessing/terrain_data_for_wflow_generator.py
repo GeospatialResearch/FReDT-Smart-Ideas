@@ -13,7 +13,10 @@ from .terrain_data_manipulator import TerrainFilter
 from .terrain_attributes_generator import (StreamTopologyGenerator,
                                            StreamHydraulicsGenerator)
 from .terrain_data_for_wflow_preparator import TerrainDataWflowPreparator
-
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 class TerrainDataWflowGenerator:
     """This class is to generate terrain data for wflow model"""
     
