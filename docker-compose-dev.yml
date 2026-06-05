@@ -26,18 +26,18 @@ services:
     volumes:
     - fredt_postgres_db_vol_dev:/var/lib/postgresql/data
 
-  backend:
-    volumes:
-    - ${DATA_DIR_MODEL_OUTPUT}:/stored_data/model_output
+#  backend:
+#    volumes:
+#    - ${DATA_DIR_MODEL_OUTPUT}:/stored_data/model_output
 
   celery_worker:
     restart: no
-    volumes:
-    # Bind host data directories to container, allowing different instances to share data sources.
-    - ${DATA_DIR}:/stored_data
-#    - ${DATA_DIR_MODEL_OUTPUT}:/stored_data/model_output
-    - ${DATA_DIR_GEOSERVER}:/stored_data/geoserver
-    - ${PRECIPITATION_PATH}:/Barra
+#    volumes:
+#    # Bind host data directories to container, allowing different instances to share data sources.
+#    - ${HYDROMT_PATH}:/stored_data/necessary_data
+##    - ${DATA_DIR_MODEL_OUTPUT}:/stored_data/model_output
+##    - ${DATA_DIR_GEOSERVER}:/stored_data/geoserver
+##    - ${PRECIPITATION_PATH}:/Barra
 
   terria_map:
     volumes:
