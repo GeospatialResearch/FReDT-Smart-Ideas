@@ -16,6 +16,7 @@ from .bgflood_precipitation import PrecipitationGenerator, PrecipitationFloodMod
 
 from .bgflood_parameters_generator import ParametersFloodModelGenerator
 
+from .. import serve_model
 from src.eddie_floodresilience.config import EnvVariable
 
 import platform
@@ -235,6 +236,12 @@ class BGFloodModelSimulationsGenerator():
                 stdout=log_file,
                 stderr=log_file
             )
+        self.serve_flood_model_outputs(output_folder_path)
+
+
+    def serve_flood_model_outputs(self, output_directory: Path):
+        model_output = output_directory / "output.nc"
+        serve_model.add_model_output_to_geoserver(model_output, -1)
 
     def flood_model_executor(self):
         """Generate necessary inputs for flood model"""
