@@ -115,7 +115,7 @@ class WflowSimulationsGenerator():
         
     def preprocessing_command(self) -> None:
         """Set up preprocessing command and preprocess data for wflow model"""
-        log.debug("Preprocessing data for wflow model")
+        log.info("Preprocessing data for wflow model")
         if self.polygons is not None:
             # Find existing file
             existing_file = sorted(

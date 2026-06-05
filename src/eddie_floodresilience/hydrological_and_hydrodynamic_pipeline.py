@@ -126,7 +126,7 @@ class HydrologicalAndHydrodynamicPipeline:
             self.forcing_path = forcing_name
 
     def total_solutions(self):
-        print("Starting total solutions")
+        log.info("Starting total solutions")
         """Develop solutions for flood risk resilience"""
         if self.polygons is not None and self.vectors is not None:
             # Land cover/natural solution
@@ -165,7 +165,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
     def terrain_data_pipeline(self):
         """Generate terrain data for wflow and flood models"""
-        print("Starting terrain data")
+        log.info("Starting terrain data")
         # Set up terrain data generation system
         terrain_data = TerrainDataWflowGenerator(
             self.hydro_combination_path,
@@ -181,7 +181,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
     def wflow_data_pipeline(self):
         """Generate wflow model data for flood model"""
-        print("Starting wflow data pipeline")
+        log.info("Starting wflow data pipeline")
         # Set up wflow model data generation system
         wflow_data = WflowSimulationsGenerator(
             self.hydromt_path,
@@ -202,7 +202,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
     def flood_data_pipeline(self):
         """Generate flood model data"""
-        print("Starting flood model pipeline")
+        log.info("Starting flood model pipeline")
         # Set up flood model data generation system
         if self.flood_model == 'lisflood-fp':
             flood_data = LisFloodModelSimulationsGenerator(
@@ -375,7 +375,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # MATAURA
 def main(landcover_scenario_gdf: gpd.GeoDataFrame | None = None):
-    print("main started")
+    log.info("main started")
 
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH
     forcing_name = 'mataura'  # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")

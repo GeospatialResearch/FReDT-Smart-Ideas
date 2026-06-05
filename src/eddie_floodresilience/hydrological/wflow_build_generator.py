@@ -411,7 +411,7 @@ class WflowBuildGenerator():
         wflow_build : dict
             A dictionary that contains wflow build's section
         """
-        log.debug("Setting up wflow build config")
+        log.info("Setting up wflow build config")
         # Set up wflow build dictionary
         wflow_build = {}
 
@@ -487,7 +487,7 @@ class WflowBuildGenerator():
             # Set up output filename
             output_filename = self.wflow_model_path / "wflow_build.yml"
 
-        log.debug(f"Writing out {output_filename}")
+        log.info(f"Writing out {output_filename}")
         # Geenrate content for wflow_build.yml
         with open(output_filename, "w") as output_file:
             yaml.dump(

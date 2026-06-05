@@ -473,7 +473,7 @@ class DataCatalogGenerator():
     def data_catalog_generator(self):
         """Generate data_catalog.yml file"""
         # Set up content for data_catalog file
-        log.debug(f"Generating data_catalog.yml file")
+        log.info(f"Generating data_catalog.yml file")
         data_catalog = self.data_catalog_section()
         
         # Write data_catalog file
