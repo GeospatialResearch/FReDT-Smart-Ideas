@@ -388,7 +388,7 @@ def main(landcover_scenario_gdf: gpd.GeoDataFrame | None = None):
     num_threads = 8
     flood_aoi_boundary = [1283763.983, 4882997.604, 1289535.012, 4890957.772]
     adjust_manning = False
-    flood_model = 'bg-flood'
+    flood_model = 'lisflood-fp'
 
     polygons = None
     vectors = None # r'vectors/vectors.csv'
