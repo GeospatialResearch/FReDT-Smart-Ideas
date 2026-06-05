@@ -906,8 +906,8 @@ class TerrainFloodModelGenerator():
             # Convert roughness length to Manning's n
             manning_for_flood = self.roughness_to_manning(
                 roughness,
-                200
-            )
+                1
+            ) * 2
 
         # Clip Manning's n
         clipped_manning_for_flood = manning_for_flood.rio.clip_box(
