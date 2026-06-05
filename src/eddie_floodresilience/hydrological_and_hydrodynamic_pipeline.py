@@ -237,6 +237,7 @@ class HydrologicalAndHydrodynamicPipeline:
         
     def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
+        self.hydro_combination_path.mkdir(parents=True, exist_ok=True)
         # The if function here will be modified later
         # Apply land cover solution
         # (this would be for both landcover and elevation solutions)
