@@ -321,7 +321,7 @@ class PrecipitationGenerator():
         combined_precipitation_timestep : xr.Dataset
             Precipitation that combines all timesteps
         """
-        log.info("Combinging precipitation timesteps")
+        log.info("Combining precipitation timesteps")
         # Collect all files of precipitation timesteps
         precipitation_timesteps_files = self.collect_precipitation_timesteps()
 
