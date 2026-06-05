@@ -427,7 +427,7 @@ def whirinaki():
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH
     forcing_name = 'whirinaki'
     river_name = 'whirinaki'
-    precipitation_path = Path(r"H:/Barra/Whirinaki/rainfall_gauges_HIRDS_004")
+    precipitation_path = EnvVariable.PRECIPITATION_PATH
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
