@@ -151,12 +151,12 @@ class DataCatalogGenerator():
         """
         # Polygons for land cover solutions
         if self.polygons is None:
-            if self.landcover == 'globcover':
+            if self.landcover in ['globcover', 'globcover_modified']:
                 landcover_file = 'original_globcover.tif'
             else:
                 landcover_file = 'lcdb_2023_50m_fixed_nodata.tif'
         else:
-            if self.landcover == 'globcover':
+            if self.landcover in ['globcover', 'globcover_modified']:
                 landcover_file = max(
                     Path(self.hydromt_path).glob("globcover_*.tif"),
                     default=Path(self.hydromt_path) / "globcover_001.tif"
@@ -173,7 +173,7 @@ class DataCatalogGenerator():
         # Generate a dictionary with landcover information
         landcover = {
             "landcover": {
-                "crs": 2193,
+                "crs": 4326,
                 "data_type": "RasterDataset",
                 "driver": "raster",
                 "meta": {

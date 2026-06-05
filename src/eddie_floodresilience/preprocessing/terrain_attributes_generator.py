@@ -20,6 +20,8 @@ from shapely.geometry import LineString, MultiLineString
 from shapely.geometry import Point, box
 import json
 
+import rasterio.features
+
 # Create whitebox environment and whitebox tools
 wbe = WbEnvironment()
 wbe.verbose = True
@@ -967,25 +969,52 @@ class StreamHydraulicsGenerator():
             hydraulic_name: str
     ) -> None:
         """
-        Assign stream hydraulic values to each stream segment in the vector network
+        Generate features (e.g. width, roughness, ...) for watershed network.
+        THis is temporary solution.
 
         Parameters
         -----------
         streams_watershed_vector_more_info: gpd.GeoDataFrame
-            Converted-to-vector streams within watershed with more information
+            Converted-to-vector streams within watershed.
+            This dataframe contains necessary information of watershed
         streams_watershed_buffer: gpd.GeoDataFrame
-            Buffered streams vector within watershed that can intersect with pixels
+            Buffered streams vector within watershed.
+            Default: the streams is buffered half size of resolution.
+            These buffered streams will be used to intersect with pixels
         hydraulic_name: str
             Name of hydraulic stream attributes
         """
-        # Extract stream hydraulic values for each reach
+        # Set up path
         stream_hydraulic_path_values = self.path / f"{self.origin_filename}_streams_{hydraulic_name}.tif"
-        streams_hydraulic_values = zonal_stats(
-            vectors=streams_watershed_buffer,
-            raster=str(stream_hydraulic_path_values),
-            stats=['mean'],
-            all_touched=True  # includes all pixels by touching the buffered ones
-        )
+
+        # Extract stream hydraulic values for each reach
+        streams_hydraulic_values = []
+        with rasterio.open(str(stream_hydraulic_path_values)) as src:
+            # Read raster and transform
+            raster = src.read(1)
+            transform = src.transform
+
+            # Loop through each stream buffer
+            for geom in streams_watershed_buffer.geometry:
+                # rasterize polygon into mask
+                # True means pixel inside polygon
+                # False means pixel outside polygon
+                # Only True pixels are used
+                mask = rasterio.features.geometry_mask(
+                    [geom],
+                    transform=transform,
+                    invert=True,
+                    out_shape=raster.shape
+                )
+
+                # Use the mask to filter raster: Only pixels inside the buffer polygon
+                values = raster[mask]
+
+                # Based on process above, here what the code does is: For each stream segment,
+                # take all raster pixels inside it, and then calculate mean values
+                streams_hydraulic_values.append({
+                    "mean": np.nanmean(values) if len(values) > 0 else np.nan
+                })
 
         # Convert list of dicts to dataframe
         streams_hydraulic_values_df = pd.DataFrame(streams_hydraulic_values)
