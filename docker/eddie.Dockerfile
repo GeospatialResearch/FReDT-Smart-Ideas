@@ -103,6 +103,8 @@ ENV JULIA_DEPOT_PATH="/opt/julia"
 # Install Julia package Wflow
 RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="0.8.1")'
 
+COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/rainfall_gauges_HIRDS /Barra
+COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/hydrological_hydrodynamic_mataura_path_001 /stored_data/mataura/hydrological_hydrodynamic_mataura_path_001
 
 # Copy python virtual environment from build layer
 # todo find better way than chmod 777 for allowing whitebox
