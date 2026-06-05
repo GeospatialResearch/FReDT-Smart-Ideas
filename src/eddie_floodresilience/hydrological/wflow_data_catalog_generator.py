@@ -176,7 +176,7 @@ class DataCatalogGenerator():
         # Generate a dictionary with landcover information
         landcover = {
             "landcover": {
-                "crs": 2193,
+                "crs": 4326,
                 "data_type": "RasterDataset",
                 "driver": "raster",
                 "meta": {
