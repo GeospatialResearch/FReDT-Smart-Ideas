@@ -574,7 +574,7 @@ class InjectionPointsandStreamlinesAligner():
         new_injection_points: gpd.GeoDataFrame
             New injection points
         """
-        log.info("Snbapping injections points to nearby low-elevation cells.")
+        log.info("Snapping injections points to nearby low-elevation cells.")
         # Create empty geometry
         new_geometries = []
 
