@@ -13,6 +13,10 @@ import netCDF4
 import numpy as np
 from pathlib import Path
 from datetime import datetime
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 
 class PrecipitationGenerator():
