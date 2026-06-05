@@ -33,7 +33,6 @@ class EnvVariable(EnvVarBase):  # pylint: disable=too-few-public-methods
     HYDRO_COMBINATION_PATH = pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH"))
     HYDROMT_PATH = pathlib.Path(EnvVarBase._get_env_variable("HYDROMT_PATH"))
     PRECIPITATION_PATH = pathlib.Path(EnvVarBase._get_env_variable("PRECIPITATION_PATH"))
-    LISFLOOD_PATH = pathlib.Path(EnvVarBase._get_env_variable("LISFLOOD_PATH"))
 
     # NewZealidar config that we must ensure have values.
     _LIDAR_DIR = EnvVarBase._get_env_variable("LIDAR_DIR")

@@ -7,6 +7,7 @@ Created on Tue Apr  7 21:12:29 2026
 
 from pathlib import Path
 from datetime import datetime
+import platform
 
 from .lisflood_inputs_generator import TerrainGenerator, \
                                           TerrainFloodModelGenerator, \
@@ -22,6 +23,11 @@ import subprocess
 from eddie import geoserver
 
 from src.eddie_floodresilience.config import EnvVariable
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
+
 
 
 class LisFloodModelSimulationsGenerator():
@@ -179,10 +185,25 @@ class LisFloodModelSimulationsGenerator():
 
         # Set up path to parameters' file
         par_file_path = str(self.flood_model_path / "par.par")
-        
+
+        # Identify the LISFLOOD-FP executable, accounting for OS differences
+        operating_system = platform.system()
+        linux_path = EnvVariable.HYDROMT_PATH / "lisflood"
+        match operating_system:
+            case "Windows":
+                lisflood_path = EnvVariable.HYDROMT_PATH / "lisflood_v8_1_0.exe"
+            case "Linux":
+                lisflood_path = linux_path
+            case _:
+                lisflood_path = linux_path
+                log.warning(
+                    f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
+                log.warning(f"Attempting to run LISFLOOD-FP linux script in {operating_system}")
+
+
         # Flood simulation command
         flood_simulation_command = [
-            EnvVariable.LISFLOOD_PATH,
+            lisflood_path,
             "-v",
             par_file_path
         ]
@@ -219,6 +240,7 @@ class LisFloodModelSimulationsGenerator():
 
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
+            self.serve_flood_model_outputs(self.flood_model_path / "output")
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
