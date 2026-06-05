@@ -64,7 +64,7 @@ class PrecipitationGenerator():
         precipitation_subset : xr.Dataset
             Precipitation data within given time
         """
-        log.debug("Extracting precipitation data")
+        log.info("Extracting precipitation data")
 
         # Extract time information (month and year) from start_time.
         # This is just within a month.
@@ -107,7 +107,7 @@ class PrecipitationGenerator():
         formatted_precipitation_subset : xr.Dataset
             Formatted precipitation for easy processing within given time
         """
-        log.debug("Formatting precipitation data")
+        log.info("Formatting precipitation data")
         # Rename variable
         precipitation_subset = precipitation_subset.rename({
             'pr': 'rainfall_depth'
@@ -183,7 +183,7 @@ class PrecipitationGenerator():
         clipped_precipitation : xr.Dataset
             Clipped precipitation data
         """
-        log.debug("Clipping precipitation data")
+        log.info("Clipping precipitation data")
         # Generate padding box
         precipitation_padding_box = self.padding_box_generator(padding_value)
 
@@ -217,7 +217,7 @@ class PrecipitationGenerator():
         reprojected_precipitation_data : xr.Dataset
             Reprojected precipitation data
         """
-        log.debug("Reprojecting precipitation data")
+        log.info("Reprojecting precipitation data")
         # Reproject precipitation data to padding box of terrain data
         reprojected_precipitation_data = precipitation_data.rio.reproject(
             dst_crs='EPSG:2193',
@@ -265,7 +265,7 @@ class PrecipitationGenerator():
         None.
 
         """
-        log.debug("Writing out precipitation data")
+        log.info("Writing out precipitation data")
         # Create fine precipitation folder
         fine_precipitation_folder = self.flood_model_path / "precipitation"
         fine_precipitation_folder.mkdir(
@@ -288,13 +288,13 @@ class PrecipitationGenerator():
             )
 
             # Write out to precipitation folder
-            print("---- Saving precipitation for each timestep ----")
+            log.info("---- Saving precipitation for each timestep ----")
             fine_precipitation_path = fine_precipitation_folder / f"precipitation_{i:03d}.nc"
             self.write_out_precipitation(
                 fine_precipitation_path,
                 clipped_reprojected_each_precipitation_timestep
             )
-            print(f"Precipitation timestep {i} is saved")
+            log.info(f"Precipitation timestep {i} is saved")
 
     def collect_precipitation_timesteps(self) -> list:
         """
@@ -321,7 +321,7 @@ class PrecipitationGenerator():
         combined_precipitation_timestep : xr.Dataset
             Precipitation that combines all timesteps
         """
-        log.debug("Combinging precipitation timesteps")
+        log.info("Combinging precipitation timesteps")
         # Collect all files of precipitation timesteps
         precipitation_timesteps_files = self.collect_precipitation_timesteps()
 

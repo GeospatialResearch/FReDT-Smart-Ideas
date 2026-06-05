@@ -281,13 +281,13 @@ class PrecipitationGenerator():
             )
             
             # Write out to precipitation folder
-            print("---- Saving precipitation for each timestep ----")
+            log.info("---- Saving precipitation for each timestep ----")
             fine_precipitation_path = fine_precipitation_folder / f"precipitation_{i:03d}.nc"
             self.write_out_precipitation(
                 fine_precipitation_path,
                 clipped_reprojected_each_precipitation_timestep
             )
-            print(f"Precipitation timestep {i} is saved")
+            log.info(f"Precipitation timestep {i} is saved")
             
     def collect_precipitation_timesteps(self) -> list:
         """

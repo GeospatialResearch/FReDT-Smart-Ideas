@@ -118,7 +118,7 @@ class TerrainGenerator():
         terrain_crs_clipped : xr.Dataset
             Clipped terrain data with crs
         """
-        log.debug("Clipping terrain data to area of interest")
+        log.info("Clipping terrain data to area of interest")
         # Clip DEM
         terrain_crs_clipped = terrain_crs.rio.clip(
             [mapping(self.aoi_boundary)]
@@ -162,7 +162,7 @@ class TerrainGenerator():
         terrain_crs_clipped : xr.Dataset
             Clipped terrain data with crs
         """
-        log.debug("Writing out terrain data.")
+        log.info("Writing out terrain data.")
         # Write out
         terrain_crs_clipped.to_netcdf(
             self.flood_model_path / "8m_geofabric_clipped.nc"
@@ -242,7 +242,7 @@ class InjectionPointsandStreamlinesAligner():
         dem_clip : xr.DataArray
             DEM clipped to the geometry
         """
-        log.debug("Clipping DEM around geometry.")
+        log.info("Clipping DEM around geometry.")
         # Clip DEM around geometry
         dem_clip = dem.rio.clip(
             [geom],
@@ -271,7 +271,7 @@ class InjectionPointsandStreamlinesAligner():
         y_array_coord : np.ndarray
             Meshgrid arrays of y coordinates
         """
-        log.debug("Getting coordinate grids from DEM coordinates.")
+        log.info("Getting coordinate grids from DEM coordinates.")
         # Extract x, y coordinates from DEM that is clipped around geometry
         x_coord = dem_clip.x.values
         y_coord = dem_clip.y.values
@@ -303,7 +303,7 @@ class InjectionPointsandStreamlinesAligner():
         distance : np.ndarray
             Distance grid
         """
-        log.debug("Calculating Euclidean distance from each DEM cell to original injection points.")
+        log.info("Calculating Euclidean distance from each DEM cell to original injection points.")
         # Calculate the distance
         distance = np.sqrt(
             (x_array_coord - point.x) ** 2 +
@@ -334,7 +334,7 @@ class InjectionPointsandStreamlinesAligner():
         boundary_distance : np.ndarray
             Distance grid to DEM boundary
         """
-        log.debug("Calculating Euclidean distance from each DEM cell to DEM boundary")
+        log.info("Calculating Euclidean distance from each DEM cell to DEM boundary")
         boundary_line = self.dem_boundary.boundary
 
         boundary_distance = np.zeros_like(
@@ -392,7 +392,7 @@ class InjectionPointsandStreamlinesAligner():
             Computed score grid.
         """
         # Compute score
-        log.debug("Computing weighted elevation and distance score.")
+        log.info("Computing weighted elevation and distance score.")
         score = elevation_weight * values + distance_weight * distances + boundary_weight * boundary_distances
 
         # Ignore nans
@@ -417,7 +417,7 @@ class InjectionPointsandStreamlinesAligner():
         row_column_position : tuple[int, int]
             Row and column indexes
         """
-        log.debug("Finding best cell")
+        log.info("Finding best cell")
         # Find the best cell
         best_index = np.nanargmin(score)
 
@@ -574,7 +574,7 @@ class InjectionPointsandStreamlinesAligner():
         new_injection_points: gpd.GeoDataFrame
             New injection points
         """
-        log.debug("Snbapping injections points to nearby low-elevation cells.")
+        log.info("Snbapping injections points to nearby low-elevation cells.")
         # Create empty geometry
         new_geometries = []
 
@@ -652,7 +652,7 @@ class InjectionPointsFloodModelGenerator():
         rivers_new_projection : gpd.GeoDataFrame
             River geodataframe with new crs (2193 for NZTM)
         """
-        log.debug("Reprojecting rivers dataframe.")
+        log.info("Reprojecting rivers dataframe.")
         if self.polygons is not None:
             wflow_test_full_folder = str(max(
                 Path(self.catchment_model_path).glob("wflow_test_full_landcover_*"),
@@ -689,7 +689,7 @@ class InjectionPointsFloodModelGenerator():
         intersections : gpd.GeoSeries
             Intersections series between rivers and DEM bounding box
         """
-        log.debug("Generating intersections between rivers and DEM bounding box.")
+        log.info("Generating intersections between rivers and DEM bounding box.")
         # Get boundary of bounding box
         boundary = self.terrain_bounding_box.boundary
 
@@ -721,7 +721,7 @@ class InjectionPointsFloodModelGenerator():
             List of points where rivers cut the DEM bounding box
         """
         # Create list of points where rivers intersect DEM bounding box
-        log.debug("Extracting injection points from intersections.")
+        log.info("Extracting injection points from intersections.")
         points = []
 
         for geom in intersections:
@@ -801,7 +801,7 @@ class InjectionPointsFloodModelGenerator():
         original_injection_points : gpd.GeoDataFrame
             Original injection points
         """
-        log.debug("Aligning injections points with streamlines.")
+        log.info("Aligning injections points with streamlines.")
         # Get DEM
         terrain_data = xr.open_dataset(self.flood_model_path / "8m_geofabric_clipped.nc")
         dem = terrain_data.z.rio.write_crs("EPSG:2193")
@@ -835,7 +835,7 @@ class InjectionPointsFloodModelGenerator():
             Points geodataframe of intersections between rivers and DEM
             bounding box with IDs and converted crs
         """
-        log.debug("Writing out injection points.")
+        log.info("Writing out injection points.")
         # Write out to shapefile
         points_path = self.flood_model_path / "injection_points.shp"
         new_injection_points.to_file(points_path)
@@ -849,7 +849,7 @@ class InjectionPointsFloodModelGenerator():
         rivers_flow : xr.DataArray
             Rivers' flow data extracted from catchment model outputs
         """
-        log.debug("Extracting rivers' flow from catchment model outputs.")
+        log.info("Extracting rivers' flow from catchment model outputs.")
         if self.polygons is not None:
             wflow_test_full_folder = str(max(
                 Path(self.catchment_model_path).glob("wflow_test_full_landcover_*"),
@@ -889,7 +889,7 @@ class InjectionPointsFloodModelGenerator():
             A table that contains rivers' flow data at injection points
         """
         # Set up dictionary for rivers' flow data for all injection points
-        log.debug("Extracting rivers' flow from catchment model outputs.")
+        log.info("Extracting rivers' flow from catchment model outputs.")
         injection_points_flow_dict = {}
 
         # Extract rivers' flow from catchment model outputs
@@ -930,7 +930,7 @@ class InjectionPointsFloodModelGenerator():
         rivers_flow : xr.DataArray
             Rivers' flow data extracted from catchment model outputs
         """
-        log.debug("Writing out rivers' flow within time.")
+        log.info("Writing out rivers' flow within time.")
         # Set up correct time values
         times = pd.to_datetime(rivers_flow['time'].values)
 

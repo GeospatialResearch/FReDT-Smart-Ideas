@@ -242,7 +242,6 @@ class LisFloodModelSimulationsGenerator():
 
             # Generate simulations by running flood model
             self.flood_model_simulations_generator()
-            # todo apply this elsewhere too
             self.serve_flood_model_outputs(self.flood_model_path / "output")
 
     def serve_flood_model_outputs(self, output_directory: Path):

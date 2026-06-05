@@ -82,7 +82,7 @@ class ParametersFloodModelGenerator():
 
     def output_folder_generator(self):
         """Generate output folder"""
-        log.debug("Generating output folder")
+        log.info("Generating output folder")
         if self.polygons is not None and self.vectors is not None:
             output_name = "output_landcover_elevation"
         elif self.polygons is not None:
@@ -113,7 +113,7 @@ class ParametersFloodModelGenerator():
 
     def flow_text_file_generator(self):
         """Generate flow text data for BG-Flood"""
-        log.debug("Generating flow text data")
+        log.info("Generating flow text data")
         # Create a loop to generate flow text data for BG-Flood
         for col in self.injection_points_flow.columns:
 
@@ -164,7 +164,7 @@ class ParametersFloodModelGenerator():
 
     def tide_text_file_generator(self):
         """Generate tide text data for four edges for BG-Flood"""
-        log.debug("Writing tide boundary configuration.")
+        log.info("Writing tide boundary configuration.")
         self.tide_text_file_design('top')
         self.tide_text_file_design('bottom')
         self.tide_text_file_design('left')
@@ -196,7 +196,7 @@ class ParametersFloodModelGenerator():
         xy_coords : list
             New coordinates of x and y. X and y of each injection point
         """
-        log.debug("Moving points inside aoi")
+        log.info("Moving points inside aoi")
         # Extract each x and y
         x, y = xy_coords
 
@@ -298,7 +298,7 @@ class ParametersFloodModelGenerator():
         flow_lines : list
             A lsit of flow information for BG-Flood parameter file
         """
-        log.debug("Generate flow BG Flood parameter file")
+        log.info("Generate flow BG Flood parameter file")
         # Calculate pixel bounds for each injection points
         self.injection_points["bounds"] = self.injection_points.geometry.apply(
             self.pixel_bounds_from_centroid

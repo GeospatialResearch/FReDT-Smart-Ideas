@@ -85,7 +85,7 @@ class Whirinaki1999ScenarioProcessService(Process):
         """
         location_geojson_str = request.inputs["location"][0].data
         landcover_type_name = request.inputs["landcover"][0].data
-        print("Starting task")
+        log.info("Starting task")
         modelling_task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999.delay(location_geojson_str,
                                                                                                landcover_type_name)
         scenario_id = modelling_task.get()
