@@ -159,11 +159,8 @@ class DataCatalogGenerator():
             else:
                 landcover_file = 'lcdb_2023_50m_fixed_nodata.tif'
         else:
-            if self.landcover == 'globcover':
-                landcover_file = max(
-                    Path(self.hydromt_path).glob("globcover_*.tif"),
-                    default=Path(self.hydromt_path) / "globcover_001.tif"
-                ).name
+            if self.landcover.startswith('globcover'):
+                landcover_file = str((self.wflow_model_path / "globcover" / self.landcover).resolve())
             else:
                 landcover_file = max(
                     Path(self.hydromt_path).glob("lcdb_*.tif"),

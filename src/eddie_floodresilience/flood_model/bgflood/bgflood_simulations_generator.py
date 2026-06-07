@@ -5,44 +5,49 @@ Created on Tue Apr  7 21:12:29 2026
 @author: mng42
 """
 
-from pathlib import Path
-from datetime import datetime
+import logging
+import platform
 import shutil
+import subprocess
+from datetime import datetime
+from pathlib import Path
 
+import geopandas as gpd
+from shapely.geometry import box
+
+from eddie.digitaltwin import setup_environment
+from eddie.digitaltwin.utils import LogLevel, setup_logging
 
 from .bgflood_inputs_generator import TerrainGenerator, InjectionPointsFloodModelGenerator
-
-from .bgflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
-
 from .bgflood_parameters_generator import ParametersFloodModelGenerator
-
-from .. import serve_model
+from .bgflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 from src.eddie_floodresilience.config import EnvVariable
+from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_output_metadata_to_db
+from src.eddie_floodresilience.flood_model.flooded_buildings import (
+    find_flooded_buildings, store_flooded_buildings_in_database)
+from src.eddie_floodresilience.flood_model.serve_model import add_model_output_to_geoserver
 
-import platform
-import subprocess
-
-import logging
-from eddie.digitaltwin.utils import setup_logging, LogLevel
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
+
 class BGFloodModelSimulationsGenerator():
     """This class is to generate flood model simulations"""
 
     def __init__(
-            self,
-            flood_model_path: Path,
-            catchment_model_path: Path,
-            hydromt_path: Path,
-            river_name: str,
-            precipitation_path: Path,
-            aoi_boundary: list,
-            adjust_manning: bool,
-            start_time: datetime,
-            end_time: datetime,
-            crs: int = 2193,
-            polygons: str = None,
-            vectors: str = None
+        self,
+        flood_model_path: Path,
+        catchment_model_path: Path,
+        hydromt_path: Path,
+        river_name: str,
+        precipitation_path: Path,
+        aoi_boundary: list,
+        adjust_manning: bool,
+        start_time: datetime,
+        end_time: datetime,
+        crs: int = 2193,
+        polygons: str = None,
+        vectors: str = None
     ) -> None:
         """
         Generate flood model simulations
@@ -127,7 +132,7 @@ class BGFloodModelSimulationsGenerator():
         # Call out class used to generate precipitation data
         # Path to precipitation file
         precipitation_file = (
-                self.flood_model_path / "precipitation_dynamic.nc"
+            self.flood_model_path / "precipitation_dynamic.nc"
         )
 
         # Check if file already exists
@@ -199,7 +204,7 @@ class BGFloodModelSimulationsGenerator():
 
         return output_folder_path
 
-    def flood_model_simulations_generator(self):
+    def flood_model_simulations_generator(self) -> int:
         """Generate flood simulations by running flood model"""
         # Set up path to log file
         log_file_path = self.flood_model_path / "simulation_log.log"
@@ -216,15 +221,18 @@ class BGFloodModelSimulationsGenerator():
                 flood_model_exe_path = EnvVariable.FLOOD_MODEL_DIR / "BG_Flood"
             case _:
                 flood_model_exe_path = EnvVariable.FLOOD_MODEL_DIR / "BG_Flood"
-                log.warning(f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
+                log.warning(
+                    f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
                 log.warning(f"Attempting to run BG_Flood linux script in {operating_system}")
 
         # Copy executable into scenario folder
         output_executable = output_folder_path / flood_model_exe_path.name
+        # shutil.copyfile is used instead of copy2 because of some kind of mysterious linux permissions bug.
+        # https://github.com/GeospatialResearch/FReDT-Smart-Ideas/issues/83
         shutil.copyfile(
             flood_model_exe_path,
             output_executable
-        )  # todo shutil.copyfile is used instead of copy2 because of some kind of mysterious linux permissions bug
+        )
 
         # BG flood command
         bg_flood_command = [
@@ -239,14 +247,46 @@ class BGFloodModelSimulationsGenerator():
                 stdout=log_file,
                 stderr=log_file
             )
-        self.serve_flood_model_outputs(output_folder_path)
+        model_output_id = self.serve_flood_model_outputs(output_folder_path)
+        return model_output_id
 
+    def serve_flood_model_outputs(self, output_directory: Path) -> int:
+        """
+        Adds max flood model output data to database and geoserver for serving.
 
-    def serve_flood_model_outputs(self, output_directory: Path):
+        Parameters
+        ----------
+        output_directory : Path
+            The output directory for the flood model output.
+
+        Returns
+        -------
+        int
+            The flood model output ID.
+            Returns -1 if GeoServer is disabled for testing.
+        """
+        if not EnvVariable.IS_GEOSERVER_ACTIVE:
+            return -1
+
         model_output = output_directory / "output.nc"
-        serve_model.add_model_output_to_geoserver(model_output, -1)
+        # Retrieve the AOI as a GeoDataFrame
+        bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.aoi_boundary)], crs="EPSG:2193")
 
-    def flood_model_executor(self):
+        # Store metadata related to the BG Flood model output in the database
+        engine = setup_environment.get_database()
+        with engine.connect() as conn:
+            model_output_id = store_model_output_metadata_to_db(conn, model_output, bbox_gdf)
+            # Find buildings that are flooded to a depth greater than or equal to 0.1m
+            log.info("Analysing flooded buildings")
+            flooded_buildings = find_flooded_buildings(conn, bbox_gdf, model_output_path,
+                                                       flood_depth_threshold=0.1)
+            log.info("Analysed flooded buildings - adding flooded buildings to database")
+            store_flooded_buildings_in_database(conn, flooded_buildings, model_output_id)
+        # Add the model output to GeoServer for visualization
+        add_model_output_to_geoserver(model_output_path, model_output_id)
+        return model_output_id
+
+    def flood_model_executor(self) -> int:
         """Generate necessary inputs for flood model"""
         # Four cases:
         # 1. Original scenario (polygon=None, vector=None)
@@ -265,7 +305,7 @@ class BGFloodModelSimulationsGenerator():
             self.precipitation_data_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            self.flood_model_simulations_generator()
+            model_output_id = self.flood_model_simulations_generator()
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
@@ -276,7 +316,7 @@ class BGFloodModelSimulationsGenerator():
             self.parameter_data_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            self.flood_model_simulations_generator()
+            model_output_id = self.flood_model_simulations_generator()
 
         # This 'else' includes 2
         else:
@@ -284,4 +324,5 @@ class BGFloodModelSimulationsGenerator():
             self.parameter_data_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            self.flood_model_simulations_generator()
+            model_output_id = self.flood_model_simulations_generator()
+        return model_output_id

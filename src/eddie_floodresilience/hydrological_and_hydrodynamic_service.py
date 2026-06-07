@@ -17,81 +17,167 @@
 
 """Defines PyWPS WebProcessingService process for creating a flooding scenario with hydraluic and hydrodynamic modelling."""
 
-from datetime import datetime
 import json
+from abc import ABC
+from typing import Callable
 from urllib.parse import urlencode
 
-from pywps import BoundingBoxInput, ComplexInput, ComplexOutput, Format, LiteralInput, Process, WPSRequest
+from celery import Task
+from pywps import ComplexInput, ComplexOutput, Format, LiteralInput, Process, WPSRequest
 from pywps.response.execute import ExecuteResponse
-from shapely import box
 
 from src.eddie_floodresilience import tasks
 from src.eddie_floodresilience.config import EnvVariable as EnvVar
 from src.eddie_floodresilience.solutions.total_solutions import GLOBCOVER_CLASSES
 
 
-class Whirinaki1999ScenarioProcessService(Process):
-    """Class representing a WebProcessingService process for creating a flooding scenario"""
+class PredefinedScenario(Process, ABC):
+    def __init__(self, title: str, identifier: str, task: Callable, isBaseline=False) -> None:
+        """Define inputs and outputs of the WPS process, and assign process handler."""
+
+        # Create bounding box WPS inputs
+        if isBaseline:
+            # A very simple placeholder configuration for baseline
+            inputs = [LiteralInput(
+                "options",
+                "Options",
+                data_type="integer",
+                allowed_values=[0, 1]
+            ), ]
+        else:
+            inputs = [
+                ComplexInput(
+                    'location',
+                    'New Land Cover Area',
+                    supported_formats=[
+                        Format(mime_type='application/vnd.geo+json',
+                               schema='http://geojson.org/geojson-spec.html#geojson')],
+                    workdir='workdir'
+                ),
+                LiteralInput(
+                    "landcover",
+                    "Landcover Class",
+                    data_type="string",
+                    allowed_values=list(GLOBCOVER_CLASSES.keys())
+                ),
+            ]
+        # Create area WPS outputs
+        outputs = [
+            ComplexOutput("floodDepth", "Maximum Flood Depth",
+                          supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
+            ComplexOutput("floodedBuildings", "Flooded Buildings",
+                          supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
+        ]
+
+        handler = handler_for_task(task, isBaseline)
+        # Initialise the process
+        super().__init__(
+            handler,
+            identifier=identifier,
+            title=title,
+            inputs=inputs,
+            outputs=outputs,
+        )
+
+
+def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
+    """
+    Create a process handler for a given task.
+
+    Parameters
+    ----------
+    task : Task
+        The callback function to be executed as a task.
+    is_baseline : bool = False
+        Whether the scenario is configurable or a baseline. If it is a baseline then we do not have to read the inputs.
+
+    Returns
+    -------
+    Callable
+        The WPS handler function.
+    """
+
+    def _handler(request: WPSRequest, response: ExecuteResponse):
+        """
+                Process handler for modelling a flood scenario
+
+                Parameters
+                ----------
+                request : WPSRequest
+                    The WPS request, containing input parameters.
+                response : ExecuteResponse
+                    The WPS response, containing output data.
+                """
+        if is_baseline:
+            # Inputs can be ignored in a baseline
+            location_geojson_str = None
+            landcover_type_name = None
+        else:
+            # Read the inputs
+            location_geojson_str = request.inputs["location"][0].data
+            landcover_type_name = request.inputs["landcover"][0].data
+
+        # Run the task callback
+        modelling_task = task.delay(location_geojson_str, landcover_type_name)
+        scenario_id = modelling_task.get()
+
+        # Add Geoserver JSON Catalog entries to WPS response for use by Terria
+        response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id))
+        response.outputs['floodedBuildings'].data = json.dumps(building_flood_status_catalog(scenario_id))
+
+    return _handler
+
+
+class Whirinaki1999ScenarioProcessService(PredefinedScenario):
+    """Class representing a WebProcessingService process for creating a flooding scenario for Whirinaki"""
 
     # pylint: disable=too-few-public-methods
 
     def __init__(self) -> None:
         """Define inputs and outputs of the WPS process, and assign process handler."""
-        # Create bounding box WPS inputs
-        inputs = [
-            ComplexInput(
-                'location',
-                'New Land Cover Area',
-                supported_formats=[
-                    Format(mime_type='application/vnd.geo+json',
-                           schema='http://geojson.org/geojson-spec.html#geojson')],
-                workdir='workdir'
-            ),
-            LiteralInput(
-                "landcover",
-                "Landcover Class",
-                data_type="string",
-                allowed_values=list(GLOBCOVER_CLASSES.keys())
-            ),
-        ]
-        # Create area WPS outputs
-        outputs = [
-            ComplexOutput("floodDepth", "Maximum Flood Depth",
-                          supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
-            # ComplexOutput("floodedBuildings", "Flooded Buildings",
-            #               supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
-        ]
+        title = "Whirinaki 1999"
+        identifier = "whirinaki1999"
+        task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999
+        super().__init__(title, identifier, task)
 
-        # Initialise the process
-        super().__init__(
-            self._handler,
-            identifier="whirinaki1999",
-            title="Whirinaki 1999",
-            inputs=inputs,
-            outputs=outputs,
-        )
 
-    @staticmethod
-    def _handler(request: WPSRequest, response: ExecuteResponse) -> None:
-        """
-        Process handler for modelling a flood scenario
+class Whirinaki1999BaselineProcessService(PredefinedScenario):
+    """Class representing a WebProcessingService process for creating a flooding baseline for Whirinaki"""
 
-        Parameters
-        ----------
-        request : WPSRequest
-            The WPS request, containing input parameters.
-        response : ExecuteResponse
-            The WPS response, containing output data.
-        """
-        location_geojson_str = request.inputs["location"][0].data
-        landcover_type_name = request.inputs["landcover"][0].data
-        modelling_task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999.delay(location_geojson_str,
-                                                                                               landcover_type_name)
-        scenario_id = modelling_task.get()
+    # pylint: disable=too-few-public-methods
 
-        # Add Geoserver JSON Catalog entries to WPS response for use by Terria
-        response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id))
-        # response.outputs['floodedBuildings'].data = json.dumps(building_flood_status_catalog(scenario_id))
+    def __init__(self) -> None:
+        """Define inputs and outputs of the WPS process, and assign process handler."""
+        title = "Whirinaki 1999 Baseline"
+        identifier = "whirinaki1999baseline"
+        task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999
+        super().__init__(title, identifier, task, isBaseline=True)
+
+
+class Mataura2020ScenarioProcessService(PredefinedScenario):
+    """Class representing a WebProcessingService process for creating a flooding scenario for Mataura"""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self) -> None:
+        """Define inputs and outputs of the WPS process, and assign process handler."""
+        title = "Mataura 2020"
+        identifier = "mataura2020"
+        task = tasks.create_hydrological_and_hydrodynamic_model_mataura_2020
+        super().__init__(title, identifier, task)
+
+
+class Mataura2020BaselineProcessService(PredefinedScenario):
+    """Class representing a WebProcessingService process for creating a flooding scenario for Whirinaki"""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self) -> None:
+        """Define inputs and outputs of the WPS process, and assign process handler."""
+        title = "Mataura 2020 Baseline"
+        identifier = "mataura2020baseline"
+        task = tasks.create_hydrological_and_hydrodynamic_model_mataura_2020
+        super().__init__(title, identifier, task, isBaseline=True)
 
 
 def building_flood_status_catalog(scenario_id: int) -> dict:
@@ -108,7 +194,7 @@ def building_flood_status_catalog(scenario_id: int) -> dict:
     dict
         The TerriaJS catalog item JSON for the building flood status layer.
     """
-    dataset_name = "Building Flood Status"
+    dataset_name = f"Building Flood Status - {scenario_id}"
     gs_building_workspace = f"{EnvVar.POSTGRES_DB}-buildings"
     gs_building_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_building_workspace}/ows"
 
@@ -206,7 +292,7 @@ def flood_depth_catalog(scenario_id: int) -> dict:
 
     return {
         "type": "wms",
-        "name": "Flood Depth",
+        "name": f"Flood Depth - {scenario_id}",
         "url": gs_flood_url,
         "layers": layer_name,
         "styles": style_name,
