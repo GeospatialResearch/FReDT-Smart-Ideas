@@ -30,9 +30,12 @@ class EnvVariable(EnvVarBase):  # pylint: disable=too-few-public-methods
     DATA_DIR_MODEL_OUTPUT = pathlib.Path(EnvVarBase._get_env_variable("DATA_DIR_MODEL_OUTPUT"))
     FLOOD_MODEL_DIR = pathlib.Path(EnvVarBase._get_env_variable("FLOOD_MODEL_DIR"))
 
-    HYDRO_COMBINATION_PATH = pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH"))
+    HYDRO_COMBINATION_PATH_MATAURA = pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "mataura" # todo revisit this solution
+    HYDRO_COMBINATION_PATH_WHIRINAKI = pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "whirinaki"
     HYDROMT_PATH = pathlib.Path(EnvVarBase._get_env_variable("HYDROMT_PATH"))
     PRECIPITATION_PATH = pathlib.Path(EnvVarBase._get_env_variable("PRECIPITATION_PATH"))
+
+    IS_GEOSERVER_ACTIVE = EnvVarBase._get_bool_env_variable("IS_GEOSERVER_ACTIVE", True)
 
     # NewZealidar config that we must ensure have values.
     _LIDAR_DIR = EnvVarBase._get_env_variable("LIDAR_DIR")

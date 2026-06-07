@@ -112,8 +112,15 @@ class LandCoverSolution():
         return modified_landcover
 
 
-    def apply_landcover_solution(self):
-        """This is to change the landcover based on polygons"""
+    def apply_landcover_solution(self) -> Path:
+        """
+        Changes the landcover based on polygons.
+
+        Returns
+        -------
+        Path
+            Path to the modified landcover.
+        """
         # Read current land cover data
         with rxr.open_rasterio(self.hydromt_path / r'original_globcover.tif') as current_landcover:
             current_landcover = current_landcover.squeeze().load()
@@ -129,7 +136,7 @@ class LandCoverSolution():
         )
 
         # Find existing elevation files
-        existing_landcover_files = sorted(
+        existing_landcover_files = list(
             self.hydromt_path.glob("globcover_*.tif")
         )
 
@@ -138,15 +145,20 @@ class LandCoverSolution():
         number = len(existing_landcover_files) + 1
 
         # Create filename
+        # self.hydromt_path may not be writable on linux, so write to self.hydro_combination_path
         output_name = f"globcover_{number:03d}.tif"
+        output_path = self.hydro_combination_path / "globcover" / output_name
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Write out new land cover
         modified_landcover.rio.to_raster(
-            self.hydromt_path / output_name,
+            output_path,
             compress="LZW",
             tiled=True,
             BIGTIFF="IF_SAFER"
         )
+
+        return output_path
 
 
 class ElevationSolution():

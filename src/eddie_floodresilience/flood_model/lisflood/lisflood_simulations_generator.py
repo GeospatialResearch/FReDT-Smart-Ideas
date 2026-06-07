@@ -7,32 +7,34 @@ Created on Tue Apr  7 21:12:29 2026
 
 from pathlib import Path
 from datetime import datetime
+import logging
 import platform
-
-from .lisflood_inputs_generator import TerrainGenerator, \
-                                          TerrainFloodModelGenerator, \
-                                          InjectionPointsFloodModelGenerator
-                            
-from .lisflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
-
-from .lisflood_parameters_generator import ParametersFloodModelGenerator
-from .. import serve_model
-
 import subprocess
 
-from eddie import geoserver
+import geopandas as gpd
+from shapely.geometry import box
 
+from eddie import geoserver
+from eddie.digitaltwin import setup_environment
+from eddie.digitaltwin.utils import LogLevel, setup_logging
+
+from .. import serve_model
+from .lisflood_inputs_generator import TerrainGenerator, TerrainFloodModelGenerator, InjectionPointsFloodModelGenerator
+from .lisflood_parameters_generator import ParametersFloodModelGenerator
+from .lisflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 from src.eddie_floodresilience.config import EnvVariable
-import logging
-from eddie.digitaltwin.utils import setup_logging, LogLevel
+from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_output_metadata_to_db
+from src.eddie_floodresilience.flood_model.flooded_buildings import (
+    find_flooded_buildings, store_flooded_buildings_in_database)
+
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-
 class LisFloodModelSimulationsGenerator():
     """This class is to generate flood model simulations"""
-    
+
     def __init__(
         self,
         flood_model_path: Path,
@@ -104,10 +106,10 @@ class LisFloodModelSimulationsGenerator():
             self.aoi_boundary,
             self.crs
         )
-        
+
         # Generate common terrain data
         self.terrain_bounding_box, self.terrain_crs_clipped = self.terrain.terrain_data_generator()
-        
+
     def terrain_data_for_flood_model_generator(self):
         """Generate terrain data for flood model (LISFLOOD-FP)"""
         # Call out class used to generate terrain data for flood model
@@ -119,10 +121,10 @@ class LisFloodModelSimulationsGenerator():
             self.adjust_manning,
             self.crs
         )
-        
+
         # Generate terrain data for flood model
         terrain_data_for_flood_model.execute_terrain_data_generator()
-    
+
     def injection_points_for_flood_model_generator(self):
         """Generate injection points for flood model (LISFLOOD-FP)"""
         # Call out class used to generate injection points for flood model
@@ -135,10 +137,10 @@ class LisFloodModelSimulationsGenerator():
             self.polygons,
             self.crs
         )
-        
+
         # Generate injection points for flood model
         injection_points_for_flood_model.injection_points_flow_generator()
-        
+
     def precipitation_data_for_flood_model_generator(self):
         """Generate precipitation data for flood model"""
         # Call out class used to generate precipitation data
@@ -150,19 +152,19 @@ class LisFloodModelSimulationsGenerator():
             self.end_time,
             self.crs
         )
-        
+
         # Generate precipitation data
         precipitation_data = precipitation_generator.precipitation_data_generator()
-        
+
         # Call out class used to generate precipitation data for flood model
         precipitation_data_for_flood_model = PrecipitationFloodModelGenerator(
             self.flood_model_path,
             precipitation_data
         )
-        
+
         # Generate precipitation data for flood model
         precipitation_data_for_flood_model.precipitation_for_flood_model_generator()
-        
+
     def parameters_files_for_flood_model_generator(self):
         """Generate parameters files for flood model"""
         # Call out class used to generate parameter files
@@ -174,11 +176,11 @@ class LisFloodModelSimulationsGenerator():
             self.polygons,
             self.vectors
         )
-        
+
         # Generate parameter files
         parameters_files_generator.parameters_files_generator()
-        
-    def flood_model_simulations_generator(self):
+
+    def flood_model_simulations_generator(self) -> int:
         """Generate flood simulations by running flood model"""
         # Set up path to log file
         log_file_path = self.flood_model_path / "simulation_log.log"
@@ -200,14 +202,13 @@ class LisFloodModelSimulationsGenerator():
                     f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
                 log.warning(f"Attempting to run LISFLOOD-FP linux script in {operating_system}")
 
-
         # Flood simulation command
         flood_simulation_command = [
             lisflood_path,
             "-v",
             par_file_path
         ]
-        
+
         # Generate flood model simulations
         with open(log_file_path, "w") as log_file:
             subprocess.run(
@@ -216,7 +217,10 @@ class LisFloodModelSimulationsGenerator():
                 stderr=subprocess.STDOUT,  # add error into log file if appears
                 check=True
             )
-        
+
+        model_output_id = self.serve_flood_model_outputs(self.flood_model_path / "output")
+        return model_output_id
+
     def flood_model_executor(self):
         """Generate necessary inputs for flood model"""
         # Four cases:
@@ -239,8 +243,7 @@ class LisFloodModelSimulationsGenerator():
             self.parameters_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            self.flood_model_simulations_generator()
-            self.serve_flood_model_outputs(self.flood_model_path / "output")
+            model_output_id = self.flood_model_simulations_generator()
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
@@ -251,8 +254,7 @@ class LisFloodModelSimulationsGenerator():
             self.parameters_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            self.flood_model_simulations_generator()
-            self.serve_flood_model_outputs(self.flood_model_path / "output")
+            model_output_id = self.flood_model_simulations_generator()
 
         # This 'else' includes 2
         else:
@@ -263,17 +265,51 @@ class LisFloodModelSimulationsGenerator():
             self.parameters_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            self.flood_model_simulations_generator()
-            self.serve_flood_model_outputs(self.flood_model_path / "output")
+            model_output_id = self.flood_model_simulations_generator()
+        return model_output_id
 
-    def serve_flood_model_outputs(self, output_directory: Path):
+    def serve_flood_model_outputs(self, output_directory: Path) -> int:
+        """
+        Adds max flood model output data to database and geoserver for serving.
+
+        Parameters
+        ----------
+        output_directory : Path
+            The output directory for the flood model output.
+
+        Returns
+        -------
+        int
+            The flood model output ID.
+            Returns -1 if GeoServer is disabled for testing.
+        """
+        if not EnvVariable.IS_GEOSERVER_ACTIVE:
+            return -1
+
+        # Convert the ASCII raster to GeoTIFF
         max_file = output_directory / "out.max"
         max_gtiff = serve_model.asc_to_gtiff(max_file)
-        db_name = EnvVariable.POSTGRES_DB
+        # Retrieve the AOI as a GeoDataFrame
+        bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.aoi_boundary)], crs="EPSG:2193")
+
+        # Store metadata related to the BG Flood model output in the database
+        engine = setup_environment.get_database()
+        with engine.connect() as conn:
+            model_output_id = store_model_output_metadata_to_db(conn, max_gtiff, bbox_gdf)
+            # Find buildings that are flooded to a depth greater than or equal to 0.1m
+            log.info("Analysing flooded buildings")
+            flooded_buildings = find_flooded_buildings(conn, bbox_gdf, max_gtiff,
+                                                       flood_depth_threshold=0.1)
+            log.info("Analysed flooded buildings - adding flooded buildings to database")
+            store_flooded_buildings_in_database(conn, flooded_buildings, model_output_id)
+
         # Assign a new workspace name based on the db_name, to prevent name clashes if running multiple databases
+        db_name = EnvVariable.POSTGRES_DB
         workspace_name = f"{db_name}-dt-model-outputs"
         geoserver.create_workspace_if_not_exists(workspace_name)
-        layer_name = f"output_-1"
+        # Add the gtiff to geoserver
+        layer_name = f"output_{model_output_id}"
         geoserver.add_gtiff_to_geoserver(max_gtiff, workspace_name, layer_name)
         serve_model.create_viridis_style_if_not_exists()
 
+        return model_output_id

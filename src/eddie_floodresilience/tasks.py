@@ -62,9 +62,71 @@ class DepthTimePlot(NamedTuple):
 
 
 @app.task(base=OnFailureStateTask)
-def create_hydrological_and_hydrodynamic_model_whirinaki_1999(location_geojson: str, landcover_name: str) -> int:
+def create_hydrological_and_hydrodynamic_model_whirinaki_1999(
+    location_geojson: str | None,
+    landcover_name: str | None
+) -> int:
+    """
+    Task to run a hydrological and hydronynamic model for Whirinaki.
+
+    Parameters
+    ----------
+    location_geojson: str | None
+        A GeoJSON string with polygons dictating where to change landcover. # TODO combine these params into one
+    landcover_name: str | None
+        The landcover type to change landcover to.
+
+    Returns
+    -------
+    int
+        The resultant flood model output ID.
+    """
+    landcover_scenario_gdf = read_location_geojson(location_geojson, landcover_name)
+    flood_model_output_id = hydrological_and_hydrodynamic_pipeline.whirinaki(landcover_scenario_gdf)
+    return flood_model_output_id
+
+
+@app.task(base=OnFailureStateTask)
+def create_hydrological_and_hydrodynamic_model_mataura_2020(location_geojson: str, landcover_name: str) -> int:
+    """
+    Task to run a hydrological and hydronynamic model for Mataura.
+
+    Parameters
+    ----------
+    location_geojson: str | None
+        A GeoJSON string with polygons dictating where to change landcover. # TODO combine these params into one
+    landcover_name: str | None
+        The landcover type to change landcover to.
+
+    Returns
+    -------
+    int
+        The resultant flood model output ID.
+    """
+    landcover_scenario_gdf = read_location_geojson(location_geojson, landcover_name)
+    flood_model_output_id = hydrological_and_hydrodynamic_pipeline.mataura(landcover_scenario_gdf)
+    return flood_model_output_id
+
+
+def read_location_geojson(location_geojson: str | None, landcover_name: str | None) -> gpd.GeoDataFrame | None:
+    """
+    Read a GeoJSON string and a landcover name into a GeoDataFrame,
+
+    Parameters
+    ----------
+    location_geojson: str | None
+        A GeoJSON string with polygons dictating where to change landcover. # TODO combine these params into one
+    landcover_name: str | None
+        The landcover type to change landcover to.
+
+    Returns
+    _______
+    gpd.GeoDataFrame
+        The GeoDataFrame containing polygons with a column named "landcover_name".
+
+    """
+    if location_geojson is None or landcover_name is None:
+        return None
     landcover_scenario_gdf = gpd.read_file(location_geojson, driver="GeoJSON")
     landcover_scenario_gdf["landcover_name"] = landcover_name
-    hydrological_and_hydrodynamic_pipeline.main(landcover_scenario_gdf)
-    return -1
-
+    return landcover_scenario_gdf

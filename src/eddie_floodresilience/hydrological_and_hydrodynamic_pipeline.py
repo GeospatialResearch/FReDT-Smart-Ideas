@@ -5,11 +5,16 @@ Created on Sat Apr 11 17:11:15 2026
 @author: mng42
 """
 
-from pathlib import Path
 from datetime import datetime
+import logging
+from pathlib import Path
 from typing import Union
 
 import geopandas as gpd
+from shapely.geometry import box
+
+from eddie.digitaltwin import retrieve_from_instructions
+from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
@@ -19,10 +24,10 @@ from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
 
-import logging
-from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
 
 class HydrologicalAndHydrodynamicPipeline:
     """This class is to generate hydrological and hydrodynamic results"""
@@ -126,8 +131,8 @@ class HydrologicalAndHydrodynamicPipeline:
             self.forcing_path = forcing_name
 
     def total_solutions(self):
-        log.info("Starting total solutions")
         """Develop solutions for flood risk resilience"""
+        log.info("Starting total solutions")
         if self.polygons is not None and self.vectors is not None:
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
@@ -135,7 +140,7 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.hydromt_path,
                 self.polygons
             )
-            landcover_solution.apply_landcover_solution()
+            self.landcover = landcover_solution.apply_landcover_solution().name
 
             # Elevation solution
             elevation_solution = ElevationSolution(
@@ -152,7 +157,7 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.hydromt_path,
                 self.polygons
             )
-            landcover_solution.apply_landcover_solution()
+            self.landcover = landcover_solution.apply_landcover_solution().name
 
         elif self.vectors is not None:
             # Elevation solution
@@ -237,11 +242,18 @@ class HydrologicalAndHydrodynamicPipeline:
             )
 
         # Generate flood model data
-        flood_data.flood_model_executor()
+        model_output_id = flood_data.flood_model_executor()
+        return model_output_id
 
     def hydrological_and_hydrodynamic_simulation_generator(self):
         """Generate hydraulic and hydrodynamic simulations"""
+        # Ensure output directory exists
         self.hydro_combination_path.mkdir(parents=True, exist_ok=True)
+
+        # Download external spatial data into database
+        bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.flood_aoi_boundary)], crs="EPSG:2193")
+        retrieve_from_instructions.main(bbox_gdf, Path("src/eddie_floodresilience/static_boundary_instructions.json"))
+
         # The if function here will be modified later
         # Apply land cover solution
         # (this would be for both landcover and elevation solutions)
@@ -253,7 +265,7 @@ class HydrologicalAndHydrodynamicPipeline:
             self.wflow_data_pipeline()
 
             # Generate flood data
-            self.flood_data_pipeline()
+            flood_model_output_id = self.flood_data_pipeline()
 
         # Apply elevation solution
         elif self.vectors is not None:
@@ -261,7 +273,7 @@ class HydrologicalAndHydrodynamicPipeline:
             self.total_solutions()
 
             # Generate flood data
-            self.flood_data_pipeline()
+            flood_model_output_id = self.flood_data_pipeline()
 
         # Original scenario
         else:
@@ -272,7 +284,8 @@ class HydrologicalAndHydrodynamicPipeline:
             self.wflow_data_pipeline()
 
             # Generate flood data
-            self.flood_data_pipeline()
+            flood_model_output_id = self.flood_data_pipeline()
+        return flood_model_output_id
 
 
 # # OTAUTAU
@@ -373,14 +386,25 @@ class HydrologicalAndHydrodynamicPipeline:
 #     main()
 
 
-# MATAURA
-def main(landcover_scenario_gdf: gpd.GeoDataFrame | None = None):
-    log.info("main started")
+def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+    """
+    Runs a hydrological and hydrodynamic simulation for Mataura.
 
-    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH
-    forcing_name = 'mataura'  # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    Parameters
+    ----------
+    landcover_scenario_gdf: gpd.GeoDataFrame | None
+            Polygons that are used to change the landcover information.
+            This polygon dataframe has 'landcover_name' column with new values.
+
+    Returns
+    -------
+    int
+        Flood model output ID.
+    """
+    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_MATAURA
+    forcing_name = 'mataura'
     river_name = 'mataura'
-    precipitation_path = EnvVariable.PRECIPITATION_PATH
+    precipitation_path = EnvVariable.PRECIPITATION_PATH / "mataura"  # todo revisit this solution
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
@@ -390,7 +414,7 @@ def main(landcover_scenario_gdf: gpd.GeoDataFrame | None = None):
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
-    polygons = None
+    polygons = landcover_scenario_gdf
     vectors = None  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
@@ -418,25 +442,38 @@ def main(landcover_scenario_gdf: gpd.GeoDataFrame | None = None):
         landcover
     )
 
-    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+    flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+    return flood_model_output_id
 
 
-# WHIRINAKI
-# This is where to check the model
-def whirinaki():
-    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH
+def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+    """
+    Runs a hydrological and hydrodynamic simulation for Whirinaki.
+
+    Parameters
+    ----------
+    landcover_scenario_gdf: gpd.GeoDataFrame | None
+            Polygons that are used to change the landcover information.
+            This polygon dataframe has 'landcover_name' column with new values.
+
+    Returns
+    -------
+    int
+        Flood model output ID.
+    """
+    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_WHIRINAKI
     forcing_name = 'whirinaki'
     river_name = 'whirinaki'
-    precipitation_path = EnvVariable.PRECIPITATION_PATH
+    precipitation_path = EnvVariable.PRECIPITATION_PATH / "whirinaki"
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
     num_threads = 8
     flood_aoi_boundary = [1641148, 6072404, 1642796, 6076268]
-    adjust_manning = True
-    flood_model = 'bg-flood'
+    adjust_manning = False
+    flood_model = 'lisflood-fp'
 
-    polygons = None  # r'polygons/polygons.shp'
+    polygons = landcover_scenario_gdf
     vectors = None  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
@@ -464,7 +501,9 @@ def whirinaki():
         landcover
     )
 
-    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+    flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+    return flood_model_output_id
+
 
 if __name__ == '__main__':
     whirinaki()
