@@ -34,10 +34,7 @@ services:
     restart: no
     volumes:
     # Bind host data directories to container, allowing different instances to share data sources.
-    - ${HYDROMT_PATH}:/stored_data/necessary_data
-##    - ${DATA_DIR_MODEL_OUTPUT}:/stored_data/model_output
-##    - ${DATA_DIR_GEOSERVER}:/stored_data/geoserver
-##    - ${PRECIPITATION_PATH}:/Barra
+    - ${HYDROMT_PATH}:/necessary_data
 
   terria_map:
     volumes:
@@ -45,6 +42,6 @@ services:
     - ./terriajs/client_config.json:/app/wwwroot/config.json
     - ./terriajs/catalog.json:/app/wwwroot/init/catalog.json
 
-  geoserver:
-    volumes:
-    - ${DATA_DIR_GEOSERVER}:/opt/geoserver_data
+#  geoserver:
+#    volumes:
+#    - ${DATA_DIR_GEOSERVER}:/opt/geoserver_data
