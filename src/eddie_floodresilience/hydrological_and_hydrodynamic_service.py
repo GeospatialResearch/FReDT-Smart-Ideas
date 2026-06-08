@@ -117,9 +117,20 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
             location_geojson_str = request.inputs["location"][0].data
             landcover_type_name = request.inputs["landcover"][0].data
 
-        # Run the task callback
-        modelling_task = task.delay(location_geojson_str, landcover_type_name)
-        scenario_id = modelling_task.get()
+        # Check if scenario is already cached
+        cache_dict = {
+            "task": task.name,
+            "location_geojson_str": location_geojson_str,
+            "landcover_type_name": landcover_type_name,
+        }
+        check_cache_task = tasks.check_cache.delay(cache_dict)
+        scenario_id = check_cache_task.get()
+
+        # Run the task callback if its needed
+        if scenario_id is None:
+            modelling_task = task.delay(location_geojson_str, landcover_type_name)
+            scenario_id = modelling_task.get()
+            tasks.cache_results.delay(scenario_id, cache_dict)
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id))
