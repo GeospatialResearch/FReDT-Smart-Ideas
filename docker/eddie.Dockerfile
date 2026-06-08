@@ -109,6 +109,15 @@ COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/hydrologic
 # Copy python virtual environment from build layer
 # todo find better way than chmod 777 for allowing whitebox
 COPY --chown=root:root --chmod=777 --from=build /venv /venv
+USER nonroot
+# download whitebox binaries
+RUN <<EOF
+  set -ex
+  source /venv/bin/activate
+  python -c "from whitebox.whitebox_tools import WhiteboxTools; wbt = WhiteboxTools()"
+EOF
+
+USER root
 
 # Copy source files and essential runtime files
 COPY --chown=root:root --chmod=444 selected_polygon.geojson .
