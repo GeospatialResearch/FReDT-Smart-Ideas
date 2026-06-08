@@ -62,6 +62,46 @@ class DepthTimePlot(NamedTuple):
 
 
 @app.task(base=OnFailureStateTask)
+def cache_results(flood_model_id: int, scenario_options: dict) -> int:
+    """
+    Task to cache the scenario options used to generate an existing model with the given model id, for faster retrieval.
+
+    Parameters
+    ----------
+    flood_model_id : int
+        The database id of the existing model output to attach the cached parameters to.
+    scenario_options : dict
+        The input parameters to the model to cache, which must match for later retrieval.
+
+    Returns
+    -------
+    int
+        model_id re-returned to allow method chaining.
+    """
+    cache_new_results.main(flood_model_id, scenario_options)
+    return flood_model_id
+
+
+@app.task(base=OnFailureStateTask)
+def check_cache(scenario_options: dict) -> int | None:
+    """
+    Checks cache table for model output generated from identical scenario_options, and finds matching model ID.
+
+    Parameters
+    ----------
+    scenario_options : dict
+        The model input parameters, which must match exactly with the cached results for a positive match.
+
+    Returns
+    -------
+    int | None
+        Returns the matching model_id if a match is found. Otherwise, None.
+    """
+    flood_model_id = check_cache_results.main(scenario_options)
+    return flood_model_id
+
+
+@app.task(base=OnFailureStateTask)
 def create_hydrological_and_hydrodynamic_model_whirinaki_1999(
     location_geojson: str | None,
     landcover_name: str | None
