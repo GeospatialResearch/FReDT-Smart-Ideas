@@ -85,7 +85,8 @@ class LandCoverSolution():
         """
         # Copy original land cover data to not be affected by the change
         modified_landcover = current_landcover.copy()
-        polygons["landcover"] = polygons["landcover_name"].map(GLOBCOVER_CLASSES)
+        if "landcover" not in polygons.columns:
+            polygons["landcover"] = polygons["landcover_name"].map(GLOBCOVER_CLASSES)
         
         # Create rasterization shapes
         shapes = [

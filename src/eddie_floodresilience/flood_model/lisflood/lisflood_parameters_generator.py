@@ -308,7 +308,8 @@ class ParametersFloodModelGenerator():
 
     def par_generator(self) -> None:
         """Generate par files - where all the parameter data are navigated"""
-
+        par_file_path = self.flood_model_path / "par.par"
+        log.info(f"Generating par file {par_file_path}")
         # Create output directory
         output_directory = self.optional_output_generator()
 
@@ -366,7 +367,7 @@ class ParametersFloodModelGenerator():
         parameters_array = np.array(parameters_list)
 
         # Write PAR file
-        with open(self.flood_model_path / "par.par", "w") as parameters:
+        with open(par_file_path, "w") as parameters:
             for each_parameter in range(parameters_array.shape[0]):
                 data_parameter = parameters_array[each_parameter]
                 text_parameter = '{0[0]:<20}{0[1]}\n'.format(data_parameter)
