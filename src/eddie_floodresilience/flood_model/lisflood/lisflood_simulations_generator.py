@@ -237,7 +237,7 @@ class LisFloodModelSimulationsGenerator():
             self.injection_points_for_flood_model_generator()
 
             # Generate precipitation data for flood model
-            self.precipitation_data_for_flood_model_generator()
+            # self.precipitation_data_for_flood_model_generator()
 
             # Generate parameter files for flood model
             self.parameters_files_for_flood_model_generator()
@@ -312,4 +312,10 @@ class LisFloodModelSimulationsGenerator():
         geoserver.add_gtiff_to_geoserver(max_gtiff, workspace_name, layer_name)
         serve_model.create_viridis_style_if_not_exists()
 
+        serve_intermediate_files(model_output_id)
+
         return model_output_id
+
+        def serve_intermediate_files(model_output_id: int) -> None:
+            pass
+
