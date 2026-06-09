@@ -12,13 +12,15 @@ from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
 
 GLOBCOVER_CLASSES: dict[str, int] = {
-    "Evergreen Forest": 40,
     "Dense Deciduous Forest": 50,
+    "Evergreen Forest": 40,
     "Deciduous Forest": 60,
     "Needleleaf Forest": 70,
-    "Grassland Mosaic": 120,
+    "Pasture Mosaic": 120,
     "Shrubland": 130,
-    "Grassland": 140,
+    "Pasture": 140,
+    "Sparse Vegetation": 150,
+    "Wetland": 160,
     "Bare Land": 200,
 }
 from eddie.digitaltwin.utils import setup_logging, LogLevel
