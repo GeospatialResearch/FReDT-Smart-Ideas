@@ -520,6 +520,52 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     return flood_model_output_id
 
 
+# RIVERTON
+# This is where to check the model
+def riverton():
+    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_riverton_path_001")
+    forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    river_name = 'riverton'
+    precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
+    start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+    end_time = datetime.fromisoformat("2020-02-05T00:00:00")
+
+    num_threads = 8
+    flood_aoi_boundary = [1209555.319, 4849977.393, 1222804.726, 4864906.303]
+    adjust_manning = False
+    flood_model = 'lisflood-fp'
+
+    polygons = None # r'polygons/polygons.shp'
+    vectors = None # r'vectors/vectors.csv'
+    resolution = 200
+    threshold = 25000
+    landcover = 'globcover'
+
+    # Set up hydraulic and hydrodynamic pipeline
+    hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+        hydro_combination_path,
+
+        forcing_name,
+        river_name,
+        precipitation_path,
+        start_time,
+        end_time,
+
+        num_threads,
+        flood_aoi_boundary,
+        adjust_manning,
+        flood_model,
+
+        polygons,
+        vectors,
+        resolution,
+        threshold,
+        landcover
+    )
+
+    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+
+
 if __name__ == '__main__':
     gdf = gpd.read_file(r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example\polygons_vectors\whirinaki\polygons\polygons.shp")
     whirinaki(None)
