@@ -136,11 +136,13 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
             scenario_id = modelling_task.get()
             tasks.cache_results.delay(scenario_id, cache_dict)
 
+        scenario_name = "Baseline" if is_baseline else scenario_id
+
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
-        response.outputs['landcover'].data = json.dumps(landcover_catalog(scenario_id))
-        response.outputs['catchmentBoundary'].data = json.dumps(catchment_boundary_catalog(scenario_id))
-        response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id))
-        response.outputs['floodedBuildings'].data = json.dumps(building_flood_status_catalog(scenario_id))
+        response.outputs['landcover'].data = json.dumps(landcover_catalog(scenario_id, scenario_name))
+        response.outputs['catchmentBoundary'].data = json.dumps(catchment_boundary_catalog(scenario_id, scenario_name))
+        response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id, scenario_name))
+        response.outputs['floodedBuildings'].data = json.dumps(building_flood_status_catalog(scenario_id, scenario_name))
 
     return _handler
 
@@ -197,7 +199,7 @@ class Mataura2020BaselineProcessService(PredefinedScenario):
         super().__init__(title, identifier, task, isBaseline=True)
 
 
-def building_flood_status_catalog(scenario_id: int) -> dict:
+def building_flood_status_catalog(scenario_id: int, scenario_name: str) -> dict:
     """
     Create a dictionary in the format of a terria js catalog json for the building flood status layer.
 
@@ -211,7 +213,7 @@ def building_flood_status_catalog(scenario_id: int) -> dict:
     dict
         The TerriaJS catalog item JSON for the building flood status layer.
     """
-    dataset_name = f"Building Flood Status - {scenario_id}"
+    dataset_name = f"Building Flood Status - {scenario_name}"
     gs_building_workspace = f"{EnvVar.POSTGRES_DB}-buildings"
     gs_building_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_building_workspace}/ows"
 
@@ -266,7 +268,7 @@ def building_flood_status_catalog(scenario_id: int) -> dict:
     }
 
 
-def flood_depth_catalog(scenario_id: int) -> dict:
+def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
     """
     Create a dictionary in the format of a terria js catalog json for the flood depth layer.
 
@@ -309,7 +311,7 @@ def flood_depth_catalog(scenario_id: int) -> dict:
 
     return {
         "type": "wms",
-        "name": f"Flood Depth - {scenario_id}",
+        "name": f"Flood Depth - {scenario_name}",
         "url": gs_flood_url,
         "layers": layer_name,
         "styles": style_name,
@@ -325,7 +327,7 @@ def flood_depth_catalog(scenario_id: int) -> dict:
     }
 
 
-def catchment_boundary_catalog(scenario_id: int) -> dict:
+def catchment_boundary_catalog(scenario_id: int, scenario_name: str) -> dict:
     """
     Create a dictionary in the format of a terria js catalog json for the building flood status layer.
 
@@ -339,7 +341,7 @@ def catchment_boundary_catalog(scenario_id: int) -> dict:
     dict
         The TerriaJS catalog item JSON for the building flood status layer.
     """
-    dataset_name = f"Catchment Boundary - {scenario_id}"
+    dataset_name = f"Catchment Boundary - {scenario_name}"
     gs_building_workspace = f"{EnvVar.POSTGRES_DB}-intermediate-wflow"
     gs_building_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_building_workspace}/ows"
 
@@ -368,14 +370,14 @@ def catchment_boundary_catalog(scenario_id: int) -> dict:
     }
 
 
-def landcover_catalog(scenario_id: int) -> dict:
+def landcover_catalog(scenario_id: int, scenario_name) -> dict:
     gs_intermediate_workspace = f"{EnvVar.POSTGRES_DB}-intermediate-wflow"
     gs_landcover_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_intermediate_workspace}/ows"
     layer_name = f"{gs_intermediate_workspace}:landcover_{scenario_id}"
 
     return {
         "type": "wms",
-        "name": f"Landcover - {scenario_id}",
+        "name": f"Landcover - {scenario_name}",
         "url": gs_landcover_url,
         "layers": layer_name,
         "styles": "landcover",
