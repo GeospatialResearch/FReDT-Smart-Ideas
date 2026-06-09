@@ -211,6 +211,7 @@ class LisFloodModelSimulationsGenerator():
 
         # Generate flood model simulations
         with open(log_file_path, "w") as log_file:
+            log.info(f"Running LISFLOOD-FP flood simulation")
             subprocess.run(
                 flood_simulation_command,
                 stdout=log_file,
@@ -312,10 +313,4 @@ class LisFloodModelSimulationsGenerator():
         geoserver.add_gtiff_to_geoserver(max_gtiff, workspace_name, layer_name)
         serve_model.create_viridis_style_if_not_exists()
 
-        serve_intermediate_files(model_output_id)
-
         return model_output_id
-
-        def serve_intermediate_files(model_output_id: int) -> None:
-            pass
-
