@@ -4,19 +4,23 @@ Created on Tue Apr  7 10:28:16 2026
 
 @author: mng42
 """
+import logging
+from datetime import datetime
+from pathlib import Path
 
 from osgeo import gdal  # Import gdal before rasterio
+
+import netCDF4
+import numpy as np
 import xarray as xr
 from rasterio.enums import Resampling
-import netCDF4
+from tqdm import tqdm
 
-import numpy as np
-from pathlib import Path
-from datetime import datetime
-import logging
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
 
 class PrecipitationGenerator():
     """This class is to generate precipitation"""
@@ -259,11 +263,6 @@ class PrecipitationGenerator():
         ----------
         clipped_precipitation : TYPE
             DESCRIPTION.
-
-        Returns
-        -------
-        None.
-
         """
         log.info("Writing out precipitation data")
         # Create fine precipitation folder
@@ -274,7 +273,7 @@ class PrecipitationGenerator():
         )
 
         # Loop through each precipitation time step to format and write out
-        for i, t in enumerate(clipped_precipitation.time):
+        for i, t in tqdm(list(enumerate(clipped_precipitation.time)), desc="Formatting precipitation"):
             # Extract each precipitation timestep
             each_precipitation_timestep = clipped_precipitation.sel(time=t)
 
@@ -288,13 +287,11 @@ class PrecipitationGenerator():
             )
 
             # Write out to precipitation folder
-            log.info("---- Saving precipitation for each timestep ----")
             fine_precipitation_path = fine_precipitation_folder / f"precipitation_{i:03d}.nc"
             self.write_out_precipitation(
                 fine_precipitation_path,
                 clipped_reprojected_each_precipitation_timestep
             )
-            log.info(f"Precipitation timestep {i} is saved")
 
     def collect_precipitation_timesteps(self) -> list:
         """

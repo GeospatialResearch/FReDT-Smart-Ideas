@@ -5,16 +5,20 @@ Created on Tue Apr  7 10:28:16 2026
 @author: mng42
 """
 
-from osgeo import gdal # Import gdal before rasterio
-import xarray as xr
-from rasterio.enums import Resampling
-import netCDF4
-
-import numpy as np
-from pathlib import Path
 from datetime import datetime
 import logging
+from pathlib import Path
+
+from osgeo import gdal # Import gdal before rasterio
+
+import netCDF4
+import numpy as np
+from rasterio.enums import Resampling
+from tqdm import tqdm
+import xarray as xr
+
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
@@ -270,7 +274,7 @@ class PrecipitationGenerator():
         )
         
         # Loop through each precipitation time step to format and write out
-        for i, t in enumerate(clipped_precipitation.time):
+        for i, t in tqdm(list(enumerate(clipped_precipitation.time)), desc="Formatting precipitation"):
             
             # Extract each precipitation timestep
             each_precipitation_timestep = clipped_precipitation.sel(time=t)
@@ -285,14 +289,12 @@ class PrecipitationGenerator():
             )
             
             # Write out to precipitation folder
-            log.info("---- Saving precipitation for each timestep ----")
             fine_precipitation_path = fine_precipitation_folder / f"precipitation_{i:03d}.nc"
             self.write_out_precipitation(
                 fine_precipitation_path,
                 clipped_reprojected_each_precipitation_timestep
             )
-            log.info(f"Precipitation timestep {i} is saved")
-            
+
     def collect_precipitation_timesteps(self) -> list:
         """
         Collect all precipitation timesteps' files
@@ -318,6 +320,7 @@ class PrecipitationGenerator():
         combined_precipitation_timestep : xr.Dataset
             Precipitation that combines all timesteps
         """
+        log.info("Combining all precipitation timesteps")
         # Collect all files of precipitation timesteps
         precipitation_timesteps_files = self.collect_precipitation_timesteps()
         
@@ -396,8 +399,10 @@ class PrecipitationFloodModelGenerator():
             Precipitation variable that needs assigning values separately
         """
         
-        for i, t in enumerate(self.combined_precipitation_data.time):
-            
+        for i, t in tqdm(
+            list(enumerate(self.combined_precipitation_data.time)),
+            desc="Converting precipitation units to mm/hr"
+        ):
             # Extract each precipitation timesteps
             each_precipitation_timestep = self.combined_precipitation_data.sel(time=t)['rainfall_depth']
             
@@ -429,8 +434,8 @@ class PrecipitationFloodModelGenerator():
             outfile_precipitation_path,
             'w', format='NETCDF4'
         )
-        
-        # Extract dimensions from the precipitation dat
+
+        # Extract dimensions from the precipitation data
         outfile_precipitation_x = self.combined_precipitation_data.x.size
         outfile_precipitation_y = self.combined_precipitation_data.y.size
         outfile_precipitation_time = self.combined_precipitation_data.time.size
@@ -479,10 +484,11 @@ class PrecipitationFloodModelGenerator():
         
         # Assign each precipitation timestep
         self.assign_each_precipitation_timestep(precipitation_var)
-        
+
         # Close writing-out file
         outfile_precipitation.close()
-        
+        log.info(f"Finished writing precipitation data {outfile_precipitation_path}")
+
             
     def precipitation_for_flood_model_generator(self) -> None:
         """Generate precipitation for flood model (LISFLOOD-FP)"""
