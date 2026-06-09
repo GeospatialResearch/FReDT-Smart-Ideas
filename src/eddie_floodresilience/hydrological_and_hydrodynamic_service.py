@@ -63,6 +63,10 @@ class PredefinedScenario(Process, ABC):
             ]
         # Create area WPS outputs
         outputs = [
+            ComplexOutput("landcover", "Landcover",
+                          supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
+            ComplexOutput("catchmentBoundary", "CatchmentBoundary",
+                          supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
             ComplexOutput("floodDepth", "Maximum Flood Depth",
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
             ComplexOutput("floodedBuildings", "Flooded Buildings",
@@ -133,6 +137,8 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
             tasks.cache_results.delay(scenario_id, cache_dict)
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
+        response.outputs['landcover'].data = json.dumps(landcover_catalog(scenario_id))
+        response.outputs['catchmentBoundary'].data = json.dumps(catchment_boundary_catalog(scenario_id))
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id))
         response.outputs['floodedBuildings'].data = json.dumps(building_flood_status_catalog(scenario_id))
 
@@ -316,4 +322,60 @@ def flood_depth_catalog(scenario_id: int) -> dict:
             "url": legend_url,
             "urlMimeType": "image/png"
         }],
+    }
+
+
+def catchment_boundary_catalog(scenario_id: int) -> dict:
+    """
+    Create a dictionary in the format of a terria js catalog json for the building flood status layer.
+
+    Parameters
+    ----------
+    scenario_id : int
+        The ID of the scenario to create the catalog item for.
+
+    Returns
+    ----------
+    dict
+        The TerriaJS catalog item JSON for the building flood status layer.
+    """
+    dataset_name = f"Catchment Boundary - {scenario_id}"
+    gs_building_workspace = f"{EnvVar.POSTGRES_DB}-intermediate-wflow"
+    gs_building_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_building_workspace}/ows"
+
+    return {
+        "type": "wfs",
+        "name": dataset_name,
+        "url": gs_building_url,
+        "typeNames": f"{gs_building_workspace}:wflow_catchment_boundary",
+        "parameters": {
+            "CQL_FILTER": f"flood_model_id = {scenario_id}",
+        },
+        "styles": [
+            {
+                "id": "Catchment",
+                "color": {
+                    "nullColor": "rgba(0,0,0,0)"
+                },
+                "outline": {
+                    "null": {
+                        "color": "rgba(201,0,0,1)", "width": 2
+                    }
+                }
+            }
+        ],
+        "activeStyle": "Catchment",
+    }
+
+
+def landcover_catalog(scenario_id: int) -> dict:
+    gs_intermediate_workspace = f"{EnvVar.POSTGRES_DB}-intermediate-wflow"
+    gs_landcover_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_intermediate_workspace}/ows"
+    layer_name = f"{gs_intermediate_workspace}:landcover_{scenario_id}"
+
+    return {
+        "type": "wms",
+        "name": f"Landcover - {scenario_id}",
+        "url": gs_landcover_url,
+        "layers": layer_name,
     }
