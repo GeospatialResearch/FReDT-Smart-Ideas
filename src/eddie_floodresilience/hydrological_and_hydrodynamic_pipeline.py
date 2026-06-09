@@ -17,6 +17,7 @@ from eddie.digitaltwin import retrieve_from_instructions
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 from src.eddie_floodresilience.config import EnvVariable
+from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
@@ -205,6 +206,17 @@ class HydrologicalAndHydrodynamicPipeline:
         # Generate wflow model data
         wflow_data.wflow_model_simulations_pipeline()
 
+    def serve_wflow_data(self, flood_model_output_id: int):
+        log.info("Starting serve wflow data pipeline")
+        wflow_serve_data = WflowServeDataGenerator(
+            self.hydromt_path,
+            self.hydro_combination_path,
+            self.landcover,
+            flood_model_output_id
+        )
+
+        wflow_serve_data.serve_data()
+
     def flood_data_pipeline(self):
         """Generate flood model data"""
         log.info("Starting flood model pipeline")
@@ -285,6 +297,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline()
+
+        self.serve_wflow_data(flood_model_output_id)
         return flood_model_output_id
 
 

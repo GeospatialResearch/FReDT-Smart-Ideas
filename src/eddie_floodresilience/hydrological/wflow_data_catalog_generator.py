@@ -5,10 +5,12 @@ Created on Wed Apr  8 10:00:00 2026
 @author: mng42
 """
 
+import logging
 import yaml
 from pathlib import Path
-import logging
+
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
@@ -153,19 +155,8 @@ class DataCatalogGenerator():
             A dictionary contains information of landcover
         """
         # Polygons for land cover solutions
-        if self.polygons is None:
-            if self.landcover == 'globcover':
-                landcover_file = 'original_globcover.tif'
-            else:
-                landcover_file = 'lcdb_2023_50m_fixed_nodata.tif'
-        else:
-            if self.landcover.startswith('globcover'):
-                landcover_file = str((self.wflow_model_path / "globcover" / self.landcover).resolve())
-            else:
-                landcover_file = max(
-                    Path(self.hydromt_path).glob("lcdb_*.tif"),
-                    default=Path(self.hydromt_path) / "lcdb_001.tif"
-                ).name
+        is_baseline = self.polygons is None
+        landcover_file = find_landcover_file(self.wflow_model_path, self.hydromt_path, self.landcover, is_baseline)
 
         # At the moment the name globcover and other information is kept fixed for basic automation,
         # it might be changed in the future.
@@ -475,3 +466,20 @@ class DataCatalogGenerator():
         
         # Write data_catalog file
         self.write_out_data_catalog(data_catalog)
+
+
+def find_landcover_file(wflow_model_path: Path, hydromt_path: Path, landcover_name: str, is_baseline: bool = True) -> Path:
+    if is_baseline:
+        if landcover_name == 'globcover':
+            landcover_file = hydromt_path / Path("original_globcover.tif")
+        else:
+            landcover_file = hydromt_path / Path('lcdb_2023_50m_fixed_nodata.tif')
+    else:
+        if landcover_name.startswith('globcover'):
+            landcover_file = str((wflow_model_path / "globcover" / landcover_name).resolve())
+        else:
+            landcover_file = max(
+                Path(hydromt_path).glob("lcdb_*.tif"),
+                default=Path(hydromt_path) / "lcdb_001.tif"
+            ).name
+    return landcover_file
