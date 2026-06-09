@@ -104,7 +104,7 @@ class TerrainFilter:
     def terrain_splitting(self) -> None:
         """Split terrain data into DEM and roughness (if any)"""
         # Get parental directory to terrain files
-        terrain_parent_files = self.hydromt_path / f"river_data/{self.river_name}"
+        terrain_parent_files = self.hydromt_path / "river_data" / self.river_name
 
         # Get list of terrain files
         terrain_file_path = list(terrain_parent_files.glob(f"{self.origin_filename}.nc"))
