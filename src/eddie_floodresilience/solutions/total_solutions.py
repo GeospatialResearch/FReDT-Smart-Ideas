@@ -138,9 +138,13 @@ class LandCoverSolution():
             polygons_crs
         )
 
+        # self.hydromt_path may not be writable on linux, so write to self.hydro_combination_path
+        globcover_dir = self.hydro_combination_path / "globcover"
+        globcover_dir.mkdir(parents=True, exist_ok=True)
+
         # Find existing elevation files
         existing_landcover_files = list(
-            self.hydromt_path.glob("globcover_*.tif")
+            globcover_dir.glob("globcover_*.tif")
         )
 
         # Decide the number of output file
@@ -148,11 +152,8 @@ class LandCoverSolution():
         number = len(existing_landcover_files) + 1
 
         # Create filename
-        # self.hydromt_path may not be writable on linux, so write to self.hydro_combination_path
-        output_name = f"globcover_{number:03d}.tif"
-        output_path = self.hydro_combination_path / "globcover" / output_name
-        output_path.parent.mkdir(parents=True, exist_ok=True)
 
+        output_path = globcover_dir / f"globcover_{number:03d}.tif"
         # Write out new land cover
         modified_landcover.rio.to_raster(
             output_path,

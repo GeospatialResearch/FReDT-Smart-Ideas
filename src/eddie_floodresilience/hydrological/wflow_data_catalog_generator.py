@@ -476,7 +476,7 @@ def find_landcover_file(wflow_model_path: Path, hydromt_path: Path, landcover_na
             landcover_file = hydromt_path / Path('lcdb_2023_50m_fixed_nodata.tif')
     else:
         if landcover_name.startswith('globcover'):
-            landcover_file = str((wflow_model_path / "globcover" / landcover_name).resolve())
+            landcover_file = (wflow_model_path / "globcover" / landcover_name).resolve()
         else:
             landcover_file = max(
                 Path(hydromt_path).glob("lcdb_*.tif"),
