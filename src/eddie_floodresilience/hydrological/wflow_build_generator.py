@@ -220,7 +220,7 @@ class WflowBuildGenerator():
         lulc : dict
             A dictionary that contains landcover's section
         """
-        if self.landcover == 'globcover':
+        if self.landcover.startswith("globcover"):
             landcover_mapping = "globcover_mapping_default"
         else:
             landcover_mapping = str(self.hydromt_path / "lcdb_mapping.csv")
