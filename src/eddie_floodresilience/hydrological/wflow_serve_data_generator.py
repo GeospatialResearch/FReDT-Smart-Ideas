@@ -8,6 +8,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from eddie import geoserver as gs
 from eddie.digitaltwin import setup_environment
 from eddie.digitaltwin.utils import setup_logging
+from eddie.geoserver.raster_layers import CoverageDimension
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import find_landcover_file
 
@@ -57,7 +58,8 @@ class WflowServeDataGenerator:
 
         layer_name = f"landcover_{self.flood_model_output_id}"
         if layer_name not in gs.raster_layers.get_workspace_raster_layers(workspace_name):
-            gs.add_gtiff_to_geoserver(clipped_path, workspace_name, layer_name)
+            coverage_dimensions = [CoverageDimension(layer_name, "landcover_class", "Int32")]
+            gs.add_gtiff_to_geoserver(clipped_path, workspace_name, layer_name, coverage_dimensions)
         # Delete tmp clipped file
         clipped_path.unlink()
 
