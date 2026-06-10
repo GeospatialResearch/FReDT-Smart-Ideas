@@ -5,8 +5,9 @@ Created on Sat Apr 11 17:11:15 2026
 @author: mng42
 """
 
-from datetime import datetime
 import logging
+from datetime import datetime
+from os import cpu_count
 from pathlib import Path
 from typing import Union
 
@@ -423,7 +424,7 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
     # Gore
-    num_threads = 8
+    num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1283763.983, 4882997.604, 1289535.012, 4890957.772]
     adjust_manning = False
     flood_model = 'lisflood-fp'
@@ -482,7 +483,7 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     start_time = datetime.fromisoformat("1999-01-20T00:00:00")
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
-    num_threads = 8
+    num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1641148, 6072404, 1642796, 6076268]
     adjust_manning = False
     flood_model = 'lisflood-fp'
