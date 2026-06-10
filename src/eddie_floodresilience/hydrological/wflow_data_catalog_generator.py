@@ -174,7 +174,7 @@ class DataCatalogGenerator():
                     "source_license": "CC-BY-3.0",
                     "source_url": "http://due.esrin.esa.int/page_globcover.php"
                 },
-                "path": landcover_file
+                "path": str(landcover_file)
             }
         }
         

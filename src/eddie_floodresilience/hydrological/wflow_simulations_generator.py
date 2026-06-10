@@ -175,10 +175,10 @@ class WflowSimulationsGenerator():
             # Set up command for preprocessing
             preprocessing_command_list = [
                 "hydromt", "build", "wflow",
-                f"{self.wflow_model_path}/wflow_test_full",
+                str(self.wflow_model_path / "wflow_test_full"),
                 "-r", region_information,
-                "-i", f"{self.wflow_model_path}/wflow_build.yml",
-                "-d", f"{self.wflow_model_path}/data_catalog.yml",
+                "-i", str(self.wflow_model_path / "wflow_build.yml"),
+                "-d", str(self.wflow_model_path / "data_catalog.yml"),
                 "--fo",
                 "-vv"
             ]
