@@ -9,7 +9,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from osgeo import gdal # Import gdal before rasterio
+from osgeo import gdal  # Import gdal before rasterio
 
 import geopandas as gpd
 import pandas as pd
@@ -18,9 +18,9 @@ from shapely.geometry import Polygon
 
 from eddie.digitaltwin.utils import LogLevel, setup_logging
 
-
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
 
 class ParametersFloodModelGenerator():
     """This class is to generate parameter files for flood model"""
@@ -64,11 +64,11 @@ class ParametersFloodModelGenerator():
         self.vectors = vectors
 
     def move_points_inside_aoi(
-            self,
-            aoi_coords,
-            xy_coords,
-            buffer_distance,
-            tolerance
+        self,
+        aoi_coords,
+        xy_coords,
+        buffer_distance,
+        tolerance
     ):
         """
         Move points inside aoi
@@ -109,7 +109,6 @@ class ParametersFloodModelGenerator():
             x += buffer_distance
 
         return x, y
-
 
     def bci_generator(self) -> None:
         """Generate bci files - where the locations of injection points are defined"""
@@ -179,8 +178,8 @@ class ParametersFloodModelGenerator():
                 bci_parameter.write(injection_points_text)
 
     def file_increment_generator(
-            self,
-            filename: str
+        self,
+        filename: str
     ) -> Path:
         """
         Generate increasing files
@@ -306,7 +305,7 @@ class ParametersFloodModelGenerator():
 
         return output_directory
 
-    def par_generator(self) -> None:
+    def par_generator(self) -> Path:
         """Generate par files - where all the parameter data are navigated"""
         par_file_path = self.flood_model_path / "par.par"
         log.info(f"Generating par file {par_file_path}")
@@ -317,8 +316,8 @@ class ParametersFloodModelGenerator():
         if self.polygons is not None:
             bdy = str(
                 max(
-                Path(self.flood_model_path).glob("bdy_landcover_*.bdy"),
-                default=Path(self.flood_model_path) / "bdy_landcover_001.bdy"
+                    Path(self.flood_model_path).glob("bdy_landcover_*.bdy"),
+                    default=Path(self.flood_model_path) / "bdy_landcover_001.bdy"
                 )
             )
         else:
@@ -331,8 +330,8 @@ class ParametersFloodModelGenerator():
             # Path to DEM
             z = str(
                 max(
-                Path(self.flood_model_path).glob("z_elevation_*.asc"),
-                default=Path(self.flood_model_path) / "z_elevation_001.asc"
+                    Path(self.flood_model_path).glob("z_elevation_*.asc"),
+                    default=Path(self.flood_model_path) / "z_elevation_001.asc"
                 )
             )
         else:
@@ -373,11 +372,11 @@ class ParametersFloodModelGenerator():
                 text_parameter = '{0[0]:<20}{0[1]}\n'.format(data_parameter)
                 parameters.write(text_parameter)
             parameters.write('acceleration\ndrain_nodata\n\n')
+        return output_directory
 
-
-    def parameters_files_generator(self) -> None:
+    def parameters_files_generator(self) -> Path:
         """Generate parameter files for flood model"""
-        
+
         # Generate bci file
         self.bci_generator()
 
@@ -385,5 +384,5 @@ class ParametersFloodModelGenerator():
         self.bdy_generator()
 
         # Generate par file
-        self.par_generator()
-
+        output_dir = self.par_generator()
+        return output_dir

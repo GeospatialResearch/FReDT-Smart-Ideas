@@ -178,9 +178,10 @@ class LisFloodModelSimulationsGenerator():
         )
 
         # Generate parameter files
-        parameters_files_generator.parameters_files_generator()
+        output_dir = parameters_files_generator.parameters_files_generator()
+        return output_dir
 
-    def flood_model_simulations_generator(self) -> int:
+    def flood_model_simulations_generator(self, output_dir: Path) -> int:
         """Generate flood simulations by running flood model"""
         # Set up path to log file
         log_file_path = self.flood_model_path / "simulation_log.log"
@@ -219,7 +220,7 @@ class LisFloodModelSimulationsGenerator():
                 check=True
             )
 
-        model_output_id = self.serve_flood_model_outputs(self.flood_model_path / "output")
+        model_output_id = self.serve_flood_model_outputs(output_dir)
         return model_output_id
 
     def flood_model_executor(self):
@@ -241,10 +242,10 @@ class LisFloodModelSimulationsGenerator():
             # self.precipitation_data_for_flood_model_generator()
 
             # Generate parameter files for flood model
-            self.parameters_files_for_flood_model_generator()
+            output_dir = self.parameters_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator()
+            model_output_id = self.flood_model_simulations_generator(output_dir)
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
@@ -252,10 +253,10 @@ class LisFloodModelSimulationsGenerator():
             self.injection_points_for_flood_model_generator()
 
             # Generate parameter files for flood model
-            self.parameters_files_for_flood_model_generator()
+            output_dir = self.parameters_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator()
+            model_output_id = self.flood_model_simulations_generator(output_dir)
 
         # This 'else' includes 2
         else:
@@ -263,10 +264,10 @@ class LisFloodModelSimulationsGenerator():
             self.terrain_data_for_flood_model_generator()
 
             # Generate parameter files for flood model
-            self.parameters_files_for_flood_model_generator()
+            output_dir = self.parameters_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator()
+            model_output_id = self.flood_model_simulations_generator(output_dir)
         return model_output_id
 
     def serve_flood_model_outputs(self, output_directory: Path) -> int:
