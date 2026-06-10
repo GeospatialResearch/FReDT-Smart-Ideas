@@ -58,7 +58,7 @@ class PredefinedScenario(Process, ABC):
                     "landcover",
                     "Landcover Class",
                     data_type="string",
-                    allowed_values=list(GLOBCOVER_CLASSES.keys())
+                    allowed_values=["Dense Deciduous Forest"]
                 ),
             ]
         # Create area WPS outputs
