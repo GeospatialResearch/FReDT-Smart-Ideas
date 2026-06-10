@@ -9,6 +9,7 @@
     {
       "type": "group",
       "name": "Model land cover change flood scenarios",
+      "isOpen": true,
       "members": [
         {
           "type": "wps",
