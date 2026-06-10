@@ -179,8 +179,7 @@ def add_model_output_to_geoserver(model_output_path: pathlib.Path, model_id: int
     create_viridis_style_if_not_exists()
 
 
-def asc_to_gtiff(asc_path: pathlib.Path) -> pathlib.Path:
-    gtiff_filepath = asc_path.with_suffix(".tif")
+def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path):
 
     with rio.open(asc_path) as src:
         # Read the first band's data into a numpy array
@@ -193,5 +192,3 @@ def asc_to_gtiff(asc_path: pathlib.Path) -> pathlib.Path:
         # Write data to a new GTiff
         with rio.open(gtiff_filepath, 'w', **meta) as dst:
             dst.write(asc_data, 1)
-
-    return gtiff_filepath

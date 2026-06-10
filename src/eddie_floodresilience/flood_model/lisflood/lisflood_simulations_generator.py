@@ -289,8 +289,10 @@ class LisFloodModelSimulationsGenerator():
             return -1
 
         # Convert the ASCII raster to GeoTIFF
-        max_file = output_directory / "out.max"
-        max_gtiff = serve_model.asc_to_gtiff(max_file)
+        max_asc = output_directory / "out.max"
+        time = datetime.now().strftime("%Y%m%d%H%M%S")
+        max_gtiff = output_directory / f"{output_directory.name}-{time}-out.tif"
+        serve_model.asc_to_gtiff(max_asc, max_gtiff)
         # Retrieve the AOI as a GeoDataFrame
         bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.aoi_boundary)], crs="EPSG:2193")
 
