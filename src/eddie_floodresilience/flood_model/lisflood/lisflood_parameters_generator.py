@@ -271,15 +271,15 @@ class ParametersFloodModelGenerator():
 
         return seconds
 
-    def optional_output_generator(self) -> str:
+    def optional_output_generator(self) -> Path:
         """
         Set up options for outputs according to sceanrios
         and create output directory for flood modelling outputs
 
         Returns
         -------
-        output_directory : str
-            String of directory of flood model outputs
+        output_directory : Path
+            Directory of flood model outputs
         """
         # Both landcover and elevation solutions
         if self.polygons is not None and self.vectors is not None:
@@ -300,10 +300,7 @@ class ParametersFloodModelGenerator():
         # Create output (if not available)
         output.mkdir(parents=True, exist_ok=True)
 
-        # Get output directory
-        output_directory = str(output)
-
-        return output_directory
+        return output
 
     def par_generator(self) -> Path:
         """Generate par files - where all the parameter data are navigated"""
@@ -350,7 +347,7 @@ class ParametersFloodModelGenerator():
         # Create parameters list
         parameters_list = [
             ('resroot', 'out'),
-            ('dirroot', output_directory),
+            ('dirroot', str(output_directory)),
             ('saveint', 21600),
             ('massint', 500),
             ('sim_time', f'{seconds}'),
