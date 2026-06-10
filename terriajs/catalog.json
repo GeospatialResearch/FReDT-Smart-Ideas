@@ -13,20 +13,6 @@
       "members": [
         {
           "type": "wps",
-          "name": "Whirinaki 1999 Baseline",
-          "description": "Model a land cover change scenario that will impact the flood scenario",
-          "url": "$BACKEND_URL/wps",
-          "identifier": "whirinaki1999baseline"
-        },
-        {
-          "type": "wps",
-          "name": "Whirinaki 1999 Land Cover Change",
-          "description": "Model a land cover change scenario that will impact the flood scenario",
-          "url": "$BACKEND_URL/wps",
-          "identifier": "whirinaki1999"
-        },
-        {
-          "type": "wps",
           "name": "Mataura 2020 Baseline",
           "description": "Model a land cover change scenario that will impact the flood scenario",
           "url": "$BACKEND_URL/wps",
