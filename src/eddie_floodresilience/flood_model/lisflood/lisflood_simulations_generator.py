@@ -300,7 +300,7 @@ class LisFloodModelSimulationsGenerator():
             # Find buildings that are flooded to a depth greater than or equal to 0.1m
             log.info("Analysing flooded buildings")
             flooded_buildings = find_flooded_buildings(conn, bbox_gdf, max_gtiff,
-                                                       flood_depth_threshold=0.1)
+                                                       flood_depth_threshold=0.03)
             log.info("Analysed flooded buildings - adding flooded buildings to database")
             store_flooded_buildings_in_database(conn, flooded_buildings, model_output_id)
 
