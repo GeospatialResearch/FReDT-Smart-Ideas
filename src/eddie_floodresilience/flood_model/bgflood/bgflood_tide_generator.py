@@ -24,8 +24,8 @@ class TidalDataGenerator:
             self,
             flood_model_path: Path,
             hydromt_path: Path,
-            start_time: str,
-            end_time: str
+            start_time: datetime,
+            end_time: datetime
     ) -> None:
         """
         This class is to generate tidal data
@@ -64,7 +64,7 @@ class TidalDataGenerator:
         self.nearest_point = self.land_boundary_union.interpolate(
             self.land_boundary_union.project(self.river_outlet_geom)
         )
-        self.extra_distance = 100  # 100 m from the coastline to the offshore
+        self.extra_distance = 100  # 100 m from the coastline to the onshore
 
         # Set up url and headers
         self.url = "https://api.niwa.co.nz/tides/data"
@@ -87,8 +87,8 @@ class TidalDataGenerator:
 
         Returns
         -------
-        offshore_tidal_point_gdf : gpd.GeoDataFrame
-            Tidal point offshore GeoDataFrame
+        nearshore_tidal_point_gdf : gpd.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
         """
         # Calculate current distance to the coastline
         current_distance = math.sqrt(dir_x ** 2 + dir_y ** 2)
@@ -104,41 +104,41 @@ class TidalDataGenerator:
             unit_dir_x = dir_x / current_distance
             unit_dir_y = dir_y / current_distance
 
-        # Move offshore
-        offshore_tidal_point = Point(
-            self.river_outlet_geom.x + unit_dir_x * self.extra_distance,
-            self.river_outlet_geom.y + unit_dir_y * self.extra_distance
+        # Move nearshore
+        nearshore_tidal_point = Point(
+            self.nearest_point.x - unit_dir_x * self.extra_distance,
+            self.nearest_point.y - unit_dir_y * self.extra_distance
         )
 
         # Convert to GeoDataframe
-        offshore_tidal_point_gdf = gpd.GeoDataFrame(
-            geometry=[offshore_tidal_point],
+        nearshore_tidal_point_gdf = gpd.GeoDataFrame(
+            geometry=[nearshore_tidal_point],
             crs=2193
         )
 
-        return offshore_tidal_point_gdf
+        return nearshore_tidal_point_gdf
 
     def tidal_point_outland_geom_generator(self) -> gpd.GeoDataFrame:
         """
         Generate tidal point geometry outside land
-        where the river outlet is already offshore or on the coastline
+        where the river outlet is offshore or on the coastline
 
         Returns
         -------
-        offshore_tidal_point : gpd.GeoDataFrame
-            Tidal point offshore GeoDataFrame
+        nearshore_tidal_point : gpd.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
         """
         # Calculate direction from coast to outlet
         dir_x = self.river_outlet_geom.x - self.nearest_point.x
         dir_y = self.river_outlet_geom.y - self.nearest_point.y
 
-        # Generate offshore tidal point
-        offshore_tidal_point_gdf = self.tidal_point_geom_generator(
+        # Generate nearshore tidal point
+        nearshore_tidal_point_gdf = self.tidal_point_geom_generator(
             dir_x,
             dir_y
         )
 
-        return offshore_tidal_point_gdf
+        return nearshore_tidal_point_gdf
 
     def tidal_point_inland_geom_generator(self) -> gpd.GeoDataFrame:
         """
@@ -147,8 +147,8 @@ class TidalDataGenerator:
 
         Returns
         -------
-        offshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point offshore GeoDataFrame
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
         """
         # If the river outlet is inside land,
         # the symmetrically opposite-through-coastline point will be used as tidal point.
@@ -160,13 +160,13 @@ class TidalDataGenerator:
         dir_x = reflected_x - self.nearest_point.x
         dir_y = reflected_y - self.nearest_point.y
 
-        # Generate offshore tidal point geodataframe
-        offshore_tidal_point_gdf = self.tidal_point_geom_generator(
+        # Generate nearshore tidal point geodataframe
+        nearshore_tidal_point_gdf = self.tidal_point_geom_generator(
             dir_x,
             dir_y
         )
 
-        return offshore_tidal_point_gdf
+        return nearshore_tidal_point_gdf
 
     def tidal_point_geom_checker_and_generator(self) -> gpd.GeoDataFrame:
         """
@@ -175,33 +175,33 @@ class TidalDataGenerator:
 
         Returns
         -------
-        offshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point offshore GeoDataFrame
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
         """
         # Check if the tidal point is inside or outside land then generate tidal point
         if not self.land_union.contains(self.river_outlet_geom):
-            offshore_tidal_point_gdf = self.tidal_point_outland_geom_generator()
+            nearshore_tidal_point_gdf = self.tidal_point_outland_geom_generator()
         else:
-            offshore_tidal_point_gdf = self.tidal_point_inland_geom_generator()
+            nearshore_tidal_point_gdf = self.tidal_point_inland_geom_generator()
 
         # Write out
-        offshore_tidal_point_gdf.to_file(
+        nearshore_tidal_point_gdf.to_file(
             self.flood_model_path / "tidal_point.shp"
         )
 
-        return offshore_tidal_point_gdf
+        return nearshore_tidal_point_gdf
 
-    def offshore_tidal_point_crs_conversion(
+    def nearshore_tidal_point_crs_conversion(
             self,
-            offshore_tidal_point_gdf: gpd.GeoDataFrame
+            nearshore_tidal_point_gdf: gpd.GeoDataFrame
     ) -> tuple[float, float]:
         """
         Reproject tidal point
 
         Parameters
         ----------
-        offshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point offshore GeoDataFrame
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
 
         Returns
         -------
@@ -211,7 +211,7 @@ class TidalDataGenerator:
             tidal point longitude
         """
         # Get river outlet x, y
-        tidal_point_geom = offshore_tidal_point_gdf.geometry.iloc[0]
+        tidal_point_geom = nearshore_tidal_point_gdf.geometry.iloc[0]
 
         # Set up crs transformer
         transformer = Transformer.from_crs("EPSG:2193", "EPSG:4326", always_xy=True)
@@ -226,15 +226,15 @@ class TidalDataGenerator:
 
     def query_params_designer(
             self,
-            offshore_tidal_point_gdf: gpd.GeoDataFrame
+            nearshore_tidal_point_gdf: gpd.GeoDataFrame
     ) -> dict:
         """
         Design query with parameters to extract tidal data from NIWA API
 
         Parameters
         ----------
-        offshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point offshore GeoDataFrame
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
 
         Returns
         -------
@@ -242,8 +242,8 @@ class TidalDataGenerator:
             Dictionary of parameters used for extracting tidal data from NIWA API
         """
         # Get tidal lat, lon
-        tidal_lat, tidal_lon = self.offshore_tidal_point_crs_conversion(
-            offshore_tidal_point_gdf
+        tidal_lat, tidal_lon = self.nearshore_tidal_point_crs_conversion(
+            nearshore_tidal_point_gdf
         )
 
         # Get number of days
@@ -263,15 +263,15 @@ class TidalDataGenerator:
 
     def query_params_generator(
             self,
-            offshore_tidal_point_gdf: gpd.GeoDataFrame
+            nearshore_tidal_point_gdf: gpd.GeoDataFrame
     ) -> dict:
         """
         Extract tidal data from NIWA API using the designed query
 
         Parameters
         ----------
-        offshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point offshore GeoDataFrame
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
 
         Returns
         -------
@@ -280,7 +280,7 @@ class TidalDataGenerator:
         """
         # Design parameter dictionary
         param_dict = self.query_params_designer(
-            offshore_tidal_point_gdf
+            nearshore_tidal_point_gdf
         )
 
         # Extract tidal data from NIWA API
@@ -323,11 +323,11 @@ class TidalDataGenerator:
 
     def tidal_data_generator(self):
         """Generate tidal data from NIWA API"""
-        # Generate offshore tidal point
-        offshore_tidal_point_gdf = self.tidal_point_geom_checker_and_generator()
+        # Generate nearshore tidal point
+        nearshore_tidal_point_gdf = self.tidal_point_geom_checker_and_generator()
 
         # Extract tidal data from NIWA API
-        tidal_dict = self.query_params_generator(offshore_tidal_point_gdf)
+        tidal_dict = self.query_params_generator(nearshore_tidal_point_gdf)
 
         # Resample tidal data
         tidal_df = self.resample_tidal_data(tidal_dict)
