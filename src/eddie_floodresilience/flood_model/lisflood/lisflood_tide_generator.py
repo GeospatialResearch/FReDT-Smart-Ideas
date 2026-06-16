@@ -5,12 +5,6 @@ Created on Thu Mar 26 22:33:14 2026
 @author: mng42
 """
 
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Jun  8 08:51:54 2026
-
-@author: mng42
-"""
 
 from datetime import date, timedelta
 import pandas as pd
@@ -20,8 +14,7 @@ from datetime import datetime
 from pathlib import Path
 import requests
 import math
-from shapely.geometry import LineString, Point, box
-import numpy as np
+from shapely.geometry import Point
 
 
 class TidalDataGenerator:
@@ -31,9 +24,8 @@ class TidalDataGenerator:
             self,
             flood_model_path: Path,
             hydromt_path: Path,
-            flood_aoi_boundary: list,
-            start_time: str,
-            end_time: str
+            start_time: datetime,
+            end_time: datetime
     ) -> None:
         """
         This class is to generate tidal data
@@ -44,9 +36,6 @@ class TidalDataGenerator:
             Directory to folder storing terrain data
         hydromt_path : Path
             Directory to folder storing necessary data
-        flood_aoi_boundary: list
-            Boundaries' coordinates of area of interest.
-            Format is [xmin, ymin, xmax, ymax]
         start_time : str
             Starting time of simulation
         end_time : str
@@ -54,296 +43,308 @@ class TidalDataGenerator:
         """
         self.flood_model_path = flood_model_path
         self.hydromt_path = hydromt_path
-        self.flood_aoi_boundary = flood_aoi_boundary
         self.start_time = start_time
         self.end_time = end_time
 
-        # Get land polygon
-        self.land = gpd.read_file(self.hydromt_path / 'nz_coastline.shp')
+        # River outlet
+        self.river_outlet = gpd.read_file(
+            self.flood_model_path / 'river_outlet.shp'
+        )
+        self.river_outlet_geom = self.river_outlet.geometry.iloc[0]
 
-        # Extra distance
-        self.extra_distance = 200
-        self.spacing = 500
+        self.land = gpd.read_file(
+            self.hydromt_path / 'nz_coastline.shp'
+        )
+
+        # Merge polygons and edges
+        self.land_union = self.land.union_all()  # All polygons are merged into one
+        self.land_boundary_union = self.land.boundary.union_all()  # All edges are merged into one
+
+        # Generate nearest coastline point
+        self.nearest_point = self.land_boundary_union.interpolate(
+            self.land_boundary_union.project(self.river_outlet_geom)
+        )
+        self.extra_distance = 100  # 100 m from the coastline to the onshore
 
         # Set up url and headers
         self.url = "https://api.niwa.co.nz/tides/data"
         self.headers = {"x-apikey": "MLnPC2sBzVkbvk6mdEyRxGNcTZDRv8y4"}
 
-    def land_bufferer(self) -> gpd.GeoDataFrame:
-        """
-        Buffer land polygon as the distance between tide and coastline
-
-        Returns
-        -------
-        buffered_whole_land_boundary : gpd.GeoDataFrame
-            Boundary of land after being buffered
-
-        """
-        # Merge all land polygons into one
-        whole_land = self.land.dissolve().geometry.iloc[0]
-
-        # Buffer by extra distance
-        buffered_whole_land = whole_land.buffer(self.extra_distance)
-
-        # Boundary
-        buffered_whole_land_boundary = buffered_whole_land.boundary
-
-        return buffered_whole_land_boundary
-
-    def intersected_coastline_generator(
+    def tidal_point_geom_generator(
             self,
-            buffered_whole_land_boundary: gpd.GeoDataFrame
-    ) -> LineString:
-        """
-        Intersect DEM with buffered coastline
-
-        Parameters
-        ----------
-        buffered_whole_land_boundary : gpd.GeoDataFrame
-            Boundary of land after being buffered
-
-        Returns
-        -------
-        intersected_coastline : LineString
-            Coastline that is clipped within DEM boundary
-
-        """
-        # Set DEM boundary
-        self.dem_boundary = box(
-            self.flood_aoi_boundary[0],
-            self.flood_aoi_boundary[1],
-            self.flood_aoi_boundary[2],
-            self.flood_aoi_boundary[3]
-        )
-
-        # Clip coastline using DEM boundary
-        clipped_dem_coastline = buffered_whole_land_boundary.intersection(self.dem_boundary)
-
-        # Conver to GeoDataFrame
-        clipped_dem_coastline_gdf = gpd.GeoDataFrame(
-            geometry=[clipped_dem_coastline],
-            crs=2193
-        )
-
-        # Extract intersected line only
-        intersected_coastline = clipped_dem_coastline_gdf.geometry.iloc[0]
-
-        return intersected_coastline
-
-    def linestring_to_points_processor(
-            self,
-            intersected_coastline: LineString,
-            spacing: float = 50
-    ) -> list:
-        """
-        Process to convert linestrings to points
-
-        Parameters
-        ----------
-        intersected_coastline : LineString
-            Coastline that is clipped within DEM boundary
-
-        Returns
-        -------
-        points_list : list
-            List of points that are converted
-        """
-        # Set up points list
-        points_list = []
-
-        # Loop through line by line to convert to points
-        for each_line in intersected_coastline:
-
-            # Get length of each line
-            length = each_line.length
-
-            # Skip lines that are too short
-            if length <= 2 * spacing:
-                continue
-
-            # Get distances between points except the start/end points
-            distances = np.arange(
-                spacing,
-                length - spacing + 1e-9,
-                spacing
-            )
-
-            # Create points excluding start/end points
-            points_list.extend(
-                [each_line.interpolate(distance) for distance in distances]
-            )
-
-        return points_list
-
-    def linestring_to_points_generator(
-            self,
-            intersected_coastline: LineString
+            dir_x: float,
+            dir_y: float
     ) -> gpd.GeoDataFrame:
         """
-        Generate points from linestrings
+        Generate tidal point geometry
 
         Parameters
         ----------
-        intersected_coastline : LineString
-            Coastline that is clipped within DEM boundary
+        dir_x : float
+            X direction
+        dir_y : float
+            Y direction
 
         Returns
         -------
-        points_gpd : gpd.GeoDataFrame
-            GeoDataFrame of points that are converted
+        nearshore_tidal_point_gdf : gpd.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
         """
-        # Make LineString and MultiLineString behave the same
-        intersected_coastlines = (
-            [intersected_coastline]
-            if isinstance(intersected_coastline, LineString)
-            else intersected_coastline.geoms
+        # Calculate current distance to the coastline
+        current_distance = math.sqrt(dir_x ** 2 + dir_y ** 2)
+
+        # Normalise direction unit based on current distance
+        # If current distance is 0 - river outlet on the coast line
+        # This if is only for when the river outlet is already offshore or on the coastline
+        if current_distance == 0:
+            unit_dir_x, unit_dir_y = 1, 1
+
+        # If current distance is not 0 - river outlet in the offshore
+        else:
+            unit_dir_x = dir_x / current_distance
+            unit_dir_y = dir_y / current_distance
+
+        # Move nearshore
+        nearshore_tidal_point = Point(
+            self.nearest_point.x - unit_dir_x * self.extra_distance,
+            self.nearest_point.y - unit_dir_y * self.extra_distance
         )
 
-        # Create points based on intersected coastline
-        points_list = self.linestring_to_points_processor(
-            intersected_coastlines,
-            spacing=self.spacing
-        )
-
-        # Convert to GeoDataFrame
-        points_gdf = gpd.GeoDataFrame(
-            geometry=points_list,
+        # Convert to GeoDataframe
+        nearshore_tidal_point_gdf = gpd.GeoDataFrame(
+            geometry=[nearshore_tidal_point],
             crs=2193
         )
 
-        # Reproject points from 2193 to 4326
-        points_gdf = points_gdf.to_crs(4326)
+        return nearshore_tidal_point_gdf
 
-        return points_gdf
+    def tidal_point_outland_geom_generator(self) -> gpd.GeoDataFrame:
+        """
+        Generate tidal point geometry outside land
+        where the river outlet is offshore or on the coastline
 
-    def tidal_points_query_requester(
+        Returns
+        -------
+        nearshore_tidal_point : gpd.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
+        """
+        # Calculate direction from coast to outlet
+        dir_x = self.river_outlet_geom.x - self.nearest_point.x
+        dir_y = self.river_outlet_geom.y - self.nearest_point.y
+
+        # Generate nearshore tidal point
+        nearshore_tidal_point_gdf = self.tidal_point_geom_generator(
+            dir_x,
+            dir_y
+        )
+
+        return nearshore_tidal_point_gdf
+
+    def tidal_point_inland_geom_generator(self) -> gpd.GeoDataFrame:
+        """
+        Generate tidal point geometry outside land
+        where the river outlet is inside land
+
+        Returns
+        -------
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
+        """
+        # If the river outlet is inside land,
+        # the symmetrically opposite-through-coastline point will be used as tidal point.
+        # Reflect river outlet across coastline
+        reflected_x = 2 * self.nearest_point.x - self.river_outlet_geom.x
+        reflected_y = 2 * self.nearest_point.y - self.river_outlet_geom.y
+
+        # Calculate direction from coast to outlet
+        dir_x = reflected_x - self.nearest_point.x
+        dir_y = reflected_y - self.nearest_point.y
+
+        # Generate nearshore tidal point geodataframe
+        nearshore_tidal_point_gdf = self.tidal_point_geom_generator(
+            dir_x,
+            dir_y
+        )
+
+        return nearshore_tidal_point_gdf
+
+    def tidal_point_geom_checker_and_generator(self) -> gpd.GeoDataFrame:
+        """
+        Check if the river outlet is inside, outside land, or on the coastline
+        and then generate tidal point
+
+        Returns
+        -------
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
+        """
+        # Check if the tidal point is inside or outside land then generate tidal point
+        if not self.land_union.contains(self.river_outlet_geom):
+            nearshore_tidal_point_gdf = self.tidal_point_outland_geom_generator()
+        else:
+            nearshore_tidal_point_gdf = self.tidal_point_inland_geom_generator()
+
+        # Write out
+        nearshore_tidal_point_gdf.to_file(
+            self.flood_model_path / "tidal_point.shp"
+        )
+
+        return nearshore_tidal_point_gdf
+
+    def nearshore_tidal_point_crs_conversion(
             self,
-            points_gdf: gpd.GeoDataFrame
+            nearshore_tidal_point_gdf: gpd.GeoDataFrame
+    ) -> tuple[float, float]:
+        """
+        Reproject tidal point
+
+        Parameters
+        ----------
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
+
+        Returns
+        -------
+        tidal_lat : float
+            tidal point latitude
+        tidal_lon : float
+            tidal point longitude
+        """
+        # Get river outlet x, y
+        tidal_point_geom = nearshore_tidal_point_gdf.geometry.iloc[0]
+
+        # Set up crs transformer
+        transformer = Transformer.from_crs("EPSG:2193", "EPSG:4326", always_xy=True)
+
+        # Convert x, y coordinates into lon, lat
+        tidal_lon, tidal_lat = transformer.transform(
+            tidal_point_geom.x,
+            tidal_point_geom.y
+        )
+
+        return tidal_lat, tidal_lon
+
+    def query_params_designer(
+            self,
+            nearshore_tidal_point_gdf: gpd.GeoDataFrame
+    ) -> dict:
+        """
+        Design query with parameters to extract tidal data from NIWA API
+
+        Parameters
+        ----------
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
+
+        Returns
+        -------
+        params_dict : dict
+            Dictionary of parameters used for extracting tidal data from NIWA API
+        """
+        # Get tidal lat, lon
+        tidal_lat, tidal_lon = self.nearshore_tidal_point_crs_conversion(
+            nearshore_tidal_point_gdf
+        )
+
+        # Get number of days
+        n_days = (self.end_time - self.start_time).days
+
+        # Design query params
+        params_dict = {
+            "lat": float(tidal_lat),
+            "long": float(tidal_lon),
+            "numberOfDays": n_days,
+            "startDate": self.start_time.strftime("%Y-%m-%d"),
+            "datum": 'MSL',
+            "interval": 10
+        }
+
+        return params_dict
+
+    def query_params_generator(
+            self,
+            nearshore_tidal_point_gdf: gpd.GeoDataFrame
+    ) -> dict:
+        """
+        Extract tidal data from NIWA API using the designed query
+
+        Parameters
+        ----------
+        nearshore_tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point nearshore GeoDataFrame
+
+        Returns
+        -------
+        tidal_dict : dict
+            Dictionary of tidal time and values extracted from NIWA API
+        """
+        # Design parameter dictionary
+        param_dict = self.query_params_designer(
+            nearshore_tidal_point_gdf
+        )
+
+        # Extract tidal data from NIWA API
+        tidal_dict = requests.get(
+            self.url,
+            params=param_dict,
+            headers=self.headers
+        ).json()
+
+        return tidal_dict
+
+    def resample_tidal_data(
+            self,
+            tidal_dict: dict
     ):
         """
-        Request tidal points from NIWA API
+        Resample tidal data into 1 hour interval
 
         Parameters
         ----------
-        points_gpd : gpd.GeoDataFrame
-            GeoDataFrame of points that are converted
+        tidal_dict : dict
+            Dictionary of tidal time and values extracted from NIWA API
 
         Returns
         -------
-        all_tidal_df : list
-            List of all tidal dataframe
+        tidal_df : pd.DataFrame
+            DataFrame of tidal data
         """
-        # Set up list of all tidal df
-        all_tidal_df_list = []
+        # Set up tidal dataframe
+        tidal_df = pd.DataFrame(tidal_dict['values'])
 
-        for i, geom in enumerate(points_gdf.geometry):
-            # Query parameters design
-            query_params = {
-                "lat": geom.y,
-                "long": geom.x,
-                "numberOfDays": (self.end_time - self.start_time).days,
-                "startDate": self.start_time.strftime("%Y-%m-%d"),
-                "datum": "MSL",
-                "interval": 10
-            }
+        # Convert time into time format
+        tidal_df['time'] = pd.to_datetime(tidal_df['time'])
+        tidal_df = tidal_df.set_index('time')
 
-            # Request points
-            points_request = requests.get(
-                self.url,
-                params=query_params,
-                headers=self.headers
-            )
+        # Resample tidal data
+        tidal_df = tidal_df.resample('1h').mean()
 
-            # Get tidal raw data from request
-            tidal_raw_data = points_request.json()
-
-            # Get tidal series data
-            tidal_series_data = tidal_raw_data.get(
-                "values",
-                None
-            )
-
-            # Convert to dataframe with only time and value
-            tidal_df = pd.DataFrame(tidal_series_data)[['time', 'value']]
-
-            # Rename tidal columns
-            tidal_df = tidal_df.rename(columns={'value': f"p{i}"})
-
-            # Collect all tidal df
-            all_tidal_df_list.append(tidal_df)
-
-        return all_tidal_df_list
-
-    def tidal_points_cleaner(
-            self,
-            all_tidal_df_list: list
-    ) -> pd.DataFrame:
-        """
-        Clean the requested tidal point dataframes
-
-        Parameters
-        ----------
-        all_tidal_df_list : list
-            List of all tidal dataframe
-
-        Returns
-        -------
-        all_tidal_df : pd.DataFrame
-            All tidal dataframe
-        """
-        # Mege all tidal point dataframes
-        all_tidal_df = pd.concat(all_tidal_df_list, axis=0)
-
-        # Group by time
-        all_tidal_df = all_tidal_df.groupby("time", as_index=False).mean()
-
-        # Sort out by time
-        all_tidal_df = all_tidal_df.sort_values("time")
-
-        return all_tidal_df
+        return tidal_df
 
     def tidal_data_generator(self):
-        """
-        Generate tidal data from NIWA API
+        """Generate tidal data from NIWA API"""
+        # Generate nearshore tidal point
+        nearshore_tidal_point_gdf = self.tidal_point_geom_checker_and_generator()
+
+        # Extract tidal data from NIWA API
+        tidal_dict = self.query_params_generator(nearshore_tidal_point_gdf)
+
+        # Resample tidal data
+        tidal_df = self.resample_tidal_data(tidal_dict)
+
+        # Add more seconds
+        tidal_df["seconds"] = (
+                tidal_df.index - tidal_df.index[0]
+        ).total_seconds()
+
+        return tidal_df
 
 
-        Returns
-        -------
-        all_tidal_df : pd.DataFrame
-            All tidal dataframe
-        """
-        # Buffer land boundary to intersect with DEM boundary
-        buffered_whole_land_boundary = self.land_bufferer()
 
-        # Generate intersected coastline
-        intersected_coastline = self.intersected_coastline_generator(
-            buffered_whole_land_boundary
-        )
-
-        # Convert intersected coastline to points
-        points_gdf = self.linestring_to_points_generator(
-            intersected_coastline
-        )
-
-        # Request tidal values for tidal points from NIWA API
-        all_tidal_df_list = self.tidal_points_query_requester(
-            points_gdf
-        )
-
-        # Clean the requested data
-        all_tidal_df = self.tidal_points_cleaner(
-            all_tidal_df_list
-        )
-
-        return all_tidal_df
-
-
-# Check
-
+# # Check code
 # tide_generator = TidalDataGenerator(
 #     Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_riverton_path_001"),
 #     Path(r"D:\data_checking_tide"),
-#     [1209556, 4849980, 1222804, 4864908],
 #     datetime.fromisoformat("2020-02-03T00:00:00"),
 #     datetime.fromisoformat("2020-02-05T00:00:00")
 # )

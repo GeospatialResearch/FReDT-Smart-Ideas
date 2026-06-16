@@ -10,11 +10,12 @@ from osgeo import gdal # Import gdal before rasterio
 import geopandas as gpd
 import numpy as np
 from shapely.geometry import Polygon
-import pandas as pd
-from datetime import datetime
-from pathlib import Path
-from src.eddie_floodresilience.flood_model.lisflood.lisflood_tide_generator import TidalDataGenerator
 
+import pandas as pd
+
+from datetime import datetime
+
+from pathlib import Path
 
 class ParametersFloodModelGenerator():
     """This class is to generate parameter files for flood model"""
@@ -22,7 +23,6 @@ class ParametersFloodModelGenerator():
     def __init__(
         self,
         flood_model_path: Path,
-        hydromt_path: Path,
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
@@ -36,8 +36,6 @@ class ParametersFloodModelGenerator():
         ----------
         flood_model_path : Path
             Directory to folder storing flood model data
-        hydromt_path : Path
-            Directory to folder storing necessary data
         terrain_bounding_box : Polygon
             Bounding's box of terrain data
         start_time : datetime
@@ -53,23 +51,12 @@ class ParametersFloodModelGenerator():
             and 'distance' column to specify how smooth to decrease elevation.
         """
         self.flood_model_path = flood_model_path
-        self.hydromt_path = hydromt_path
         self.terrain_bounding_box = terrain_bounding_box
         self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
         self.start_time = start_time
         self.end_time = end_time
         self.polygons = polygons
         self.vectors = vectors
-
-        # Set up tide generator
-        tide_df_generator = TidalDataGenerator(
-            self.flood_model_path,
-            self.hydromt_path,
-            self.start_time,
-            self.end_time
-        )
-        # Generate tide dataframe
-        self.tide_df = tide_df_generator.tidal_data_generator()
 
     def move_points_inside_aoi(
             self,
@@ -184,26 +171,6 @@ class ParametersFloodModelGenerator():
                 # Write inside bci file
                 bci_parameter.write(injection_points_text)
 
-            # Add tide geometry
-            # Read tidal point
-            onshore_tidal_point_gdf = gpd.read_file(
-                self.flood_model_path / "tidal_point.shp"
-            )
-            # Setup tidal point format for bci
-            onshore_tidal_point_format = [
-                'P',
-                onshore_tidal_point_gdf.geometry.iloc[0].x,
-                onshore_tidal_point_gdf.geometry.iloc[0].y,
-                'HVAR', 'Tide'
-            ]
-            # Design text for tidal point format
-            onshore_tidal_point_text = '{0[0]:<5}{0[1]:<20.3f}{0[2]:<20.3f}{0[3]:<7}{0[4]:<5}\n'.format(
-                onshore_tidal_point_format
-            )
-            # Write into bci
-            bci_parameter.write(onshore_tidal_point_text)
-
-
     def file_increment_generator(
             self,
             filename: str
@@ -270,34 +237,19 @@ class ParametersFloodModelGenerator():
 
             discharge_tide.write("LISFLOOD-FP setup\n")
 
-            # Write flow data
             for flow_column in flow_columns:
-                # Create new line for each flow value
+
                 discharge_tide.write(flow_column + "\n")
-                # Write column names
                 discharge_tide.write(
                     '{0:<20}seconds\n'.format(flow_df.shape[0])
                 )
 
-                # Write flow values
                 for i in range(flow_df.shape[0]):
                     value = flow_df.at[i, flow_column]
                     sec = flow_df.at[i, 'seconds']
 
-                    line = f"{value:<20.4f}{sec:.0f}\n"
+                    line = f"{value:<20}{sec:.0f}\n"
                     discharge_tide.write(line)
-
-            # Write tide data (only one point)
-            discharge_tide.write("Tide\n")
-            discharge_tide.write('{0:<20}seconds\n'.format(self.tide_df.shape[0]))
-            # Write tide values
-            for i in range(self.tide_df.shape[0]):
-                value = self.tide_df['value'].iloc[i]
-                sec = self.tide_df['seconds'].iloc[i]
-
-                line = f"{value:<20.4f}{sec:.0f}\n"
-                discharge_tide.write(line)
-
                     
     def simulated_seconds_generator(self):
         """
