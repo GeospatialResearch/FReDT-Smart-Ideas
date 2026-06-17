@@ -2,6 +2,7 @@
 <StyledLayerDescriptor xmlns="http://www.opengis.net/sld" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                        xsi:schemaLocation="http://www.opengis.net/sld
 http://schemas.opengis.net/sld/1.0.0/StyledLayerDescriptor.xsd" version="1.0.0">
+    <!-- Style definition for rasters in Plasma colour scheme, with values ranging from 0.03m - 3m -->
     <NamedLayer>
         <Name>plasma_0_3m</Name>
         <UserStyle>

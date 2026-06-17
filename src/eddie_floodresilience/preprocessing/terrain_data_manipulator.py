@@ -14,20 +14,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+import logging
 from osgeo import gdal # Import gdal before rasterio to get rid of DLL error
 import subprocess
 import rioxarray as rxr
 
 from pathlib import Path
-import logging
+
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
+
 def value_change(
-        shapefile_path: Path,
-        file_need_changing: str,
-        value: float,
-        inside: bool = True
+    shapefile_path: Path,
+    file_need_changing: str,
+    value: float,
+    inside: bool = True
 ) -> None:
     """
     Change pixel values inside or outside polygons

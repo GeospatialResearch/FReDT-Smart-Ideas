@@ -180,6 +180,16 @@ def add_model_output_to_geoserver(model_output_path: pathlib.Path, model_id: int
 
 
 def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path):
+    """
+    Converts the ASCII raster (CRS=2193) to a GeoTiff file.
+
+    Parameters
+    ----------
+    asc_path : pathlib.Path
+        The path to the ASCII raster.
+    gtiff_filepath : pathlib.Path
+        The path to the result GeoTiff file.
+    """
 
     with rio.open(asc_path) as src:
         # Read the first band's data into a numpy array

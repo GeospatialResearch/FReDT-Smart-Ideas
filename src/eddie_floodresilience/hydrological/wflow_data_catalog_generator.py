@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 class DataCatalogGenerator():
     """This class is to generate data_catalog.yml for preprocessing data for wflow"""
-    
+
     def __init__(
             self,
             hydromt_path: Path,
@@ -53,7 +53,7 @@ class DataCatalogGenerator():
         self.river_name = river_name
         self.polygons = polygons
         self.landcover = landcover
-        
+
     def meta_section(self) -> dict:
         """
         Write out meta section
@@ -67,9 +67,9 @@ class DataCatalogGenerator():
         meta = {
             "meta": {
                 "root": str(self.hydromt_path)
-            }    
+            }
         }
-        
+
         return meta
 
     def forcing_section(self) -> dict:
@@ -142,9 +142,9 @@ class DataCatalogGenerator():
                 "path": "era5_orography.nc"
             }
         }
-        
+
         return orography
-    
+
     def landcover_section(self) -> dict:
         """
         Write out landcover section
@@ -177,9 +177,9 @@ class DataCatalogGenerator():
                 "path": str(landcover_file)
             }
         }
-        
+
         return landcover
-    
+
     def lakes_section(self) -> dict:
         """
         Write out lakes section
@@ -208,9 +208,9 @@ class DataCatalogGenerator():
                 }
             }
         }
-        
+
         return lakes
-        
+
     def terrain_section(self) -> dict:
         """
         Write out terrain section
@@ -237,9 +237,9 @@ class DataCatalogGenerator():
                 "path": f"{self.wflow_model_path / 'merit_hydro/{variable}.tif'}"
             }
         }
-        
+
         return terrain
-    
+
     def basin_section(self) -> dict:
         """
         Write out basin section
@@ -265,11 +265,11 @@ class DataCatalogGenerator():
                     "source_license": "CC-BY-NC 4.0"
                 },
                 "path": f"{self.wflow_model_path / 'merit_hydro_index.gpkg'}"
-            }    
+            }
         }
-        
+
         return basin
-    
+
     def rivers_section(self) -> dict:
         """
         Write out rivers section
@@ -296,11 +296,11 @@ class DataCatalogGenerator():
                 },
                 "version": 1,
                 "path": f"{self.wflow_model_path / 'rivers_lin2019_v1.gpkg'}"
-            }    
+            }
         }
-        
+
         return rivers
-    
+
     def soilgrids_section(self) -> dict:
         """
         Write out soilgrids section
@@ -323,9 +323,9 @@ class DataCatalogGenerator():
                 "path": "soilgrids_2020/{variable}.tif"
             }
         }
-        
+
         return soilgrids
-        
+
     def lai_section(self) -> dict:
         """
         Write out LAI section
@@ -364,9 +364,9 @@ class DataCatalogGenerator():
                 }
             }
         }
-        
+
         return lai
-    
+
     def data_catalog_section(self) -> dict:
         """
         Organise data_catalog's content
@@ -415,13 +415,13 @@ class DataCatalogGenerator():
                     self.soilgrids_section(),
                     self.lai_section()
                 ]
-        
+
         # Generate a dictionary of data_catalog
         for each_section in sections_list:
             data_catalog.update(each_section)
-            
+
         return data_catalog
-    
+
     def write_out_data_catalog(
             self,
             data_catalog
@@ -449,37 +449,66 @@ class DataCatalogGenerator():
         else:
             # Set up output filename
             output_filename = self.wflow_model_path / "data_catalog.yml"
-        
+
         # Write out data_catalog.yml
         with open(output_filename, "w") as output_file:
             yaml.dump(
-                data_catalog, 
+                data_catalog,
                 output_file,
                 sort_keys=False
             )
-        
+
     def data_catalog_generator(self):
         """Generate data_catalog.yml file"""
         # Set up content for data_catalog file
         log.info(f"Generating data_catalog.yml file")
         data_catalog = self.data_catalog_section()
-        
+
         # Write data_catalog file
         self.write_out_data_catalog(data_catalog)
 
 
-def find_landcover_file(wflow_model_path: Path, hydromt_path: Path, landcover_name: str, is_baseline: bool = True) -> Path:
+def find_landcover_file(
+    wflow_model_path: Path,
+    hydromt_path: Path,
+    landcover_name: str,
+    is_baseline: bool = True
+) -> Path:
+    """
+    Find the correct landcover filepath to use, based on complex coupled internal logic.
+
+    Parameters
+    ----------
+    wflow_model_path : Path
+        A directory to where the data_catalog.yml is stored for WFlow
+    hydromt_path : Path
+        A directory to where all necessary files are stored to run wflow model
+    landcover_name : str
+        A string to identify the landcover. Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
+    is_baseline : bool
+        Whether this scenario is a baseline scenario (True) or has modified landcover (False)
+
+    Returns
+    -------
+    Path
+        The Path to the landcover file for the given landcover_name
+
+    """
+    # Baselines use original files
     if is_baseline:
         if landcover_name == 'globcover':
             landcover_file = hydromt_path / Path("original_globcover.tif")
         else:
             landcover_file = hydromt_path / Path('lcdb_2023_50m_fixed_nodata.tif')
     else:
+        # non-baselines use new modified files
         if landcover_name.startswith('globcover'):
+            # globcover must be written to wflow_model_path not hydromt_path in docker due to permissions.
+            # We find the correct version based on the landcover file name
             landcover_file = (wflow_model_path / "globcover" / landcover_name).resolve()
         else:
             landcover_file = max(
                 Path(hydromt_path).glob("lcdb_*.tif"),
                 default=Path(hydromt_path) / "lcdb_001.tif"
-            ).name
+            )
     return landcover_file

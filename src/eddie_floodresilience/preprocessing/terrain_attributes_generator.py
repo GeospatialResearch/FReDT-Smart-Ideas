@@ -2,7 +2,7 @@
 Generate terrain attributes by processing DEM and roughness data
 mainly using Whitebox package.
 """
-
+import logging
 from pathlib import Path
 from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
@@ -22,10 +22,11 @@ import json
 
 import rasterio.features
 
-import logging
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
 # Create whitebox environment and whitebox tools
 wbe = WbEnvironment()
 wbe.verbose = True

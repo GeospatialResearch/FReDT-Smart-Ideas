@@ -1,3 +1,5 @@
+import logging
+
 from osgeo import gdal
 import rioxarray as rxr
 import xarray as xr
@@ -11,6 +13,11 @@ import numpy as np
 from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
 
+from eddie.digitaltwin.utils import setup_logging, LogLevel
+
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
+
 GLOBCOVER_CLASSES: dict[str, int] = {
     "Dense Deciduous Forest": 50,
     "Evergreen Forest": 40,
@@ -23,10 +30,7 @@ GLOBCOVER_CLASSES: dict[str, int] = {
     "Wetland": 160,
     "Bare Land": 200,
 }
-from eddie.digitaltwin.utils import setup_logging, LogLevel
-import logging
-setup_logging(LogLevel.DEBUG)
-log = logging.getLogger(__name__)
+
 
 wbe = WbEnvironment()
 wbe.verbose = True

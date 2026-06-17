@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Defines PyWPS WebProcessingService process for creating a flooding scenario with hydraluic and hydrodynamic modelling."""
+"""Defines PyWPS WebProcessingService processes for creating a flood scenarios with hydraulic and hydrodynamic modelling."""
 
 import json
 from abc import ABC
@@ -32,6 +32,7 @@ from src.eddie_floodresilience.solutions.total_solutions import GLOBCOVER_CLASSE
 
 
 class PredefinedScenario(Process, ABC):
+    """Abstract base class for a Process for a scenario. Children of this provide the specific task to run."""
     def __init__(self, title: str, identifier: str, task: Callable, isBaseline=False) -> None:
         """Define inputs and outputs of the WPS process, and assign process handler."""
 

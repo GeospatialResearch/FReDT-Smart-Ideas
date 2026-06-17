@@ -20,23 +20,13 @@ Runs backend tasks using Celery. Allowing for multiple long-running tasks to com
 Allows the frontend to send tasks and retrieve status later.
 """
 import logging
-from typing import Dict, List, NamedTuple, Union
+from typing import List, NamedTuple
 
-from celery import result, signals
-from celery.worker.consumer import Consumer
 import geopandas as gpd
-from pyproj import Transformer
-import xarray
 
-from eddie.digitaltwin import cache_new_results, check_cache_results, retrieve_from_instructions, setup_environment
+from eddie.digitaltwin import cache_new_results, check_cache_results
 from eddie.digitaltwin.utils import setup_logging
-from eddie.tasks import OnFailureStateTask, add_base_data_to_db, app, wkt_to_gdf  # pylint: disable=cyclic-import
-from src.eddie_floodresilience.dynamic_boundary_conditions.rainfall import main_rainfall
-from src.eddie_floodresilience.dynamic_boundary_conditions.river import main_river
-from src.eddie_floodresilience.dynamic_boundary_conditions.tide import main_tide_slr
-from src.eddie_floodresilience.flood_model import bg_flood_model, process_hydro_dem
-from src.eddie_floodresilience.run_all import DEFAULT_MODULES_TO_PARAMETERS
-from src.eddie_floodresilience.config import EnvVariable
+from eddie.tasks import OnFailureStateTask, app  # pylint: disable=cyclic-import
 from src.eddie_floodresilience import hydrological_and_hydrodynamic_pipeline
 
 setup_logging()
