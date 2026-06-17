@@ -992,7 +992,7 @@ class StreamHydraulicsGenerator():
     ) -> None:
         """
         Generate features (e.g. width, roughness, ...) for watershed network.
-        THis is temporary solution.
+        This is temporary solution.
 
         Parameters
         -----------
