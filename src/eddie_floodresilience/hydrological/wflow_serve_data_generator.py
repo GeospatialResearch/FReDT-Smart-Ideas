@@ -20,6 +20,7 @@
 import logging
 from pathlib import Path
 
+from osgeo import gdal
 import geopandas as gpd
 import rioxarray as rxr
 
