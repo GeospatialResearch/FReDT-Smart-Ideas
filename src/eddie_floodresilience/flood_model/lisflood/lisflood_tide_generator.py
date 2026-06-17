@@ -64,7 +64,7 @@ class TidalDataGenerator:
         self.nearest_point = self.land_boundary_union.interpolate(
             self.land_boundary_union.project(self.river_outlet_geom)
         )
-        self.extra_distance = 100  # 100 m from the coastline to the onshore
+        self.extra_distance = 0  # extra distance from the coastline to the onshore
 
         # Set up url and headers
         self.url = "https://api.niwa.co.nz/tides/data"
@@ -93,22 +93,26 @@ class TidalDataGenerator:
         # Calculate current distance to the coastline
         current_distance = math.sqrt(dir_x ** 2 + dir_y ** 2)
 
-        # Normalise direction unit based on current distance
-        # If current distance is 0 - river outlet on the coast line
-        # This if is only for when the river outlet is already offshore or on the coastline
-        if current_distance == 0:
-            unit_dir_x, unit_dir_y = 1, 1
-
-        # If current distance is not 0 - river outlet in the offshore
+        # Extra distance is 0 means that taking river outlet as the tidal point
+        if self.extra_distance == 0:
+            nearshore_tidal_point = self.river_outlet_geom
         else:
-            unit_dir_x = dir_x / current_distance
-            unit_dir_y = dir_y / current_distance
+            # Normalise direction unit based on current distance
+            # If current distance is 0 - river outlet on the coast line
+            # This if is only for when the river outlet is already offshore or on the coastline
+            if current_distance == 0:
+                unit_dir_x, unit_dir_y = 1, 1
 
-        # Move nearshore
-        nearshore_tidal_point = Point(
-            self.nearest_point.x - unit_dir_x * self.extra_distance,
-            self.nearest_point.y - unit_dir_y * self.extra_distance
-        )
+            # If current distance is not 0 - river outlet in the offshore
+            else:
+                unit_dir_x = dir_x / current_distance
+                unit_dir_y = dir_y / current_distance
+
+            # Move nearshore
+            nearshore_tidal_point = Point(
+                self.nearest_point.x - unit_dir_x * self.extra_distance,
+                self.nearest_point.y - unit_dir_y * self.extra_distance
+            )
 
         # Convert to GeoDataframe
         nearshore_tidal_point_gdf = gpd.GeoDataFrame(
@@ -313,8 +317,23 @@ class TidalDataGenerator:
         tidal_df = pd.DataFrame(tidal_dict['values'])
 
         # Convert time into time format
-        tidal_df['time'] = pd.to_datetime(tidal_df['time'])
+        tidal_df['time'] = pd.to_datetime(
+            tidal_df['time'],
+            utc=True
+        )
+
+        # Convert UTC to NZ local time
+        tidal_df['time'] = tidal_df['time'].dt.tz_convert(
+            'Pacific/Auckland'
+        )
         tidal_df = tidal_df.set_index('time')
+
+        # Convert datum to NZVD2016
+        tidal_df['value'] = tidal_df['value'] - 0.11 + 1
+
+        tidal_df.to_csv(
+            self.flood_model_path / 'tidal_point_df_query.csv'
+        )
 
         # Resample tidal data
         tidal_df = tidal_df.resample('1h').mean()
@@ -336,6 +355,11 @@ class TidalDataGenerator:
         tidal_df["seconds"] = (
                 tidal_df.index - tidal_df.index[0]
         ).total_seconds()
+
+        # Generate tidal dataframe
+        tidal_df.to_csv(
+            self.flood_model_path / 'tidal_point_df.csv'
+        )
 
         return tidal_df
 
