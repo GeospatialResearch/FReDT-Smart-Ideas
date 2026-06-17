@@ -73,6 +73,7 @@ RUN <<EOF
       libnuma-dev \
       wget
 
+    # Install Julia for running wflow
     curl -fsSL https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-1.12.6-linux-x86_64.tar.gz | tar -xz -C /opt/
 
     # Cleanup image and remove junk
@@ -108,7 +109,6 @@ COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/hydrologic
 COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/necessary_data /necessary_data
 
 # Copy python virtual environment from build layer
-# todo find better way than chmod 777 for allowing whitebox
 COPY --chown=root:root --chmod=777 --from=build /venv /venv
 USER nonroot
 # download whitebox binaries
