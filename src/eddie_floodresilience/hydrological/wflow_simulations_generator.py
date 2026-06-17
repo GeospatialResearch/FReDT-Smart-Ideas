@@ -5,6 +5,7 @@ Created on Thu Apr  9 08:43:08 2026
 @author: mng42
 """
 
+import logging
 from pathlib import Path
 from datetime import datetime
 import geopandas as gpd
@@ -14,14 +15,15 @@ from .wflow_build_generator import WflowBuildGenerator
 
 
 import subprocess
-import logging
+
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 class WflowSimulationsGenerator():
     """This class is to generate wflow model simulations"""
-    
+
     def __init__(
         self,
         hydromt_path: Path,
@@ -85,7 +87,7 @@ class WflowSimulationsGenerator():
         self.polygons = polygons
         self.resolution = resolution
         self.landcover = landcover
-        
+
     def files_for_preprocessing_generator(self) -> None:
         """Generate files for preprocessing"""
         # Generate data_catalog.yml
@@ -98,7 +100,7 @@ class WflowSimulationsGenerator():
             self.landcover
         )
         data_catalog.data_catalog_generator()
-        
+
         # Generate wflow_build.yml
         wflow_build = WflowBuildGenerator(
             self.start_time,
@@ -112,7 +114,7 @@ class WflowSimulationsGenerator():
             self.landcover
         )
         wflow_build.wflow_build_generator()
-        
+
     def preprocessing_command(self) -> None:
         """Set up preprocessing command and preprocess data for wflow model"""
         log.info("Preprocessing data for wflow model")
@@ -188,7 +190,7 @@ class WflowSimulationsGenerator():
             preprocessing_command_list,
             check=True
         )
-        
+
     def simulation_command(self) -> None:
         """Set up simulation command and generate simulation"""
         # Set up path to wflow simulation folder
@@ -228,12 +230,12 @@ class WflowSimulationsGenerator():
         # Run the command and write output to log
         with open(wflow_simulation_path / output_log, "w") as f:
             process = subprocess.check_call(
-                simulation_command, 
-                stdout=f, 
-                stderr=subprocess.STDOUT, 
+                simulation_command,
+                stdout=f,
+                stderr=subprocess.STDOUT,
                 text=True
             )
-        
+
     def wflow_model_simulations_pipeline(self) -> None:
         """Generate wflow model simulation"""
         # Generate files for preprocessing
@@ -241,6 +243,6 @@ class WflowSimulationsGenerator():
 
         # Preprocessing data for wflow model
         self.preprocessing_command()
-        
+
         # Generate wflow model simulation
         self.simulation_command()

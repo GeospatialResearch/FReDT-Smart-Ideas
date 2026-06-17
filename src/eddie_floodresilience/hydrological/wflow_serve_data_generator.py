@@ -1,9 +1,27 @@
+# -*- coding: utf-8 -*-
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""Serves data for WFlow scenarios, such as landcover and catchment boundaries."""
+
 import logging
 from pathlib import Path
 
 import geopandas as gpd
 import rioxarray as rxr
-from sqlalchemy.ext.declarative import declarative_base
 
 from eddie import geoserver as gs
 from eddie.digitaltwin import setup_environment
@@ -12,28 +30,57 @@ from eddie.geoserver.raster_layers import CoverageDimension
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import find_landcover_file
 
-Base = declarative_base()
-
 setup_logging()
 log = logging.getLogger(__name__)
 
 
 class WflowServeDataGenerator:
+    """
+    Class to serve data for a Wflow scenario, such as landcover and catchment boundaries.
+
+    Attributes
+    ----------
+    hydromt_path : Path
+        A directory to where all necessary files are stored to run wflow model
+    wflow_model_path : Path
+        A directory to where the data_catalog.yml is stored for WFlow
+    landcover : str
+        A string to identify the landcover. Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
+    flood_model_output_id : int
+        The ID of the flood model scenario that has been created using this wflow model
+    """
+
     def __init__(self, hydromt_path: Path, wflow_model_path: Path, landcover: str, flood_model_output_id: int):
+        """
+        Define paths and variables relating to serving a Wflow scenario.
+
+        Parameters
+        ----------
+        hydromt_path : Path
+            A directory to where all necessary files are stored to run wflow model
+        wflow_model_path : Path
+            A directory to where the data_catalog.yml is stored for WFlow
+        landcover : str
+            A string to identify the landcover. Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
+        flood_model_output_id : int
+            The ID of the flood model scenario that has been created using this wflow model
+        """
         self.hydromt_path = hydromt_path
         self.wflow_model_path = wflow_model_path
         self.landcover = landcover
         self.flood_model_output_id = flood_model_output_id
 
     def serve_data(self):
+        """Save the data relating to the Wflow scenario to GeoServer and serve them."""
         if not EnvVariable.IS_GEOSERVER_ACTIVE:
             return
-        print("serve_data")
+
+        # Set up geoserver workspace
         db_name = EnvVariable.POSTGRES_DB
         workspace_name = f"{db_name}-intermediate-wflow"
 
+        # Read catchment polygon
         catchment_file = self.wflow_model_path / "wflow_test_full/staticgeoms/basins.geojson"
-
         catchment_poly = gpd.read_file(catchment_file)
         if catchment_poly.crs.to_epsg() is None:
             raise KeyError(f"CRS is not defined in EPSG# form in vector file {vector_file_path}.")
@@ -41,9 +88,21 @@ class WflowServeDataGenerator:
 
         log.info(f"Adding catchment file '{catchment_file}' to GeoServer.")
         self._serve_catchment_boundary(workspace_name, catchment_poly)
+
+        # Read and serve scenario landcover file
         self._serve_landcover_file(workspace_name, catchment_poly)
 
     def _serve_landcover_file(self, workspace_name: str, catchment_poly: gpd.GeoDataFrame):
+        """
+        Serve the landcover scenario raster.
+
+        Parameters
+        ----------
+        workspace_name : str
+            The name of the GeoServer workspace to serve the landcover from.
+        catchment_poly : gpd.GeoDataFrame
+            The catchment polygon to clip the landcover raster to before serving to reduce space.
+        """
         is_baseline = self.landcover == "globcover"
         landcover_file = find_landcover_file(self.wflow_model_path, self.hydromt_path, self.landcover, is_baseline)
 
@@ -64,6 +123,16 @@ class WflowServeDataGenerator:
         clipped_path.unlink()
 
     def _serve_catchment_boundary(self, workspace_name: str, catchment_poly: gpd.GeoDataFrame):
+        """
+        Serve the catchment boundary polygon.
+
+        Parameters
+        ----------
+        workspace_name : str
+            The name of the GeoServer workspace to serve the landcover from.
+        catchment_poly : gpd.GeoDataFrame
+            The catchment polygon to serve."""
+        # Create the database geoserver store
         data_store = gs.create_main_db_store(workspace_name)
         # Extract the geometry of the catchment area
         catchment_poly["flood_model_id"] = self.flood_model_output_id
