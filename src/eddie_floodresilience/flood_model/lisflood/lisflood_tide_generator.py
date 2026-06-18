@@ -57,8 +57,8 @@ class TidalDataGenerator:
         )
 
         # Merge polygons and edges
-        self.land_union = self.land.union_all()  # All polygons are merged into one
-        self.land_boundary_union = self.land.boundary.union_all()  # All edges are merged into one
+        self.land_union = self.land.unary_union  # All polygons are merged into one
+        self.land_boundary_union = self.land.boundary.unary_union  # All edges are merged into one
 
         # Generate nearest coastline point
         self.nearest_point = self.land_boundary_union.interpolate(
