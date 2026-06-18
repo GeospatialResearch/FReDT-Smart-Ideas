@@ -182,7 +182,7 @@ class WflowBuildGenerator():
             "setup_rivers": {
                 "hydrography_fn": "merit_hydrox",
                 "river_geom_fn": "hydro_rivers_lin",
-                "river_upa": 10,  # whirinaki: 0.1, mataura: 1
+                "river_upa": river_information['river_upa'],  # whirinaki: 0.1, mataura: 1
                 "rivdph_method": "manning",
                 "min_rivdph": river_information['min_rivdph'],  # mataura: 1
                 "min_rivwth": river_information['min_rivwth'],  # whirinaki: 30, mataura: 0.05
