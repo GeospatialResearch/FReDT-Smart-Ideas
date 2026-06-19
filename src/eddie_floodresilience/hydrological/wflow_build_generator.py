@@ -5,12 +5,13 @@ Created on Thu Apr  9 09:01:33 2026
 @author: mng42
 """
 
+import json
 import logging
-import yaml
 from pathlib import Path
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import json
+
+import yaml
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
@@ -18,8 +19,37 @@ setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class WflowBuildGenerator():
-    """This class is to generate wflow_build.yml for preprocessing data for wflow"""
+class WflowBuildGenerator:
+    """
+    This class is to generate wflow_build.yml for preprocessing data for wflow
+
+    Attributes
+    ----------
+    start_time : datetime
+            Starting time of simulation.
+            This should include the spin-up time.
+            Normally, it is 1-year before the flood event.
+    end_time : datetime
+        Ending time of simulation
+        This should include some periods of time after the flood event.
+        Normally, it is about 12 hours or 1 day.
+    resolution : float
+        Resolution for flow data.
+        Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
+    wflow_model_path: Path
+        A directory to where the data_catalog.yml is stored and to run wflow model
+    hydromt_path: Path
+        A directory to where all necessary files are stored to run wflow model
+    river_name: str
+        Name of directory to where the river information files are stored
+    forcing_path: Path
+        A directory to where the forcing files are stored
+    polygons : str = None
+        Name of polygon file that is used to change the landcover information.
+        This polygon dataframe has 'landcover' column with new values
+    landcover : str = 'globcover'
+        Name of land cover dataset. Default is globcover
+    """  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -175,7 +205,7 @@ class WflowBuildGenerator():
         river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
 
         # Get river information
-        with open(river_path, "r") as f:
+        with open(river_path, "r", encoding="utf-8") as f:
             river_information = json.load(f)['setup_rivers']
 
         # Generate rivers section
@@ -351,7 +381,7 @@ class WflowBuildGenerator():
         """
         # Read Json file to collect some site information
         river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
-        with open(river_path, "r") as f:
+        with open(river_path, "r", encoding="utf-8") as f:
             constant_parameters_for_site = json.load(f)['setup_constant_pars']
 
         # Generate constant parameters
@@ -490,8 +520,8 @@ class WflowBuildGenerator():
             output_filename = self.wflow_model_path / "wflow_build.yml"
 
         log.info(f"Writing out {output_filename}")
-        # Geenrate content for wflow_build.yml
-        with open(output_filename, "w") as output_file:
+        # Generate content for wflow_build.yml
+        with open(output_filename, "w", encoding="utf-8") as output_file:
             yaml.dump(
                 wflow_build,
                 output_file,

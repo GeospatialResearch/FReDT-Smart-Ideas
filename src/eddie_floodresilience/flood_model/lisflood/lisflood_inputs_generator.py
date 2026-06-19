@@ -16,6 +16,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Classes to create input configuration files for LISFLOOD-FP."""
+# pylint: disable=duplicate-code,too-many-lines
+
 from datetime import datetime
 from pathlib import Path
 
@@ -514,7 +516,7 @@ class InjectionPointsandStreamlinesAligner():
         )
 
         # Best cell
-        row_idx, column_idx = self.find_best_cell(score)
+        row_idx, column_idx = self.find_best_cell(score)  # pylint: disable=unbalanced-tuple-unpacking
 
         # Snapped injection point
         snapped_injection_point = self.convert_index_to_point(
@@ -552,7 +554,7 @@ class InjectionPointsandStreamlinesAligner():
 
         Returns
         -------
-        new_injection_points: gpd.GeoDataFrame
+        gpd.GeoDataFrame
             New injection points
         """
         # Create empty geometry
@@ -633,7 +635,7 @@ class TerrainFloodModelGenerator():
 
         Returns
         -------
-        terrain_variable: xr.Dataset
+        xr.Dataset
             Specific terrain data that are filled with -9999 as nodata
         """
         # Fill NaN with -9999
@@ -718,8 +720,15 @@ class TerrainFloodModelGenerator():
         # Generate Strahler order streams for manning's n
         strahler_for_manning.strahler_stream_order_generator()
 
-    def resample_roughness(self) -> None:
-        """Resample roughness from 4m to 8m"""
+    def resample_roughness(self) -> xr.DataArray:
+        """
+        Resample roughness from 4m to 8m.
+
+        Returns
+        -------
+        xr.DataArray
+            Roughness resampled to 8m
+        """
         # Get roughness path
         roughness_path = self.flood_model_path / "4m_geofabric_roughness_split.tif"
 
@@ -763,8 +772,20 @@ class TerrainFloodModelGenerator():
     def strahler_filter_generator(
         self,
         roughness: xr.DataArray
-    ) -> None:
-        """Generate filtered Strahler Order stream raster"""
+    ) -> xr.DataArray:
+        """
+        Generate filtered Strahler Order stream raster
+
+        Parameters
+        ----------
+        roughness : xr.DataArray
+            Roughness raster
+
+        Returns
+        -------
+        xr.DataArray
+            Mask to choose only 3 and 4 orders
+        """
         # Get strahler path
         strahler_path = self.flood_model_path / "4m_geofabric_strahler_d8.tif"
 
@@ -1162,7 +1183,7 @@ class InjectionPointsFloodModelGenerator():
     def align_injection_points_and_streamlines(
         self,
         original_injection_points: gpd.GeoDataFrame
-    ) -> None:
+    ) -> gpd.GeoDataFrame:
         """
         Align injections points with streamlines
 
@@ -1170,6 +1191,11 @@ class InjectionPointsFloodModelGenerator():
         ----------
         original_injection_points : gpd.GeoDataFrame
             Original injection points
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            New injection points
         """
         # Get DEM
         terrain_data = xr.open_dataset(self.flood_model_path / "8m_geofabric_clipped.nc")
@@ -1260,7 +1286,7 @@ class InjectionPointsFloodModelGenerator():
 
         # Extract rivers' flow from catchment model outputs
         # for injection points
-        for i, row in points_gdf.iterrows():
+        for _i, row in points_gdf.iterrows():
             # Get longitude (or x), latitude (or y), and ID
             lon_x = row.geometry.x
             lat_y = row.geometry.y

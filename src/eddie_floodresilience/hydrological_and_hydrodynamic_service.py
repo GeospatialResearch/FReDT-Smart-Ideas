@@ -215,6 +215,9 @@ def building_flood_status_catalog(scenario_id: int, scenario_name: str) -> dict:
     ----------
     scenario_id : int
         The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
+
 
     Returns
     ----------
@@ -284,6 +287,8 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
     ----------
     scenario_id : int
         The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
 
     Returns
     ----------
@@ -343,6 +348,8 @@ def catchment_boundary_catalog(scenario_id: int, scenario_name: str) -> dict:
     ----------
     scenario_id : int
         The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
 
     Returns
     ----------

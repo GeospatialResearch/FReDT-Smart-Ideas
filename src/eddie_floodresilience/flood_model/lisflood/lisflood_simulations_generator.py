@@ -1,9 +1,22 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Apr  7 21:12:29 2026
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: mng42
-"""
+"""Runs LISFLOOD-FP flood model"""
+# pylint: disable=duplicate-code
 
 from pathlib import Path
 from datetime import datetime
@@ -18,21 +31,21 @@ from eddie import geoserver
 from eddie.digitaltwin import setup_environment
 from eddie.digitaltwin.utils import LogLevel, setup_logging
 
-from .. import serve_model
-from .lisflood_inputs_generator import TerrainGenerator, TerrainFloodModelGenerator, InjectionPointsFloodModelGenerator
-from .lisflood_parameters_generator import ParametersFloodModelGenerator
-from .lisflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_output_metadata_to_db
 from src.eddie_floodresilience.flood_model.flooded_buildings import (
     find_flooded_buildings, store_flooded_buildings_in_database)
+from .. import serve_model
+from .lisflood_inputs_generator import TerrainGenerator, TerrainFloodModelGenerator, InjectionPointsFloodModelGenerator
+from .lisflood_parameters_generator import ParametersFloodModelGenerator
+from .lisflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class LisFloodModelSimulationsGenerator():
-    """This class is to generate flood model simulations"""
+class LisFloodModelSimulationsGenerator:
+    """This class is to generate flood model simulations."""  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -188,7 +201,19 @@ class LisFloodModelSimulationsGenerator():
         return output_dir
 
     def flood_model_simulations_generator(self, output_dir: Path) -> int:
-        """Generate flood simulations by running flood model"""
+        """
+        Generate flood simulations by running flood model
+
+        Parameters
+        ----------
+        output_dir : Path
+            The path to the output directory, to allow for serving.
+
+        Returns
+        -------
+        int
+            The Flood Model output ID
+        """
         # Set up path to log file
         log_file_path = self.flood_model_path / "simulation_log.log"
 
@@ -217,7 +242,7 @@ class LisFloodModelSimulationsGenerator():
         ]
 
         # Generate flood model simulations
-        with open(log_file_path, "w") as log_file:
+        with open(log_file_path, "w", encoding="utf-8") as log_file:
             log.info("Running LISFLOOD-FP flood simulation")
             subprocess.run(
                 flood_simulation_command,
@@ -229,8 +254,15 @@ class LisFloodModelSimulationsGenerator():
         model_output_id = self.serve_flood_model_outputs(output_dir)
         return model_output_id
 
-    def flood_model_executor(self) -> None:
-        """Generate necessary inputs for flood model"""
+    def flood_model_executor(self) -> int:
+        """
+        Generate necessary inputs for flood model
+
+        Returns
+        -------
+        int
+            The Flood Model output ID
+        """
         # Four cases:
         # 1. Original scenario (polygon=None, vector=None)
         # 2. Polygon=None, vector!=None

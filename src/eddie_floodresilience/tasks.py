@@ -150,7 +150,7 @@ def read_location_geojson(location_geojson: str | None, landcover_name: str | No
         The landcover type to change landcover to.
 
     Returns
-    _______
+    -------
     gpd.GeoDataFrame
         The GeoDataFrame containing polygons with a column named "landcover_name".
 

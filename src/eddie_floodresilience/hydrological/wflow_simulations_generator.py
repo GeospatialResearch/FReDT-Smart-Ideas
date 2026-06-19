@@ -1,28 +1,73 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Apr  9 08:43:08 2026
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: mng42
-"""
+"""Runs Wflow model simulations"""
 
 import logging
+import subprocess
 from pathlib import Path
 from datetime import datetime
+
 import geopandas as gpd
 
+from eddie.digitaltwin.utils import setup_logging, LogLevel
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
-
-import subprocess
-
-from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class WflowSimulationsGenerator():
-    """This class is to generate wflow model simulations"""
+class WflowSimulationsGenerator:
+    """
+    This class is to generate wflow model simulations
+
+    Attributes
+    ----------
+    hydromt_path: Path
+        A directory to where all necessary files are stored to run wflow model
+    wflow_model_path: Path
+        A directory to where the data_catalog.yml is stored and to run wflow model
+    river_name: str
+        Name of directory to where the river information files are stored
+    forcing_path: Path
+        A directory to where the forcing files are stored
+    start_time : datetime
+        Starting time of simulation.
+        This should include the spin-up time.
+        Normally, it is 1-year before the flood event.
+    end_time : datetime
+        Ending time of simulation
+        This should include some periods of time after the flood event.
+        Normally, it is 12 hours or 1 day.
+    flood_aoi_boundary : list
+        Boundaries' coordinates of area of interest.
+        Format is [xmin, ymin, xmax, ymax]
+    num_threads : int
+        Number of threads that controls how fast the wflow model can run
+    polygons : str = None
+        Name of polygon file that is used to change the landcover information.
+        This polygon dataframe has 'landcover' column with new values
+    resolution : float
+        Resolution for flow data.
+        Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
+    landcover : str = 'globcover'
+        Name of land cover dataset. Default is 'globcover'
+    """  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -228,7 +273,7 @@ class WflowSimulationsGenerator():
         ]
 
         # Run the command and write output to log
-        with open(wflow_simulation_path / output_log, "w") as f:
+        with open(wflow_simulation_path / output_log, "w", encoding="utf-8") as f:
             subprocess.check_call(
                 simulation_command,
                 stdout=f,

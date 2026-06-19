@@ -2,6 +2,7 @@
 Generate terrain attributes by processing DEM and roughness data
 mainly using Whitebox package.
 """
+# pylint: disable=too-many-lines
 import json
 import logging
 import subprocess
@@ -136,7 +137,7 @@ class TerrainAttributesGenerator():
                 str(input_path),
                 str(output_path)
             ]
-            subprocess.run(cmd, capture_output=True, text=True)
+            subprocess.run(cmd, capture_output=True, text=True, check=True)
 
         else:
             log.info(f"'{output_path.name}' already exists!")
@@ -614,7 +615,30 @@ class StreamTopologyGenerator():
 
 
 class StreamHydraulicsGenerator():
-    """This class is to generate hydraulic stream attributes"""
+    """
+    This class is to generate hydraulic stream attributes
+
+    Attributes
+    ----------
+    path : Path
+        Common path to directory that stores necessary file for generating hydraulic stream data
+    hydromt_path : Path
+        A directory to where all necessary files are stored to run wflow model
+    river_name: str
+        Name of directory to where the river information files are stored
+    streams_bankfull_stage : float = 1.5
+        The stage to focus on the area that is considered as stream/river area
+        or bankfull area comparing with HAND.
+        Default is 1.5
+    resolution : float = 100
+        Resolution to resample data
+    threshold : int = 1000
+        Minimum number of cells/up-slope area required to initiate and main a channel.
+        Default is 1000
+    origin_filename : str = '8m_geofabric'
+        Name of terrain raster filename.
+        At the moment, only two names - 8m_geofabric and 4m_geofabric
+    """  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -660,7 +684,7 @@ class StreamHydraulicsGenerator():
         # Set up river path
         river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
         # Get river information
-        with open(river_path, "r") as f:
+        with open(river_path, "r", encoding="utf-8") as f:
             river_information = json.load(f)['setup_rivers']
 
         # Get width and discharge rates
@@ -956,10 +980,13 @@ class StreamHydraulicsGenerator():
         """
         Buffer the stream linestrings to capture stream pixels
 
-        Returns
-        -------
+        Parameters
+        ----------
         streams_watershed_vector_more_info : gpd.GeoDataFrame
             Converted-to-vector streams within watershed with more information
+
+        Returns
+        -------
         streams_watershed_buffer : gpd.GeoDataFrame
             Buffered streams vector within watershed that can intersect with pixels
         """

@@ -48,7 +48,7 @@ class WflowServeDataGenerator:
         A string to identify the landcover. Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
     flood_model_output_id : int
         The ID of the flood model scenario that has been created using this wflow model
-    """
+    """  # pylint: disable=too-few-public-methods
 
     def __init__(self, hydromt_path: Path, wflow_model_path: Path, landcover: str, flood_model_output_id: int) -> None:
         r"""
@@ -72,7 +72,14 @@ class WflowServeDataGenerator:
         self.flood_model_output_id = flood_model_output_id
 
     def serve_data(self) -> None:
-        """Save the data relating to the Wflow scenario to GeoServer and serve them."""
+        """
+        Save the data relating to the Wflow scenario to GeoServer and serve them.
+
+        Raises
+        ------
+        KeyError
+            If the CRS of the catchment file is not defined.
+        """
         if not EnvVariable.IS_GEOSERVER_ACTIVE:
             return
 

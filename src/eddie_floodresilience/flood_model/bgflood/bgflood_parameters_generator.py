@@ -15,6 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Classes to configure and write parameter files for BG-Flood."""
+# pylint: disable=duplicate-code
 
 import logging
 from datetime import datetime
@@ -33,7 +34,31 @@ log = logging.getLogger(__name__)
 
 
 class ParametersFloodModelGenerator:
-    """This class is to generate parameter files for flood model"""
+    """
+    This class is to generate parameter files for flood model
+
+    Attributes
+    ----------
+     flood_model_path : Path
+            Directory to folder storing flood model data
+    terrain_bounding_box : Polygon
+        Bounding's box of terrain data
+    start_time : datetime
+        Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
+    end_time : datetime
+        Ending time details.
+    polygons : str = None
+        Name of polygon file that is used to change the landcover information.
+        This polygon dataframe has 'landcover' column with new values
+    vectors : str = None
+        Name of vector file that is used to change the elevation information.
+        This vector dataframe has 'value' column to specify increasing or decreasing elevation,
+        and 'distance' column to specify how smooth to decrease elevation.
+    injection_points_flow : pd.DataFrame
+        The flow data for each point
+    injection_points : gpd.GeoDataFrame
+        The points geometry for flow data
+    """  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -101,6 +126,7 @@ class ParametersFloodModelGenerator:
         prefix = output_name + "_"
 
         next_id = (
+            # pylint: disable=consider-using-generator
             max(
                 [
                     int(f.name.split("_")[-1])
@@ -111,6 +137,7 @@ class ParametersFloodModelGenerator:
             ) + 1
         )
 
+        # pylint: disable=attribute-defined-outside-init
         self.output_folder = self.flood_model_path / f"{output_name}_{next_id:03d}"
         self.output_folder.mkdir(exist_ok=False)
 
@@ -156,7 +183,7 @@ class ParametersFloodModelGenerator:
         direction : str
             Four edges of DEM - top, bottom, left, and right
         """
-        with open(self.flood_model_path / f"{self.output_folder}/{direction}_bnd.txt", "w") as f:
+        with open(self.flood_model_path / self.output_folder / f"{direction}_bnd.txt", "w", encoding="utf-8") as f:
             # write header
             f.write("# Water level boundary\n")
 
@@ -234,7 +261,7 @@ class ParametersFloodModelGenerator:
 
         Returns
         -------
-        pixel_bounds: tuple[float, float, float, float]
+        tuple[float, float, float, float]
             Pixel bounds as (xmin, xmax, ymin, ymax)
         """
         # Get coordinates of centroids
@@ -349,7 +376,7 @@ class ParametersFloodModelGenerator:
         # Set up output path
         output_path = self.flood_model_path / f"{self.output_folder}/BG_param.txt"
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(param_text)
             for line in self.flow_text_data_generator():
                 f.write(line + "\n")

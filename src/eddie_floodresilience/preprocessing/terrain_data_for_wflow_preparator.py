@@ -5,13 +5,13 @@ import os
 from pathlib import Path
 from typing import Tuple
 
-import pyflwdir
 import geopandas as gpd
-from hydromt import flw
 import numpy as np
 import pandas as pd
+import pyflwdir
 import rioxarray as rxr
 import xarray as xr
+from hydromt import flw
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 

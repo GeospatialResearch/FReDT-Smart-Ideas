@@ -1,9 +1,23 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Apr  7 10:28:16 2026
+# -*- coding: utf-8 -*-
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: mng42
-"""
+"""This script formats and writes precipitation data for BG-Flood inputs."""
+# pylint: disable=duplicate-code
 import logging
 from datetime import datetime
 from pathlib import Path
@@ -139,7 +153,7 @@ class PrecipitationGenerator():
 
         Parameters
         ----------
-        padding_values: int
+        padding_value: int
             Value of padding
 
         Returns
@@ -397,7 +411,7 @@ class PrecipitationFloodModelGenerator():
 
     def assign_each_precipitation_timestep(
         self,
-        precipitation_var: netCDF4.Variable
+        precipitation_var: netCDF4.Variable  # pylint: disable=no-member
     ) -> None:
         """
         Assign precipitation values to precipitation variable
@@ -417,25 +431,11 @@ class PrecipitationFloodModelGenerator():
             # Write to precipitation variable
             precipitation_var[i, :, :] = each_precipitation_timestep.values
 
-    def precipitation_generator(self) -> netCDF4.Variable:
-        """
-        Generate variables of outfile precipitation
-
-        Parameters
-        ----------
-        outfile_precipitation : netCDF4.Dataset
-            Precipitation data written out as netCDF file with dimensions
-        outfile_precipitation_time : int
-            Time variable of outfile precipitation
-
-        Returns
-        -------
-        precipitation_var : netCDF4.Variable
-            Precipitation variable that needs assigning values separately
-        """
+    def precipitation_generator(self) -> None:
+        """Generate variables of outfile precipitation"""
         # Open netCDF precipitation file
         outfile_precipitation_path = self.flood_model_path / "precipitation_dynamic.nc"
-        outfile_precipitation = netCDF4.Dataset(
+        outfile_precipitation = netCDF4.Dataset(  # pylint: disable=no-member
             outfile_precipitation_path,
             'w', format='NETCDF4'
         )

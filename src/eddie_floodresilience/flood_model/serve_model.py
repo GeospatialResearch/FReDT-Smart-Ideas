@@ -196,7 +196,7 @@ def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path) -> None:
 
         # Extract metadata profile and update driver to GTiff
         meta = src.meta.copy()
-        meta.update(driver='GTiff', crs=rio.crs.CRS.from_epsg(2193))
+        meta.update(driver='GTiff', crs=rio.crs.CRS.from_epsg(2193))  # pylint: disable=c-extension-no-member
 
         # Write data to a new GTiff
         with rio.open(gtiff_filepath, 'w', **meta) as dst:

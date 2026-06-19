@@ -31,7 +31,54 @@ log = logging.getLogger(__name__)
 
 
 class HydrologicalAndHydrodynamicPipeline:
-    """This class is to generate hydrological and hydrodynamic results"""
+    """
+    This class is to generate hydrological and hydrodynamic results
+
+    Attributes
+    ----------
+    hydro_combination_path : Path
+            Directory to folder storing all necessary data
+        forcing_name: Union[str, Path]
+            Name of forcing data. Should be the site name. Ex: 'whirin
+            Or a directory to forcing data
+        river_name: Union[str, Path]
+            Name of river data. Should be the site name. Ex: 'whirinaki'
+        precipitation_path: Path
+            A directory to where the precipitation files are stored
+        start_time : str
+            Starting time of simulation.
+            This should include the spin-up time.
+            Normally, it is 1-year before the flood event.
+        end_time : str
+            Ending time of simulation
+            This should include some periods of time after the flood event.
+            Normally, it is about 2-3 months.
+        num_threads : int
+            Number of threads that controls how fast the wflow model can run
+        flood_aoi_boundary : list
+            Boundaries' coordinates of area of interest.
+            Format is [xmin, ymin, xmax, ymax]
+        adjust_manning : bool
+            True means adjusting Manning's n by resampling 4m Manning's n
+            False means no Mannning's n adjustment
+        flood_model : str
+            Either "lisflood-fp" or "bg-flood"
+        polygons : gpd.GeoDataFrame | None = None
+            Polygons that are used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
+        vectors : str = None
+            Name of vector file that is used to change the elevation information.
+            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
+            and 'distance' column to specify how smooth to decrease elevation.
+        resolution : float
+            Resolution for flow data.
+            Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
+        threshold: int = 1000
+            Minimum number of cells/up-slope area required to initiate and main a channel.
+            Default is 1000
+        landcover: str = 'globcover'
+            Name of land cover dataset. Default is 'globcover'
+    """  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -62,7 +109,7 @@ class HydrologicalAndHydrodynamicPipeline:
         hydro_combination_path : Path
             Directory to folder storing all necessary data
         forcing_name: Union[str, Path]
-            Name of forcing data. Should be the site name. Ex: 'whirinaki'
+            Name of forcing data. Should be the site name. Ex: 'whirin
             Or a directory to forcing data
         river_name: Union[str, Path]
             Name of river data. Should be the site name. Ex: 'whirinaki'
@@ -86,7 +133,6 @@ class HydrologicalAndHydrodynamicPipeline:
             False means no Mannning's n adjustment
         flood_model : str
             Either "lisflood-fp" or "bg-flood"
-
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -440,7 +486,7 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_MATAURA
     forcing_name = 'mataura'
     river_name = 'mataura'
-    precipitation_path = EnvVariable.PRECIPITATION_PATH / "mataura"  # todo revisit this solution
+    precipitation_path = EnvVariable.PRECIPITATION_PATH / "mataura"
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 

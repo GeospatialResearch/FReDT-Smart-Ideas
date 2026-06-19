@@ -6,8 +6,9 @@ Created on Wed Apr  8 10:00:00 2026
 """
 
 import logging
-import yaml
 from pathlib import Path
+
+import yaml
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
@@ -454,7 +455,7 @@ class DataCatalogGenerator():
             output_filename = self.wflow_model_path / "data_catalog.yml"
 
         # Write out data_catalog.yml
-        with open(output_filename, "w") as output_file:
+        with open(output_filename, "w", encoding="utf-8") as output_file:
             yaml.dump(
                 data_catalog,
                 output_file,

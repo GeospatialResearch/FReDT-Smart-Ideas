@@ -16,6 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Classes to transform data into forms ready for BG-Flood."""
+# pylint: disable=duplicate-code
 
 import logging
 from datetime import datetime
@@ -424,8 +425,9 @@ class InjectionPointsandStreamlinesAligner():
 
         # Find the row nad column position in the grid
         row_column_position = np.unravel_index(best_index, score.shape)
+        row, column = row_column_position  # pylint: disable=unbalanced-tuple-unpacking
 
-        return row_column_position
+        return int(row), int(column)
 
     def convert_index_to_point(
         self,
@@ -572,7 +574,7 @@ class InjectionPointsandStreamlinesAligner():
 
         Returns
         -------
-        new_injection_points: gpd.GeoDataFrame
+        gpd.GeoDataFrame
             New injection points
         """
         log.info("Snapping injections points to nearby low-elevation cells.")
@@ -793,7 +795,7 @@ class InjectionPointsFloodModelGenerator():
     def align_injection_points_and_streamlines(
         self,
         original_injection_points: gpd.GeoDataFrame
-    ) -> None:
+    ) -> gpd.GeoDataFrame:
         """
         Align injections points with streamlines
 
@@ -801,6 +803,11 @@ class InjectionPointsFloodModelGenerator():
         ----------
         original_injection_points : gpd.GeoDataFrame
             Original injection points
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            New injection points
         """
         log.info("Aligning injections points with streamlines.")
         # Get DEM
@@ -895,7 +902,7 @@ class InjectionPointsFloodModelGenerator():
 
         # Extract rivers' flow from catchment model outputs
         # for injection points
-        for i, row in points_gdf.iterrows():
+        for _i, row in points_gdf.iterrows():
             # Get longitude (or x), latitude (or y), and ID
             lon_x = row.geometry.x
             lat_y = row.geometry.y
