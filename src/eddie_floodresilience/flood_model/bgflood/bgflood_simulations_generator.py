@@ -111,7 +111,7 @@ class BGFloodModelSimulationsGenerator():
         # Generate common terrain data
         self.terrain_bounding_box, self.terrain_crs_clipped = self.terrain.terrain_data_generator()
 
-    def injection_points_for_flood_model_generator(self):
+    def injection_points_for_flood_model_generator(self) -> None:
         """Generate injection points for flood model (BG_Flood)"""
         # Call out class used to generate injection points for flood model
         injection_points_for_flood_model = InjectionPointsFloodModelGenerator(
@@ -127,7 +127,7 @@ class BGFloodModelSimulationsGenerator():
         # Generate injection points for flood model
         injection_points_for_flood_model.injection_points_flow_generator()
 
-    def precipitation_data_for_flood_model_generator(self):
+    def precipitation_data_for_flood_model_generator(self) -> None:
         """Generate precipitation data for flood model"""
         # Call out class used to generate precipitation data
         # Path to precipitation file
@@ -160,10 +160,8 @@ class BGFloodModelSimulationsGenerator():
             # Generate precipitation data for flood model
             precipitation_data_for_flood_model.precipitation_for_flood_model_generator()
 
-    def parameter_data_for_flood_model_generator(self):
-        """Generate paramter data for flood model"""
+    def parameter_data_for_flood_model_generator(self) -> None:
         """Generate parameters files for flood model"""
-
         # Call out class used to generate parameter files
         parameters_files_generator = ParametersFloodModelGenerator(
             self.flood_model_path,
@@ -177,8 +175,15 @@ class BGFloodModelSimulationsGenerator():
         # Generate parameter files
         parameters_files_generator.parameter_files_generator()
 
-    def find_output_folder_path(self):
-        """Find output folder path"""
+    def find_output_folder_path(self) -> Path:
+        """
+        Find output folder path.
+
+        Returns
+        -------
+        Path
+            the output folder path.
+        """
         # Output folder paht to store BG flood programme
         # Polygons for land cover solutions
         if self.polygons is not None and self.vectors is not None:
@@ -252,7 +257,7 @@ class BGFloodModelSimulationsGenerator():
 
     def serve_flood_model_outputs(self, output_directory: Path) -> int:
         """
-        Adds max flood model output data to database and geoserver for serving.
+        Add max flood model output data to database and geoserver for serving.
 
         Parameters
         ----------
@@ -278,12 +283,11 @@ class BGFloodModelSimulationsGenerator():
             model_output_id = store_model_output_metadata_to_db(conn, model_output, bbox_gdf)
             # Find buildings that are flooded to a depth greater than or equal to 0.1m
             log.info("Analysing flooded buildings")
-            flooded_buildings = find_flooded_buildings(conn, bbox_gdf, model_output_path,
-                                                       flood_depth_threshold=0.1)
+            flooded_buildings = find_flooded_buildings(conn, bbox_gdf, model_output, flood_depth_threshold=0.1)
             log.info("Analysed flooded buildings - adding flooded buildings to database")
             store_flooded_buildings_in_database(conn, flooded_buildings, model_output_id)
         # Add the model output to GeoServer for visualization
-        add_model_output_to_geoserver(model_output_path, model_output_id)
+        add_model_output_to_geoserver(model_output, model_output_id)
         return model_output_id
 
     def flood_model_executor(self) -> int:

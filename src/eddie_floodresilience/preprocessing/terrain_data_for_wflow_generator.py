@@ -7,14 +7,11 @@ Created on Sat Apr 11 16:23:13 2026
 
 import logging
 from pathlib import Path
-import sys
-
-from .terrain_data_manipulator import TerrainFilter
-from .terrain_attributes_generator import (StreamTopologyGenerator,
-                                           StreamHydraulicsGenerator)
-from .terrain_data_for_wflow_preparator import TerrainDataWflowPreparator
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+from .terrain_data_manipulator import TerrainFilter
+from .terrain_attributes_generator import StreamTopologyGenerator, StreamHydraulicsGenerator
+from .terrain_data_for_wflow_preparator import TerrainDataWflowPreparator
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -34,7 +31,7 @@ class TerrainDataWflowGenerator:
     ) -> None:
         """
         Generate terrain data for wflow model
-        
+
         Parameters
         ----------
         terrain_path : Path

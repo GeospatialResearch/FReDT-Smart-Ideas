@@ -42,14 +42,14 @@ class WflowBuildGenerator():
         ----------
         start_time : datetime
             Starting time of simulation.
-            This should include the spin-up time. 
+            This should include the spin-up time.
             Normally, it is 1-year before the flood event.
         end_time : datetime
             Ending time of simulation
             This should include some periods of time after the flood event.
             Normally, it is about 12 hours or 1 day.
         resolution : float
-            Resolution for flow data. 
+            Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         wflow_model_path: Path
             A directory to where the data_catalog.yml is stored and to run wflow model
@@ -78,7 +78,7 @@ class WflowBuildGenerator():
     def config_section(self) -> dict:
         """
         Write out configuration section
-        
+
         Returns
         -------
         config : dict
@@ -144,7 +144,7 @@ class WflowBuildGenerator():
     def basemaps_section(self) -> dict:
         """
         Write out basemaps' section
-        
+
         Returns
         -------
         basemaps : dict
@@ -217,7 +217,7 @@ class WflowBuildGenerator():
     def landcover_section(self) -> dict:
         """
         Write out landcover's section
-        
+
         Returns
         -------
         lulc : dict
@@ -263,7 +263,7 @@ class WflowBuildGenerator():
     def soil_section(self) -> dict:
         """
         Write out soil section
-        
+
         Returns
         -------
         soil : dict
@@ -343,7 +343,7 @@ class WflowBuildGenerator():
     def constant_parameters_section(self) -> dict:
         """
         Write out constant parameters' section
-        
+
         Returns
         -------
         constant_parameters : dict
@@ -381,7 +381,7 @@ class WflowBuildGenerator():
         """
         Write out "write" section.
         This section is to provide conditions for some files to be written correctly
-        
+
         Returns
         -------
         write : dict
@@ -463,17 +463,16 @@ class WflowBuildGenerator():
 
     def write_out_wflow_build(
         self,
-        wflow_build
+        wflow_build: dict
     ) -> None:
         """
         Write out wflow_build.yml
-        
+
         Parameters
         ----------
         wflow_build : dict
             A dictionary contains information of all sections
         """
-
         if self.polygons is not None:
             # Find existing file
             existing_file = sorted(
@@ -499,7 +498,7 @@ class WflowBuildGenerator():
                 sort_keys=False
             )
 
-    def wflow_build_generator(self):
+    def wflow_build_generator(self) -> None:
         """Generate data_catalog.yml file"""
         # Set up content for wflow_build file
         wflow_build = self.wflow_build_section()

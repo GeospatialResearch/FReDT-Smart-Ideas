@@ -1,17 +1,33 @@
-import logging
+# -*- coding: utf-8 -*-
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from osgeo import gdal
+"""Apply interventions and solutions for flooding that will from scenarios."""
+import logging
+from pathlib import Path
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 import rioxarray as rxr
 import xarray as xr
-from pathlib import Path
-import geopandas as gpd
-import pandas as pd
 from rasterio.features import rasterize
 from scipy.ndimage import distance_transform_edt
-import numpy as np
-
-from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
+from whitebox_workflows import WbEnvironment
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
@@ -38,7 +54,7 @@ wbe.max_procs = -1
 wbt = WhiteboxTools()
 
 
-class LandCoverSolution():
+class LandCoverSolution:
     """This class is to change the land cover based on polygons"""
 
     def __init__(
@@ -73,7 +89,7 @@ class LandCoverSolution():
         polygons: gpd.GeoDataFrame
     ) -> xr.DataArray:
         """
-        This is to apply values to each polygon under raster format
+        Apply values to each polygon under raster format
 
         Parameters
         ----------
@@ -119,7 +135,7 @@ class LandCoverSolution():
 
     def apply_landcover_solution(self) -> Path:
         """
-        Changes the landcover based on polygons.
+        Change the landcover based on polygons.
 
         Returns
         -------
@@ -208,7 +224,7 @@ class ElevationSolution():
             self.dem = terrain_data.z.squeeze()
             self.roughness_length = terrain_data.zo.squeeze()
 
-    def rasterize_vector(self, vector_path):
+    def rasterize_vector(self, vector_path: str) -> None:
         """
         Rasterize vector
 
@@ -244,7 +260,7 @@ class ElevationSolution():
         dem: xr.DataArray,
         mask: np.ndarray,
         value: float
-    ):
+    ) -> None:
         """
         Increase the elevation
 
@@ -276,7 +292,7 @@ class ElevationSolution():
         mask: np.ndarray,
         value: float,
         distance: float = 0
-    ):
+    ) -> None:
         """
         Decrease the elevation
 
@@ -315,9 +331,8 @@ class ElevationSolution():
 
         return decreased_dem
 
-    def change_elevation(self):
+    def change_elevation(self) -> None:
         """Change the elevation"""
-
         # Copy DEM to work separately
         modified_dem = self.dem
 
@@ -351,7 +366,7 @@ class ElevationSolution():
 
         return modified_dem
 
-    def apply_elevation_solution(self):
+    def apply_elevation_solution(self) -> None:
         """Apply solution to elevation data"""
         # Change elevation data
         modified_dem = self.change_elevation()

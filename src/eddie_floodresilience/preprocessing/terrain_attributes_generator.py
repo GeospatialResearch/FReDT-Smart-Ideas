@@ -2,25 +2,21 @@
 Generate terrain attributes by processing DEM and roughness data
 mainly using Whitebox package.
 """
-import logging
-from pathlib import Path
-from whitebox_workflows import WbEnvironment, Raster
-from whitebox.whitebox_tools import WhiteboxTools
-
-from osgeo import gdal  # Import gdal before rasterio
-import subprocess
-import xarray as xr
-import rioxarray as rxr
-import numpy as np
-from scipy.ndimage import distance_transform_edt
-import geopandas as gpd
-import pandas as pd
-from rasterstats import zonal_stats
-from shapely.geometry import LineString, MultiLineString
-from shapely.geometry import Point, box
 import json
+import logging
+import subprocess
+from pathlib import Path
 
+import geopandas as gpd
+import numpy as np
+import pandas as pd
 import rasterio.features
+import rioxarray as rxr
+import xarray as xr
+from scipy.ndimage import distance_transform_edt
+from shapely.geometry import box, LineString, MultiLineString
+from whitebox.whitebox_tools import WhiteboxTools
+from whitebox_workflows import WbEnvironment, Raster
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
@@ -140,7 +136,7 @@ class TerrainAttributesGenerator():
                 str(input_path),
                 str(output_path)
             ]
-            result = subprocess.run(cmd, capture_output=True, text=True)
+            subprocess.run(cmd, capture_output=True, text=True)
 
         else:
             log.info(f"'{output_path.name}' already exists!")
@@ -281,7 +277,7 @@ class TerrainAttributesGenerator():
     ) -> None:
         """
         Repair streams if they are not connected
-        
+
         Parameters
         ----------
         info_from_watershed : bool = False
@@ -290,7 +286,7 @@ class TerrainAttributesGenerator():
             If True, it is D8 streams that includes watershed information
         """
         log.info("Repairing streams that are not connected.")
-        if info_from_watershed == False:
+        if not info_from_watershed:
             # Repair streams within 50m distance
             wbt.repair_stream_vector_topology(
                 i=str(self.path / f"{self.origin_filename}_streams_d8.shp"),
@@ -301,7 +297,7 @@ class TerrainAttributesGenerator():
             # Read the repaired streams
             repaired_streams = gpd.read_file(
                 self.path / f"{self.origin_filename}_repaired_streams_d8.shp",
-                on_invalid='ignore'  # Ignore broken geometries            
+                on_invalid='ignore'  # Ignore broken geometries
             )
 
             # Output filename
@@ -318,7 +314,7 @@ class TerrainAttributesGenerator():
             # Read the repaired streams
             repaired_streams = gpd.read_file(
                 self.path / f"{self.origin_filename}_repaired_streams_watershed_more_info.shp",
-                on_invalid='ignore'  # Ignore broken geometries            
+                on_invalid='ignore'  # Ignore broken geometries
             )
 
             # Output filename
@@ -334,9 +330,7 @@ class TerrainAttributesGenerator():
 
         # Remove very short lines
         min_line = 1
-        repaired_streams = repaired_streams[
-            repaired_streams.geometry.length > min_line
-            ]
+        repaired_streams = repaired_streams[repaired_streams.geometry.length > min_line]
 
         # Set up crs
         # This will be changed in the future
@@ -553,10 +547,8 @@ class StreamTopologyGenerator():
         stream_output_path = self.path / f"{self.origin_filename}_streams_d8_area_strahler.shp"
         streams_rename.to_file(stream_output_path)
 
-    def river_outlet_generator(self):
-        """
-        Generate river outlet based on streams' strahler order and upper catchment area
-        """
+    def river_outlet_generator(self) -> None:
+        """Generate river outlet based on streams' strahler order and upper catchment area."""
         log.info("Generating river outlets")
         # Read streams data that has upper catchment area
         points_merge = gpd.read_file(self.path / f"{self.origin_filename}_points_merge_strahler_uparea.shp")
@@ -578,9 +570,7 @@ class StreamTopologyGenerator():
         max_strahler = points_merge_clip['strahler'].max()
 
         # Filter only the maximum strahler order which is the main river
-        main_river = points_merge_clip[
-            points_merge_clip['strahler'] == max_strahler
-            ]
+        main_river = points_merge_clip[points_merge_clip['strahler'] == max_strahler]
 
         # Select the point that has the largest upper catchment area which is the river outlet
         river_outlet = main_river.loc[
@@ -588,7 +578,7 @@ class StreamTopologyGenerator():
         ]
 
         # Write out to file
-        river_outlet.to_file(self.path / f"river_outlet.shp")
+        river_outlet.to_file(self.path / "river_outlet.shp")
 
     def dataframe_upstream_area_strahler_geometry_generator(
         self,
@@ -726,7 +716,7 @@ class StreamHydraulicsGenerator():
         d8_pointer = wbe.read_raster(str(d8_pointer_path))
 
         # Get river outlet path
-        river_outlet = self.path / f"river_outlet.shp"
+        river_outlet = self.path / "river_outlet.shp"
 
         # Extract watershed for specific points of outlet and gauges
         outlet_gauge_points = wbe.read_vector(str(river_outlet))
@@ -840,7 +830,8 @@ class StreamHydraulicsGenerator():
         self.stream_topology_data.streams_repairer(info_from_watershed=True)
 
         # Read the repaired streams
-        repaired_streams_watershed_more_info_path = self.path / f"{self.origin_filename}_filtered_repaired_streams_watershed_more_info.shp"
+        repaired_streams_watershed_more_info_path = (
+            self.path / f"{self.origin_filename}_filtered_repaired_streams_watershed_more_info.shp")
         repaired_streams_watershed_more_info = wbe.read_vector(
             str(repaired_streams_watershed_more_info_path)
         )
@@ -951,7 +942,8 @@ class StreamHydraulicsGenerator():
         streams_watershed_vector_more_info : gpd.GeoDataFrame
             Converted-to-vector streams within watershed with more information
         """
-        stream_path_watershed_vector_more_info = self.path / f"{self.origin_filename}_filtered_repaired_streams_watershed_more_info.shp"
+        stream_path_watershed_vector_more_info = (
+            self.path / f"{self.origin_filename}_filtered_repaired_streams_watershed_more_info.shp")
         log.info(f"Reading {stream_path_watershed_vector_more_info}")
         streams_watershed_vector_more_info = gpd.read_file(stream_path_watershed_vector_more_info)
 

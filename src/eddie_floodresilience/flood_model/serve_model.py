@@ -179,9 +179,9 @@ def add_model_output_to_geoserver(model_output_path: pathlib.Path, model_id: int
     create_viridis_style_if_not_exists()
 
 
-def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path):
+def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path) -> None:
     """
-    Converts the ASCII raster (CRS=2193) to a GeoTiff file.
+    Convert an ASCII raster (CRS=2193) to a GeoTiff file.
 
     Parameters
     ----------
@@ -190,7 +190,6 @@ def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path):
     gtiff_filepath : pathlib.Path
         The path to the result GeoTiff file.
     """
-
     with rio.open(asc_path) as src:
         # Read the first band's data into a numpy array
         asc_data = src.read(1)

@@ -8,7 +8,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from osgeo import gdal  # Import gdal before rasterio
 
 import netCDF4
 import numpy as np
@@ -235,7 +234,7 @@ class PrecipitationGenerator():
         self,
         precipitation_path: Path,
         precipitation_data: xr.Dataset
-    ):
+    ) -> None:
         """
         Write out precipitation as netCDF file
 
@@ -254,15 +253,15 @@ class PrecipitationGenerator():
 
     def format_each_precipitation_timestep(
         self,
-        clipped_precipitation
-    ):
+        clipped_precipitation: xr.Dataset,
+    ) -> None:
         """
         Format each precipitation timestep from clipped precipitation data
 
         Parameters
         ----------
-        clipped_precipitation : TYPE
-            DESCRIPTION.
+        clipped_precipitation : xr.Dataset
+            The clipped precipitation data
         """
         log.info("Writing out precipitation data")
         # Create fine precipitation folder
@@ -352,7 +351,7 @@ class PrecipitationGenerator():
         combined_precipitation_timesteps : xr.Dataset
             Precipitation that combines all timesteps
         """
-        ## Clip coarse precipitation before fine resolution
+        # Clip coarse precipitation before fine resolution
         # Extract precipitation within given time
         coarse_precipitation_subset = self.extract_precipitation_within_time()
 
@@ -408,7 +407,6 @@ class PrecipitationFloodModelGenerator():
         precipitation_var : netCDF4.Variable
             Precipitation variable that needs assigning values separately
         """
-
         for i, t in enumerate(self.combined_precipitation_data.time):
             # Extract each precipitation timesteps
             each_precipitation_timestep = self.combined_precipitation_data.sel(time=t)['depth']
@@ -496,7 +494,5 @@ class PrecipitationFloodModelGenerator():
         outfile_precipitation.close()
 
     def precipitation_for_flood_model_generator(self) -> None:
-        """Generate precipitation for flood model (LISFLOOD-FP)"""
-
-        # Generate precipitation for flood model
+        """Generate precipitation for flood model (BG-Flood)"""
         self.precipitation_generator()

@@ -15,4 +15,4 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Package for the Flood Resilience Digital Twin codebase."""
+"""Modules to configure and run BG-Flood model."""

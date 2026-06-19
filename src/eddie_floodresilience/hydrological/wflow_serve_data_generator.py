@@ -35,7 +35,7 @@ log = logging.getLogger(__name__)
 
 
 class WflowServeDataGenerator:
-    """
+    r"""
     Class to serve data for a Wflow scenario, such as landcover and catchment boundaries.
 
     Attributes
@@ -50,8 +50,8 @@ class WflowServeDataGenerator:
         The ID of the flood model scenario that has been created using this wflow model
     """
 
-    def __init__(self, hydromt_path: Path, wflow_model_path: Path, landcover: str, flood_model_output_id: int):
-        """
+    def __init__(self, hydromt_path: Path, wflow_model_path: Path, landcover: str, flood_model_output_id: int) -> None:
+        r"""
         Define paths and variables relating to serving a Wflow scenario.
 
         Parameters
@@ -61,7 +61,8 @@ class WflowServeDataGenerator:
         wflow_model_path : Path
             A directory to where the data_catalog.yml is stored for WFlow
         landcover : str
-            A string to identify the landcover. Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
+            A string to identify the landcover.
+            Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
         flood_model_output_id : int
             The ID of the flood model scenario that has been created using this wflow model
         """
@@ -70,7 +71,7 @@ class WflowServeDataGenerator:
         self.landcover = landcover
         self.flood_model_output_id = flood_model_output_id
 
-    def serve_data(self):
+    def serve_data(self) -> None:
         """Save the data relating to the Wflow scenario to GeoServer and serve them."""
         if not EnvVariable.IS_GEOSERVER_ACTIVE:
             return
@@ -83,7 +84,7 @@ class WflowServeDataGenerator:
         catchment_file = self.wflow_model_path / "wflow_test_full/staticgeoms/basins.geojson"
         catchment_poly = gpd.read_file(catchment_file)
         if catchment_poly.crs.to_epsg() is None:
-            raise KeyError(f"CRS is not defined in EPSG# form in vector file {vector_file_path}.")
+            raise KeyError(f"CRS is not defined in EPSG# form in vector file {catchment_file}.")
         catchment_poly = catchment_poly.to_crs(epsg=2193)
 
         log.info(f"Adding catchment file '{catchment_file}' to GeoServer.")
@@ -92,7 +93,7 @@ class WflowServeDataGenerator:
         # Read and serve scenario landcover file
         self._serve_landcover_file(workspace_name, catchment_poly)
 
-    def _serve_landcover_file(self, workspace_name: str, catchment_poly: gpd.GeoDataFrame):
+    def _serve_landcover_file(self, workspace_name: str, catchment_poly: gpd.GeoDataFrame) -> None:
         """
         Serve the landcover scenario raster.
 
@@ -122,7 +123,7 @@ class WflowServeDataGenerator:
         # Delete tmp clipped file
         clipped_path.unlink()
 
-    def _serve_catchment_boundary(self, workspace_name: str, catchment_poly: gpd.GeoDataFrame):
+    def _serve_catchment_boundary(self, workspace_name: str, catchment_poly: gpd.GeoDataFrame) -> None:
         """
         Serve the catchment boundary polygon.
 
@@ -131,7 +132,8 @@ class WflowServeDataGenerator:
         workspace_name : str
             The name of the GeoServer workspace to serve the landcover from.
         catchment_poly : gpd.GeoDataFrame
-            The catchment polygon to serve."""
+            The catchment polygon to serve.
+        """
         # Create the database geoserver store
         data_store = gs.create_main_db_store(workspace_name)
         # Extract the geometry of the catchment area

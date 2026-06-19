@@ -13,13 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Manipulate terrain data for WFlow."""
 
 import logging
-from osgeo import gdal  # Import gdal before rasterio to get rid of DLL error
 import subprocess
-import rioxarray as rxr
-
 from pathlib import Path
+
+import rioxarray as rxr
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 

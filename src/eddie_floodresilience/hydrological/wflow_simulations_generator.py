@@ -40,7 +40,7 @@ class WflowSimulationsGenerator():
     ) -> None:
         """
         Generate wflow model simulations
-        
+
         Parameters
         ----------
         hydromt_path: Path
@@ -53,7 +53,7 @@ class WflowSimulationsGenerator():
             A directory to where the forcing files are stored
         start_time : datetime
             Starting time of simulation.
-            This should include the spin-up time. 
+            This should include the spin-up time.
             Normally, it is 1-year before the flood event.
         end_time : datetime
             Ending time of simulation
@@ -68,7 +68,7 @@ class WflowSimulationsGenerator():
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
         resolution : float
-            Resolution for flow data. 
+            Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         landcover : str = 'globcover'
             Name of land cover dataset. Default is 'globcover'
@@ -216,7 +216,7 @@ class WflowSimulationsGenerator():
 
         else:
             wflow_simulation_path = self.wflow_model_path / "wflow_test_full"
-            output_log = f"wflow_run.log"
+            output_log = "wflow_run.log"
 
         log.info("Running wflow simulation.")
         # Set up simulation command
@@ -229,7 +229,7 @@ class WflowSimulationsGenerator():
 
         # Run the command and write output to log
         with open(wflow_simulation_path / output_log, "w") as f:
-            process = subprocess.check_call(
+            subprocess.check_call(
                 simulation_command,
                 stdout=f,
                 stderr=subprocess.STDOUT,

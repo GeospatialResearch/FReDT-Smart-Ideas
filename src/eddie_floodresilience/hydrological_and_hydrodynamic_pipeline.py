@@ -56,7 +56,7 @@ class HydrologicalAndHydrodynamicPipeline:
     ) -> None:
         """
         Generate hydrological and hydrodynamic results
-        
+
         Parameters
         ----------
         hydro_combination_path : Path
@@ -70,7 +70,7 @@ class HydrologicalAndHydrodynamicPipeline:
             A directory to where the precipitation files are stored
         start_time : str
             Starting time of simulation.
-            This should include the spin-up time. 
+            This should include the spin-up time.
             Normally, it is 1-year before the flood event.
         end_time : str
             Ending time of simulation
@@ -95,7 +95,7 @@ class HydrologicalAndHydrodynamicPipeline:
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
         resolution : float
-            Resolution for flow data. 
+            Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
@@ -131,7 +131,7 @@ class HydrologicalAndHydrodynamicPipeline:
         else:
             self.forcing_path = forcing_name
 
-    def total_solutions(self):
+    def total_solutions(self) -> None:
         """Develop solutions for flood risk resilience"""
         log.info("Starting total solutions")
         if self.polygons is not None and self.vectors is not None:
@@ -169,7 +169,7 @@ class HydrologicalAndHydrodynamicPipeline:
             )
             elevation_solution.apply_elevation_solution()
 
-    def terrain_data_pipeline(self):
+    def terrain_data_pipeline(self) -> None:
         """Generate terrain data for wflow and flood models"""
         log.info("Starting terrain data")
         # Set up terrain data generation system
@@ -185,7 +185,7 @@ class HydrologicalAndHydrodynamicPipeline:
         # Generate terrain data
         terrain_data.terrain_for_wflow_generator()
 
-    def wflow_data_pipeline(self):
+    def wflow_data_pipeline(self) -> None:
         """Generate wflow model data for flood model"""
         log.info("Starting wflow data pipeline")
         # Set up wflow model data generation system
@@ -206,7 +206,15 @@ class HydrologicalAndHydrodynamicPipeline:
         # Generate wflow model data
         wflow_data.wflow_model_simulations_pipeline()
 
-    def serve_wflow_data(self, flood_model_output_id: int):
+    def serve_wflow_data(self, flood_model_output_id: int) -> None:
+        """
+        Serve data for a Wflow scenario, such as landcover and catchment boundaries.
+
+        Parameters
+        ----------
+        flood_model_output_id: int
+            The flood model output ID to associate the WFlow data with
+        """
         log.info("Starting serve wflow data pipeline")
         wflow_serve_data = WflowServeDataGenerator(
             self.hydromt_path,
@@ -217,8 +225,15 @@ class HydrologicalAndHydrodynamicPipeline:
 
         wflow_serve_data.serve_data()
 
-    def flood_data_pipeline(self):
-        """Generate flood model data"""
+    def flood_data_pipeline(self) -> int:
+        """
+        Generate flood model data.
+
+        Returns
+        -------
+        int
+            The resultant flood model output ID.
+        """
         log.info("Starting flood model pipeline")
         # Set up flood model data generation system
         if self.flood_model == 'lisflood-fp':
@@ -257,8 +272,15 @@ class HydrologicalAndHydrodynamicPipeline:
         model_output_id = flood_data.flood_model_executor()
         return model_output_id
 
-    def hydrological_and_hydrodynamic_simulation_generator(self):
-        """Generate hydraulic and hydrodynamic simulations"""
+    def hydrological_and_hydrodynamic_simulation_generator(self) -> int:
+        """
+        Generate hydraulic and hydrodynamic simulations.
+
+        Returns
+        -------
+        int
+            The resultant flood model output ID.
+        """
         # Ensure output directory exists
         self.hydro_combination_path.mkdir(parents=True, exist_ok=True)
 
@@ -402,7 +424,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
 def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     """
-    Runs a hydrological and hydrodynamic simulation for Mataura.
+    Run a hydrological and hydrodynamic simulation for Mataura.
 
     Parameters
     ----------
@@ -462,7 +484,7 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 
 def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     """
-    Runs a hydrological and hydrodynamic simulation for Whirinaki.
+    Run a hydrological and hydrodynamic simulation for Whirinaki.
 
     Parameters
     ----------
@@ -521,5 +543,7 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 
 if __name__ == '__main__':
     gdf = gpd.read_file(
-        r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example\polygons_vectors\whirinaki\polygons\polygons.shp")
+        r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example\polygons_vectors\
+        whirinaki\polygons\polygons.shp"
+    )
     whirinaki(None)

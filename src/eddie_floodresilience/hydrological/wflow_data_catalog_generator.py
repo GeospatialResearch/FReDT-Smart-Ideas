@@ -31,7 +31,7 @@ class DataCatalogGenerator():
         Generate data_catalog.yml for preprocessing data for wflow.
         This data_catalog.yml matches with information (mostly parameter information)
         from wflow_build.yml
-        
+
         Parameters
         ----------
         hydromt_path: Path
@@ -58,7 +58,7 @@ class DataCatalogGenerator():
     def meta_section(self) -> dict:
         """
         Write out meta section
-        
+
         Returns
         -------
         meta : dict
@@ -96,7 +96,8 @@ class DataCatalogGenerator():
                     "history": "Extracted from Copernicus Climate Data Store",
                     "paper_doi": "10.1002/qj.3803",
                     "paper_ref": "Hersbach et al. (2019)",
-                    "source_license": "https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products",
+                    "source_license":
+                        "https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products",
                     "source_url": "https://doi.org/10.24381/cds.bd0915c6"
                 },
                 "path": str(self.forcing_path / "era5_hourly_*.nc"),
@@ -137,7 +138,8 @@ class DataCatalogGenerator():
                     "history": "Extracted from Copernicus Climate Data Store",
                     "paper_doi": "10.1002/qj.3803",
                     "paper_ref": "Hersbach et al. (2019)",
-                    "source_license": "https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products",
+                    "source_license":
+                        "https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products",
                     "source_url": "https://doi.org/10.24381/cds.bd0915c6"
                 },
                 "path": "era5_orography.nc"
@@ -184,7 +186,7 @@ class DataCatalogGenerator():
     def lakes_section(self) -> dict:
         """
         Write out lakes section
-        
+
         Returns
         -------
         lakes : dict
@@ -244,7 +246,7 @@ class DataCatalogGenerator():
     def basin_section(self) -> dict:
         """
         Write out basin section
-        
+
         Returns
         -------
         basin : dict
@@ -305,7 +307,7 @@ class DataCatalogGenerator():
     def soilgrids_section(self) -> dict:
         """
         Write out soilgrids section
-        
+
         Returns
         -------
         soilgrids : dict
@@ -330,7 +332,7 @@ class DataCatalogGenerator():
     def lai_section(self) -> dict:
         """
         Write out LAI section
-        
+
         Returns
         -------
         lai : dict
@@ -425,11 +427,11 @@ class DataCatalogGenerator():
 
     def write_out_data_catalog(
         self,
-        data_catalog
+        data_catalog: dict
     ) -> None:
         """
         Write out data_catalog.yml
-        
+
         Parameters
         ----------
         data_catalog : dict
@@ -459,10 +461,10 @@ class DataCatalogGenerator():
                 sort_keys=False
             )
 
-    def data_catalog_generator(self):
+    def data_catalog_generator(self) -> None:
         """Generate data_catalog.yml file"""
         # Set up content for data_catalog file
-        log.info(f"Generating data_catalog.yml file")
+        log.info("Generating data_catalog.yml file")
         data_catalog = self.data_catalog_section()
 
         # Write data_catalog file
@@ -475,7 +477,7 @@ def find_landcover_file(
     landcover_name: str,
     is_baseline: bool = True
 ) -> Path:
-    """
+    r"""
     Find the correct landcover filepath to use, based on complex coupled internal logic.
 
     Parameters

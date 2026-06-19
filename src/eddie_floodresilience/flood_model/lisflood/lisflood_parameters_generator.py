@@ -9,8 +9,6 @@ import logging
 from datetime import datetime
 from pathlib import Path
 
-from osgeo import gdal  # Import gdal before rasterio
-
 import geopandas as gpd
 import pandas as pd
 import numpy as np
@@ -65,19 +63,19 @@ class ParametersFloodModelGenerator():
 
     def move_points_inside_aoi(
         self,
-        aoi_coords,
-        xy_coords,
-        buffer_distance,
-        tolerance
-    ):
+        aoi_coords: list[float],
+        xy_coords: list[float],
+        buffer_distance: float,
+        tolerance: float
+    ) -> tuple[float]:
         """
         Move points inside aoi
 
         Parameters
         ----------
-        aoi_coords : list
+        aoi_coords : list[float]
             Coordinates of area of interest
-        xy_coords : list
+        xy_coords : list[float]
             Coordinates of x and y. X and y of each injection point
         buffer_distance : float
             Amount that the points are moved inside
@@ -86,7 +84,7 @@ class ParametersFloodModelGenerator():
 
         Returns
         -------
-        xy_coords : list
+        xy_coords : tuple[float]
             New coordinates of x and y. X and y of each injection point
         """
         # Extract each x and y
@@ -112,7 +110,6 @@ class ParametersFloodModelGenerator():
 
     def bci_generator(self) -> None:
         """Generate bci files - where the locations of injection points are defined"""
-
         bci_path = self.flood_model_path / "bci.bci"
         log.info(f"Genarating bci file {bci_path}")
         # At the moment there is only flow data
@@ -194,7 +191,6 @@ class ParametersFloodModelGenerator():
         file_directory : Path
             A directory to the file which has just been named
         """
-
         number_ids = [
             int(f.stem.split("_")[-1])
             for f in Path(self.flood_model_path).glob(f"{filename}_*")
@@ -210,10 +206,9 @@ class ParametersFloodModelGenerator():
 
     def bdy_generator(self) -> None:
         """Generate bdy files - where the flow data of injection points are stored"""
-
         # Path of flow data (bdy) for flood model
         if self.polygons is not None:
-            bdy_name = self.file_increment_generator(f"bdy_landcover").with_suffix(".bdy")
+            bdy_name = self.file_increment_generator("bdy_landcover").with_suffix(".bdy")
         else:
             bdy_name = self.flood_model_path / "bdy.bdy"
 
@@ -256,15 +251,14 @@ class ParametersFloodModelGenerator():
                     line = f"{value:<20}{sec:.0f}\n"
                     discharge_tide.write(line)
 
-    def simulated_seconds_generator(self):
+    def simulated_seconds_generator(self) -> int:
         """
         Generate simulated time in seconds
-        
+
         Returns
         -------
         seconds : int
             Simulated time in seconds from starting to ending times
-        
         """
         # Compute simulated time in seconds
         seconds = int((self.end_time - self.start_time).total_seconds())
@@ -338,9 +332,6 @@ class ParametersFloodModelGenerator():
         # Path to Manning's n
         n = str(self.flood_model_path / "manning.asc")
 
-        # Path to precipitation
-        precipitation = str(self.flood_model_path / "precipitation_dynamic.nc")
-
         # Simulated time in seconds
         seconds = self.simulated_seconds_generator()
 
@@ -356,7 +347,6 @@ class ParametersFloodModelGenerator():
             ('bdyfile', bdy),
             ('DEMFile', z),
             ('manningfile', n)
-            # ('dynamicrainfile', precipitation)
         ]
 
         # Write into array
@@ -373,7 +363,6 @@ class ParametersFloodModelGenerator():
 
     def parameters_files_generator(self) -> Path:
         """Generate parameter files for flood model"""
-
         # Generate bci file
         self.bci_generator()
 

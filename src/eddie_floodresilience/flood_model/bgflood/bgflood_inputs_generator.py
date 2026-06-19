@@ -1,33 +1,32 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 26 22:33:14 2026
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: mng42
-"""
-from osgeo import gdal  # Import gdal before rasterio
-import rioxarray as rxr
-import xarray as xr
-from rasterio.enums import Resampling
-from scipy.ndimage import binary_dilation
+"""Classes to transform data into forms ready for BG-Flood."""
+
+import logging
+from datetime import datetime
+from pathlib import Path
 
 import geopandas as gpd
 import numpy as np
-from shapely.geometry import box
-from shapely.geometry import mapping, Polygon, LineString, MultiLineString
-
-from pathlib import Path
-from shapely.geometry import Point, MultiPoint
-from shapely.geometry.base import BaseGeometry
-from shapely.geometry import box
-
 import pandas as pd
-from datetime import datetime
+import xarray as xr
+from shapely.geometry import box, mapping, Point, Polygon, LineString, MultiLineString, MultiPoint
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
-from src.eddie_floodresilience.preprocessing.terrain_data_manipulator import TerrainFilter
-from src.eddie_floodresilience.preprocessing.terrain_attributes_generator import TerrainAttributesGenerator
-
-import logging
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 setup_logging(LogLevel.DEBUG)
@@ -169,7 +168,7 @@ class TerrainGenerator:
             self.flood_model_path / "8m_geofabric_clipped.nc"
         )
 
-    def terrain_data_generator(self):
+    def terrain_data_generator(self) -> None:
         """
         Generate and write out terrain data after formatting
 
@@ -203,7 +202,7 @@ class InjectionPointsandStreamlinesAligner():
         self,
         original_injection_points: gpd.GeoDataFrame,
         dem: xr.DataArray
-    ):
+    ) -> None:
         """
         Align injection points with streamlines.
         This is just a temporary solution for this problem.
@@ -227,7 +226,7 @@ class InjectionPointsandStreamlinesAligner():
     def clip_dem_around_geometry(
         self,
         dem: xr.DataArray,
-        geom
+        geom: Polygon
     ) -> xr.DataArray:
         """
         Clip DEM around geometry
@@ -236,7 +235,7 @@ class InjectionPointsandStreamlinesAligner():
         ----------
         dem : xr.DataArray
             DEM used for the flood model
-        geom : BaseGeometry
+        geom : Polygon
             Geometry of injection points used for clipping
 
         Returns
@@ -287,7 +286,7 @@ class InjectionPointsandStreamlinesAligner():
         x_array_coord: np.ndarray,
         y_array_coord: np.ndarray,
         point: Point
-    ):
+    ) -> np.ndarray:
         """
         Compute Euclidean distance from each DEM cell to the original injection points
 
@@ -698,7 +697,7 @@ class InjectionPointsFloodModelGenerator():
         # Filter out the invalid river
         rivers_new_projection = rivers_new_projection[
             rivers_new_projection['idx'] != rivers_new_projection['idx_ds']
-            ]
+        ]
 
         # Generate intersection between rivers and DEM bounding box
         intersections = rivers_new_projection.geometry.intersection(boundary)
@@ -794,7 +793,7 @@ class InjectionPointsFloodModelGenerator():
     def align_injection_points_and_streamlines(
         self,
         original_injection_points: gpd.GeoDataFrame
-    ):
+    ) -> None:
         """
         Align injections points with streamlines
 
@@ -946,7 +945,7 @@ class InjectionPointsFloodModelGenerator():
         injection_points_flow_df = injection_points_flow_df[
             (injection_points_flow_df['time'] >= self.start_time) &
             (injection_points_flow_df['time'] <= self.end_time)
-            ]
+        ]
 
         # Write out csv file
         injection_points_flow_path = self.flood_model_path / "injection_points_flow.csv"
@@ -955,7 +954,7 @@ class InjectionPointsFloodModelGenerator():
             index=False
         )
 
-    def injection_points_flow_generator(self):
+    def injection_points_flow_generator(self) -> None:
         """
         Generate injection points and their flow data from catchment model output.
         These injection points will be used in flood model (LISFLOOD-FP)

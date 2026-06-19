@@ -109,7 +109,7 @@ class LisFloodModelSimulationsGenerator():
         # Generate common terrain data
         self.terrain_bounding_box, self.terrain_crs_clipped = self.terrain.terrain_data_generator()
 
-    def terrain_data_for_flood_model_generator(self):
+    def terrain_data_for_flood_model_generator(self) -> None:
         """Generate terrain data for flood model (LISFLOOD-FP)"""
         # Call out class used to generate terrain data for flood model
         terrain_data_for_flood_model = TerrainFloodModelGenerator(
@@ -124,7 +124,7 @@ class LisFloodModelSimulationsGenerator():
         # Generate terrain data for flood model
         terrain_data_for_flood_model.execute_terrain_data_generator()
 
-    def injection_points_for_flood_model_generator(self):
+    def injection_points_for_flood_model_generator(self) -> None:
         """Generate injection points for flood model (LISFLOOD-FP)"""
         # Call out class used to generate injection points for flood model
         injection_points_for_flood_model = InjectionPointsFloodModelGenerator(
@@ -140,7 +140,7 @@ class LisFloodModelSimulationsGenerator():
         # Generate injection points for flood model
         injection_points_for_flood_model.injection_points_flow_generator()
 
-    def precipitation_data_for_flood_model_generator(self):
+    def precipitation_data_for_flood_model_generator(self) -> None:
         """Generate precipitation data for flood model"""
         # Call out class used to generate precipitation data
         precipitation_generator = PrecipitationGenerator(
@@ -164,8 +164,15 @@ class LisFloodModelSimulationsGenerator():
         # Generate precipitation data for flood model
         precipitation_data_for_flood_model.precipitation_for_flood_model_generator()
 
-    def parameters_files_for_flood_model_generator(self):
-        """Generate parameters files for flood model"""
+    def parameters_files_for_flood_model_generator(self) -> Path:
+        """
+        Generate parameters files for flood model
+
+        Return
+        ------
+        Path
+            The path to the output directory generated for these parameters
+        """
         # Call out class used to generate parameter files
         parameters_files_generator = ParametersFloodModelGenerator(
             self.flood_model_path,
@@ -211,7 +218,7 @@ class LisFloodModelSimulationsGenerator():
 
         # Generate flood model simulations
         with open(log_file_path, "w") as log_file:
-            log.info(f"Running LISFLOOD-FP flood simulation")
+            log.info("Running LISFLOOD-FP flood simulation")
             subprocess.run(
                 flood_simulation_command,
                 stdout=log_file,
@@ -222,7 +229,7 @@ class LisFloodModelSimulationsGenerator():
         model_output_id = self.serve_flood_model_outputs(output_dir)
         return model_output_id
 
-    def flood_model_executor(self):
+    def flood_model_executor(self) -> None:
         """Generate necessary inputs for flood model"""
         # Four cases:
         # 1. Original scenario (polygon=None, vector=None)
@@ -271,7 +278,7 @@ class LisFloodModelSimulationsGenerator():
 
     def serve_flood_model_outputs(self, output_directory: Path) -> int:
         """
-        Adds max flood model output data to database and geoserver for serving.
+        Add max flood model output data to database and geoserver for serving.
 
         Parameters
         ----------

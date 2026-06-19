@@ -1,19 +1,18 @@
 """Generate data for wflow from terrain attributes generated before"""
 
+import logging
 import os
+from pathlib import Path
 from typing import Tuple
 
-from osgeo import gdal
+import pyflwdir
+import geopandas as gpd
+from hydromt import flw
+import numpy as np
+import pandas as pd
 import rioxarray as rxr
 import xarray as xr
-import numpy as np
-import geopandas as gpd
-import pandas as pd
-import pyflwdir
-from hydromt import flw
 
-from pathlib import Path
-import logging
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 setup_logging(LogLevel.DEBUG)
