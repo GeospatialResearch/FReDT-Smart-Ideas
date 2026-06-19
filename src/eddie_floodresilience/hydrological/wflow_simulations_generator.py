@@ -13,13 +13,13 @@ import geopandas as gpd
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
 
-
 import subprocess
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
 
 class WflowSimulationsGenerator():
     """This class is to generate wflow model simulations"""

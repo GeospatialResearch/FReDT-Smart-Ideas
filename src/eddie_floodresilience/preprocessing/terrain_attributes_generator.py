@@ -7,7 +7,7 @@ from pathlib import Path
 from whitebox_workflows import WbEnvironment, Raster
 from whitebox.whitebox_tools import WhiteboxTools
 
-from osgeo import gdal # Import gdal before rasterio
+from osgeo import gdal  # Import gdal before rasterio
 import subprocess
 import xarray as xr
 import rioxarray as rxr
@@ -41,12 +41,12 @@ class TerrainAttributesGenerator():
     """
 
     def __init__(
-            self,
-            path: Path,
-            raster_name: str = 'dem',
-            resolution: float = 50,
-            threshold: int = 1000,
-            origin_filename: str = '8m_geofabric'
+        self,
+        path: Path,
+        raster_name: str = 'dem',
+        resolution: float = 50,
+        threshold: int = 1000,
+        origin_filename: str = '8m_geofabric'
     ) -> None:
         """
         Declare variables to be used in later functions
@@ -73,8 +73,8 @@ class TerrainAttributesGenerator():
         self.origin_filename = origin_filename
 
     def raster_resampling(
-            self,
-            resampling_method: str = 'nn'
+        self,
+        resampling_method: str = 'nn'
     ) -> None:
         """
         Resample raster to a specific resolution (good with GeoTiff file)
@@ -101,8 +101,8 @@ class TerrainAttributesGenerator():
             log.info(f"'{output_path.name}' already exists!")
 
     def raster_resampling_using_gdal(
-            self,
-            resampling_method: str = 'nn'
+        self,
+        resampling_method: str = 'nn'
     ) -> None:
         """
         Resample raster to a given resolution using GDAL (memory efficient).
@@ -146,8 +146,8 @@ class TerrainAttributesGenerator():
             log.info(f"'{output_path.name}' already exists!")
 
     def raster_fill_depression(
-            self,
-            flat_increment: float = 0.0001
+        self,
+        flat_increment: float = 0.0001
     ) -> None:
         """
         Fill depressions in raster (specifically in DEM)
@@ -207,8 +207,8 @@ class TerrainAttributesGenerator():
             log.info(f"'{output_path.name}' already exists!")
 
     def d8_stream_generator(
-            self,
-            catchment_area: bool = True
+        self,
+        catchment_area: bool = True
     ) -> None:
         """
         Generate D8 flow accumulation based on D8 algorithm (O'Callaghan and Mark, 1984) (mainly from DEM)
@@ -276,9 +276,9 @@ class TerrainAttributesGenerator():
         )
 
     def streams_repairer(
-            self, 
-            info_from_watershed: bool = False
-        ) -> None:
+        self,
+        info_from_watershed: bool = False
+    ) -> None:
         """
         Repair streams if they are not connected
         
@@ -297,16 +297,16 @@ class TerrainAttributesGenerator():
                 output=str(self.path / f"{self.origin_filename}_repaired_streams_d8.shp"),
                 dist="30"
             )
-            
+
             # Read the repaired streams
             repaired_streams = gpd.read_file(
                 self.path / f"{self.origin_filename}_repaired_streams_d8.shp",
                 on_invalid='ignore'  # Ignore broken geometries            
             )
-            
+
             # Output filename
             output_filename = f"{self.origin_filename}_filtered_repaired_streams_d8.shp"
-            
+
         else:
             # Repair streams within 0.0005 degree or ~50m distance
             wbt.repair_stream_vector_topology(
@@ -314,41 +314,41 @@ class TerrainAttributesGenerator():
                 output=str(self.path / f"{self.origin_filename}_repaired_streams_watershed_more_info.shp"),
                 dist="30"
             )
-            
+
             # Read the repaired streams
             repaired_streams = gpd.read_file(
                 self.path / f"{self.origin_filename}_repaired_streams_watershed_more_info.shp",
                 on_invalid='ignore'  # Ignore broken geometries            
             )
-            
+
             # Output filename
             output_filename = f"{self.origin_filename}_filtered_repaired_streams_watershed_more_info.shp"
-        
+
         # Remove all Polygons
         # This should be improved in the future
         repaired_streams = repaired_streams[
             repaired_streams.geometry.apply(
-                lambda g: isinstance(g, (LineString, MultiLineString))    
-            )    
+                lambda g: isinstance(g, (LineString, MultiLineString))
+            )
         ]
-        
+
         # Remove very short lines
         min_line = 1
         repaired_streams = repaired_streams[
             repaired_streams.geometry.length > min_line
-        ]
-        
+            ]
+
         # Set up crs
         # This will be changed in the future
         repaired_streams = repaired_streams.set_crs(crs=2193)
-        
+
         # Write out the repaired streams again
         repaired_streams.to_file(self.path / output_filename)
 
     def raster_to_points_dataframe(
-            self,
-            file_name: str,
-            column_name: str
+        self,
+        file_name: str,
+        column_name: str
     ) -> gpd.GeoDataFrame:
         """
         Convert raster values of pixels in stream network (could be area or strahler) to points
@@ -391,9 +391,9 @@ class TerrainAttributesGenerator():
         return points_df
 
     def roughness_to_manning(
-            self,
-            roughness: xr.DataArray,
-            h: float = 1
+        self,
+        roughness: xr.DataArray,
+        h: float = 1
     ) -> None:
         """
         Convert raster of roughness to manning's n
@@ -421,12 +421,12 @@ class StreamTopologyGenerator():
     """This class is to generate stream topology data"""
 
     def __init__(
-            self,
-            path: Path,
-            flood_aoi_boundary: list,
-            resolution: float = 50,
-            threshold: int = 1000,
-            origin_filename: str = '8m_geofabric'
+        self,
+        path: Path,
+        flood_aoi_boundary: list,
+        resolution: float = 50,
+        threshold: int = 1000,
+        origin_filename: str = '8m_geofabric'
     ) -> None:
         """
         Generate stream topology: 'upstream_area_m2' and 'strahler'
@@ -452,7 +452,7 @@ class StreamTopologyGenerator():
         self.resolution = resolution
         self.threshold = threshold
         self.origin_filename = origin_filename
-        
+
         self.stream_topology_data = TerrainAttributesGenerator(self.path, 'dem')
 
     def merge_stream_topology_points(self) -> gpd.GeoDataFrame:
@@ -511,8 +511,8 @@ class StreamTopologyGenerator():
         return agg_upstream_area_and_strahler
 
     def merge_upstream_area_strahler_stream_geometry(
-            self,
-            agg_upstream_area_and_strahler: gpd.GeoDataFrame
+        self,
+        agg_upstream_area_and_strahler: gpd.GeoDataFrame
     ) -> None:
         """
         Merge dataframes of 'upstream_area_m2' and 'strahler' with 'geometry' of stream using FID
@@ -580,7 +580,7 @@ class StreamTopologyGenerator():
         # Filter only the maximum strahler order which is the main river
         main_river = points_merge_clip[
             points_merge_clip['strahler'] == max_strahler
-        ]
+            ]
 
         # Select the point that has the largest upper catchment area which is the river outlet
         river_outlet = main_river.loc[
@@ -591,7 +591,7 @@ class StreamTopologyGenerator():
         river_outlet.to_file(self.path / f"river_outlet.shp")
 
     def dataframe_upstream_area_strahler_geometry_generator(
-            self,
+        self,
     ) -> None:
         """Generate geodataframe of 'upstream_area_m2' and 'strahler'"""
         # Resample raster
@@ -608,7 +608,7 @@ class StreamTopologyGenerator():
 
         # Generate strahler order
         self.stream_topology_data.strahler_stream_order_generator()
-        
+
         # Repair streams
         self.stream_topology_data.streams_repairer(info_from_watershed=False)
 
@@ -627,14 +627,14 @@ class StreamHydraulicsGenerator():
     """This class is to generate hydraulic stream attributes"""
 
     def __init__(
-            self,
-            path: Path,
-            hydromt_path: Path,
-            river_name: str,
-            streams_bankfull_stage: float = 1.5,
-            resolution: float = 50,
-            threshold: int = 1000,
-            origin_filename: str = '8m_geofabric'
+        self,
+        path: Path,
+        hydromt_path: Path,
+        river_name: str,
+        streams_bankfull_stage: float = 1.5,
+        resolution: float = 50,
+        threshold: int = 1000,
+        origin_filename: str = '8m_geofabric'
     ) -> None:
         """
         Generate hydraulic stream attributes
@@ -678,13 +678,13 @@ class StreamHydraulicsGenerator():
         self.discharge_rate_control = river_information['discharge_rate_control']
 
         self.stream_topology_data = TerrainAttributesGenerator(
-            self.path, 
+            self.path,
             'dem',
             self.resolution,
             self.threshold
         )
         self.roughness_data = TerrainAttributesGenerator(
-            self.path, 
+            self.path,
             'roughness',
             self.resolution,
             self.threshold
@@ -692,9 +692,9 @@ class StreamHydraulicsGenerator():
         self.origin_filename = origin_filename
 
     def watershed_generator(
-            self,
-            snap_dist: float = 5.0,
-            filter_size: int = 5
+        self,
+        snap_dist: float = 5.0,
+        filter_size: int = 5
     ) -> Raster:
         """
         Generate watershed based on D8 pointer (flow direction) and list of points of outlet and gauges
@@ -771,8 +771,8 @@ class StreamHydraulicsGenerator():
         return outlet_watershed
 
     def stream_watershed_raster_generator(
-            self,
-            outlet_watershed: Raster
+        self,
+        outlet_watershed: Raster
     ) -> tuple[Raster, Raster]:
         """
         Generate streams within watershed that contributes to the outlet
@@ -835,10 +835,10 @@ class StreamHydraulicsGenerator():
             streams_watershed_vector_more_info,
             str(stream_path_watershed_more_info)
         )
-        
+
         # Repair streams
         self.stream_topology_data.streams_repairer(info_from_watershed=True)
-        
+
         # Read the repaired streams
         repaired_streams_watershed_more_info_path = self.path / f"{self.origin_filename}_filtered_repaired_streams_watershed_more_info.shp"
         repaired_streams_watershed_more_info = wbe.read_vector(
@@ -958,8 +958,8 @@ class StreamHydraulicsGenerator():
         return streams_watershed_vector_more_info
 
     def buffer_streams_watershed(
-            self,
-            streams_watershed_vector_more_info: gpd.GeoDataFrame
+        self,
+        streams_watershed_vector_more_info: gpd.GeoDataFrame
     ) -> gpd.GeoDataFrame:
         """
         Buffer the stream linestrings to capture stream pixels
@@ -985,10 +985,10 @@ class StreamHydraulicsGenerator():
         return streams_watershed_buffer
 
     def assign_streams_hydraulic_values(
-            self,
-            streams_watershed_vector_more_info: gpd.GeoDataFrame,
-            streams_watershed_buffer: gpd.GeoDataFrame,
-            hydraulic_name: str
+        self,
+        streams_watershed_vector_more_info: gpd.GeoDataFrame,
+        streams_watershed_buffer: gpd.GeoDataFrame,
+        hydraulic_name: str
     ) -> None:
         """
         Generate features (e.g. width, roughness, ...) for watershed network.
@@ -1138,10 +1138,10 @@ class StreamHydraulicsGenerator():
         )
 
     def bankfull_discharge_calculation(
-            self,
-            streams_bankfull_width: pd.Series,
-            streams_slope: pd.Series,
-            streams_manning: pd.Series
+        self,
+        streams_bankfull_width: pd.Series,
+        streams_slope: pd.Series,
+        streams_manning: pd.Series
     ) -> pd.Series:
         """
         Generate calculation method of streams' bankfull discharge
@@ -1238,7 +1238,7 @@ class StreamHydraulicsGenerator():
 
         # Generate D8 stream generator
         self.stream_topology_data.d8_stream_generator(catchment_area=True)
-                                                      
+
         # Generate watershed raster
         watershed_polygon = self.watershed_generator(
             5, 5
@@ -1264,4 +1264,3 @@ class StreamHydraulicsGenerator():
 
         # Write out stream bankfull width and discharge
         self.stream_bankfull_width_discharge_generator()
-

@@ -9,7 +9,6 @@ import logging
 from pathlib import Path
 import sys
 
-
 from .terrain_data_manipulator import TerrainFilter
 from .terrain_attributes_generator import (StreamTopologyGenerator,
                                            StreamHydraulicsGenerator)
@@ -23,16 +22,16 @@ log = logging.getLogger(__name__)
 
 class TerrainDataWflowGenerator:
     """This class is to generate terrain data for wflow model"""
-    
+
     def __init__(
-            self,
-            terrain_path: Path,
-            hydromt_path: Path,
-            flood_aoi_boundary: list,
-            river_name: str,
-            resolution: float = 100,
-            threshold: int = 1000
-        ) -> None:
+        self,
+        terrain_path: Path,
+        hydromt_path: Path,
+        flood_aoi_boundary: list,
+        river_name: str,
+        resolution: float = 100,
+        threshold: int = 1000
+    ) -> None:
         """
         Generate terrain data for wflow model
         
@@ -59,7 +58,7 @@ class TerrainDataWflowGenerator:
         self.river_name = river_name
         self.resolution = resolution
         self.threshold = threshold
-        
+
     def filtered_terrain_generator(self) -> None:
         """Filter terrain data to generate necessary data for wflow model"""
         filtered_terrain = TerrainFilter(
@@ -68,7 +67,7 @@ class TerrainDataWflowGenerator:
             self.river_name
         )
         filtered_terrain.filter_dem_for_wflow()
-        
+
     def stream_topology_generator(self) -> None:
         """Generate stream topology for wflow model"""
         stream_topology = StreamTopologyGenerator(
@@ -78,7 +77,7 @@ class TerrainDataWflowGenerator:
             self.threshold
         )
         stream_topology.dataframe_upstream_area_strahler_geometry_generator()
-        
+
     def stream_hydraulic_generator(self) -> None:
         """Generate stream hydraulic for wflow model"""
         stream_hydraulic = StreamHydraulicsGenerator(
@@ -90,23 +89,22 @@ class TerrainDataWflowGenerator:
             threshold=self.threshold
         )
         stream_hydraulic.dataframe_stream_bankfull_width_discharge_generator()
-        
+
     def terrain_for_wflow_preparator(self) -> None:
         """Prepare terrain data for wflow model"""
         terrain_for_wflow = TerrainDataWflowPreparator(self.terrain_path)
         terrain_for_wflow.terrain_data_for_wflow_preparator()
-        
+
     def terrain_for_wflow_generator(self) -> None:
         """Generate terrain data for wflow model"""
         # Fitler terrain data to generate necessary data for wflow model
         self.filtered_terrain_generator()
-        
+
         # Generate stream topology for wflow model
         self.stream_topology_generator()
-        
+
         # Generate stream hydraulic for wflow model
         self.stream_hydraulic_generator()
-        
+
         # Generate and prepare terrain data for wflow model
         self.terrain_for_wflow_preparator()
-

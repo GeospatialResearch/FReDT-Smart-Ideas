@@ -30,8 +30,10 @@ class EnvVariable(EnvVarBase):  # pylint: disable=too-few-public-methods
     DATA_DIR_MODEL_OUTPUT = pathlib.Path(EnvVarBase._get_env_variable("DATA_DIR_MODEL_OUTPUT")).resolve()
     FLOOD_MODEL_DIR = pathlib.Path(EnvVarBase._get_env_variable("FLOOD_MODEL_DIR")).resolve()
 
-    HYDRO_COMBINATION_PATH_MATAURA = (pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "mataura").resolve() # todo revisit this solution
-    HYDRO_COMBINATION_PATH_WHIRINAKI = (pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "whirinaki").resolve()
+    HYDRO_COMBINATION_PATH_MATAURA = (pathlib.Path(
+        EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "mataura").resolve()
+    HYDRO_COMBINATION_PATH_WHIRINAKI = (
+            pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "whirinaki").resolve()
     HYDROMT_PATH = pathlib.Path(EnvVarBase._get_env_variable("HYDROMT_PATH")).resolve()
     PRECIPITATION_PATH = pathlib.Path(EnvVarBase._get_env_variable("PRECIPITATION_PATH")).resolve()
 

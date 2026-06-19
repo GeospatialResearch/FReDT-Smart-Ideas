@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import logging
-from osgeo import gdal # Import gdal before rasterio to get rid of DLL error
+from osgeo import gdal  # Import gdal before rasterio to get rid of DLL error
 import subprocess
 import rioxarray as rxr
 
@@ -73,13 +73,13 @@ class TerrainFilter:
     """This class is to filter terrain data for wflow"""
 
     def __init__(
-            self,
-            path: Path,
-            hydromt_path: Path,
-            river_name: str,
-            origin_crs: int = 2193,
-            roughness: bool = True,
-            origin_filename: str = '8m_geofabric'
+        self,
+        path: Path,
+        hydromt_path: Path,
+        river_name: str,
+        origin_crs: int = 2193,
+        roughness: bool = True,
+        origin_filename: str = '8m_geofabric'
     ) -> None:
         """
         Filter terrain data for wflow
@@ -117,7 +117,8 @@ class TerrainFilter:
         # Save as tif
         if self.roughness:
             terrain['z'].rio.to_raster(self.path / f"{self.origin_filename}_dem_split.tif")  # Name here is constant
-            terrain['zo'].rio.to_raster(self.path / f"{self.origin_filename}_roughness_split.tif")  # Name here is constant
+            terrain['zo'].rio.to_raster(
+                self.path / f"{self.origin_filename}_roughness_split.tif")  # Name here is constant
         else:
             terrain.rio.to_raster(self.path / f"{self.origin_filename}_dem_split.tif")
 
@@ -143,11 +144,12 @@ class TerrainFilter:
         dem_write_nodata = dem_replace_nodata.rio.write_nodata(-9999)
         dem_write_nodata.rio.to_raster(self.path / f"{self.origin_filename}_dem_for_wflow.tif")  # Name here is constant
 
-        roughness_nosea = rxr.open_rasterio(self.path / f"{self.origin_filename}_roughness_split.tif")  # Name here is constant
+        roughness_nosea = rxr.open_rasterio(
+            self.path / f"{self.origin_filename}_roughness_split.tif")  # Name here is constant
         roughness_replace_nodata = roughness_nosea.fillna(-9999)
         roughness_write_nodata = roughness_replace_nodata.rio.write_nodata(-9999)
         roughness_write_nodata.rio.to_raster(
-            self.path / f"{self.origin_filename}_roughness_for_wflow.tif", # Name here is contstant
+            self.path / f"{self.origin_filename}_roughness_for_wflow.tif",  # Name here is contstant
             tiled=True,
             windowed=True,
             lock=False,

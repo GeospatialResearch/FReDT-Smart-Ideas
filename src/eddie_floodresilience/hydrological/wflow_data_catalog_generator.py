@@ -14,18 +14,19 @@ from eddie.digitaltwin.utils import setup_logging, LogLevel
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
+
 class DataCatalogGenerator():
     """This class is to generate data_catalog.yml for preprocessing data for wflow"""
 
     def __init__(
-            self,
-            hydromt_path: Path,
-            wflow_model_path: Path,
-            forcing_path: Path,
-            river_name: str,
-            polygons: str = None,
-            landcover: str = 'globcover'
-        ) -> None:
+        self,
+        hydromt_path: Path,
+        wflow_model_path: Path,
+        forcing_path: Path,
+        river_name: str,
+        polygons: str = None,
+        landcover: str = 'globcover'
+    ) -> None:
         """
         Generate data_catalog.yml for preprocessing data for wflow.
         This data_catalog.yml matches with information (mostly parameter information)
@@ -423,9 +424,9 @@ class DataCatalogGenerator():
         return data_catalog
 
     def write_out_data_catalog(
-            self,
-            data_catalog
-        ) -> None:
+        self,
+        data_catalog
+    ) -> None:
         """
         Write out data_catalog.yml
         

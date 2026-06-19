@@ -17,9 +17,10 @@ from eddie.digitaltwin.utils import setup_logging, LogLevel
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
+
 class WflowBuildGenerator():
     """This class is to generate wflow_build.yml for preprocessing data for wflow"""
-    
+
     def __init__(
         self,
         start_time: datetime,
@@ -137,9 +138,9 @@ class WflowBuildGenerator():
                     "model.min_streamorder_river": 3
                 }
             }
-        
+
         return config
-    
+
     def basemaps_section(self) -> dict:
         """
         Write out basemaps' section
@@ -158,9 +159,9 @@ class WflowBuildGenerator():
                 "res": self.resolution
             }
         }
-        
+
         return basemaps
-    
+
     def rivers_section(self) -> dict:
         """
         Write out rivers' section
@@ -210,9 +211,9 @@ class WflowBuildGenerator():
                 "min_area": 10.0
             }
         }
-        
+
         return lakes
-    
+
     def landcover_section(self) -> dict:
         """
         Write out landcover's section
@@ -234,9 +235,9 @@ class WflowBuildGenerator():
                 "lulc_mapping_fn": landcover_mapping
             }
         }
-        
+
         return landcover
-    
+
     def lai_section(self) -> dict:
         """
         Write out LAI section
@@ -254,11 +255,11 @@ class WflowBuildGenerator():
                 "lulc_sampling_method": "any",
                 "lulc_zero_classes": [200, 210, 220],
                 "buffer": 2
-            }    
+            }
         }
-        
+
         return lai
-    
+
     def soil_section(self) -> dict:
         """
         Write out soil section
@@ -275,7 +276,7 @@ class WflowBuildGenerator():
                 "ptf_ksatver": "brakensiek"
             }
         }
-        
+
         return soil
 
     def precipitation_section(self) -> dict:
@@ -361,7 +362,7 @@ class WflowBuildGenerator():
                 "cf_soil": 0.038,
                 "EoverR": 0.11,
                 "InfiltCapPath": constant_parameters_for_site['InfiltCapPath'],
-                "InfiltCapSoil": constant_parameters_for_site['InfiltCapSoil'], # whirinaki: 1, mataura:300
+                "InfiltCapSoil": constant_parameters_for_site['InfiltCapSoil'],  # whirinaki: 1, mataura:300
                 "MaxLeakage": 0,
                 "rootdistpar": -500,
                 "TT": 0,
@@ -373,9 +374,9 @@ class WflowBuildGenerator():
                 "G_TT": 1.3,
             }
         }
-        
+
         return constant_parameters
-        
+
     def write_section(self) -> dict:
         """
         Write out "write" section.
@@ -401,9 +402,9 @@ class WflowBuildGenerator():
                 "write_geoms": {},
                 "write_config": {}
             }
-        
+
         return write_section
-    
+
     def wflow_build_section(self) -> dict:
         """
         Organise wflow build's section
@@ -453,17 +454,17 @@ class WflowBuildGenerator():
                     self.constant_parameters_section(),
                     self.write_section()
                 ]
-        
+
         # Generate wflow build section
         for each_section in sections_list:
             wflow_build.update(each_section)
-        
+
         return wflow_build
-            
+
     def write_out_wflow_build(
-            self,
-            wflow_build
-        ) -> None:
+        self,
+        wflow_build
+    ) -> None:
         """
         Write out wflow_build.yml
         
@@ -497,12 +498,11 @@ class WflowBuildGenerator():
                 output_file,
                 sort_keys=False
             )
-    
+
     def wflow_build_generator(self):
         """Generate data_catalog.yml file"""
         # Set up content for wflow_build file
         wflow_build = self.wflow_build_section()
-        
+
         # Write wflow_build file
         self.write_out_wflow_build(wflow_build)
-    

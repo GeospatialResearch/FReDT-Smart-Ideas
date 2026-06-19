@@ -22,20 +22,22 @@ from textwrap import dedent
 import shutil
 import logging
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
-class ParametersFloodModelGenerator():
+
+class ParametersFloodModelGenerator:
     """This class is to generate parameter files for flood model"""
 
     def __init__(
-            self,
-            flood_model_path: Path,
-            terrain_bounding_box: Polygon,
-            start_time: datetime,
-            end_time: datetime,
-            polygons: str = None,
-            vectors: str = None
+        self,
+        flood_model_path: Path,
+        terrain_bounding_box: Polygon,
+        start_time: datetime,
+        end_time: datetime,
+        polygons: str = None,
+        vectors: str = None
     ) -> None:
         """
         Generate parameter files for flood model
@@ -79,7 +81,6 @@ class ParametersFloodModelGenerator():
 
         self.injection_points = gpd.read_file(self.flood_model_path / "injection_points.shp")
 
-
     def output_folder_generator(self):
         """Generate output folder"""
         log.info("Generating output folder")
@@ -95,17 +96,17 @@ class ParametersFloodModelGenerator():
         prefix = output_name + "_"
 
         next_id = (
-                max(
-                    [
-                        int(f.name.split("_")[-1])
-                        for f in self.flood_model_path.iterdir()
-                        if f.is_dir()
-                           and f.name.startswith(prefix)
-                           and f.name.split("_")[-1].isdigit()
-                    ],
-                    default=0
-                )
-                + 1
+            max(
+                [
+                    int(f.name.split("_")[-1])
+                    for f in self.flood_model_path.iterdir()
+                    if f.is_dir()
+                       and f.name.startswith(prefix)
+                       and f.name.split("_")[-1].isdigit()
+                ],
+                default=0
+            )
+            + 1
         )
 
         self.output_folder = self.flood_model_path / f"{output_name}_{next_id:03d}"
@@ -119,9 +120,8 @@ class ParametersFloodModelGenerator():
 
             # Choose only flow text columns
             if col.startswith("Q_"):
-
                 # Remove the Q before the flow ID
-                fid = col.split("_")[1]   # e.g. Q_97 → 97
+                fid = col.split("_")[1]  # e.g. Q_97 → 97
 
                 # Extract time
                 times = self.injection_points_flow["time_in_second"].values
@@ -143,8 +143,8 @@ class ParametersFloodModelGenerator():
                 )
 
     def tide_text_file_design(
-            self,
-            direction: str
+        self,
+        direction: str
     ):
         """
         Design codes for generating tide text data
@@ -171,11 +171,11 @@ class ParametersFloodModelGenerator():
         self.tide_text_file_design('right')
 
     def move_points_inside_aoi(
-            self,
-            aoi_coords,
-            xy_coords,
-            buffer_distance,
-            tolerance
+        self,
+        aoi_coords,
+        xy_coords,
+        buffer_distance,
+        tolerance
     ):
         """
         Move points inside aoi
@@ -219,8 +219,8 @@ class ParametersFloodModelGenerator():
         return x, y
 
     def pixel_bounds_from_centroid(
-            self,
-            point
+        self,
+        point
     ) -> tuple[float, float, float, float]:
         """
         Identify pixel bounds for flow through centroid
@@ -251,15 +251,15 @@ class ParametersFloodModelGenerator():
             x - 4,  # xmin
             x + 4,  # xmax
             y - 4,  # ymin
-            y + 4   # ymax
+            y + 4  # ymax
         )
 
         return pixel_bounds
 
     def flow_text_data_design(
-            self,
-            flow_id: str,
-            pixel_bounds: tuple[float, float, float, float]
+        self,
+        flow_id: str,
+        pixel_bounds: tuple[float, float, float, float]
     ) -> str:
         """
         Design river text data for BG Flood parameter file
@@ -288,7 +288,7 @@ class ParametersFloodModelGenerator():
         return flow_text
 
     def flow_text_data_generator(
-            self
+        self
     ) -> list:
         """
         Generate river text data for BG-Flood parameter file
@@ -353,7 +353,6 @@ class ParametersFloodModelGenerator():
             for line in self.flow_text_data_generator():
                 f.write(line + "\n")
 
-
     def parameter_files_generator(self):
         """Generate parameter files to run BG-Flood"""
 
@@ -368,6 +367,3 @@ class ParametersFloodModelGenerator():
 
         # Generate param files
         self.bg_param_file_generator()
-
-
-

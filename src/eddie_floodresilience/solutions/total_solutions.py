@@ -31,7 +31,6 @@ GLOBCOVER_CLASSES: dict[str, int] = {
     "Bare Land": 200,
 }
 
-
 wbe = WbEnvironment()
 wbe.verbose = True
 wbe.max_procs = -1
@@ -43,10 +42,10 @@ class LandCoverSolution():
     """This class is to change the land cover based on polygons"""
 
     def __init__(
-            self,
-            hydro_combination_path: Path,
-            hydromt_path: Path,
-            polygons: gpd.GeoDataFrame | None = None
+        self,
+        hydro_combination_path: Path,
+        hydromt_path: Path,
+        polygons: gpd.GeoDataFrame | None = None
     ) -> None:
         """
         Change the land cover based on polygons.
@@ -69,9 +68,9 @@ class LandCoverSolution():
         self.polygons = polygons
 
     def rasterize_polygons(
-            self,
-            current_landcover: xr.DataArray,
-            polygons: gpd.GeoDataFrame
+        self,
+        current_landcover: xr.DataArray,
+        polygons: gpd.GeoDataFrame
     ) -> xr.DataArray:
         """
         This is to apply values to each polygon under raster format
@@ -93,7 +92,7 @@ class LandCoverSolution():
         modified_landcover = current_landcover.copy()
         if "landcover" not in polygons.columns:
             polygons["landcover"] = polygons["landcover_name"].map(GLOBCOVER_CLASSES)
-        
+
         # Create rasterization shapes
         shapes = [
             (geom, value)
@@ -117,7 +116,6 @@ class LandCoverSolution():
         modified_landcover.values[mask] = polygon_raster[mask]
 
         return modified_landcover
-
 
     def apply_landcover_solution(self) -> Path:
         """
@@ -173,10 +171,10 @@ class ElevationSolution():
     """This class is to change the elevation"""
 
     def __init__(
-            self,
-            hydro_combination_path: Path,
-            flood_model: str,
-            vectors: str = None
+        self,
+        hydro_combination_path: Path,
+        flood_model: str,
+        vectors: str = None
     ) -> None:
         """
         Change the elevation based on the vector.
@@ -242,10 +240,10 @@ class ElevationSolution():
         return vector_raster
 
     def increase_elevation(
-            self,
-            dem: xr.DataArray,
-            mask: np.ndarray,
-            value: float
+        self,
+        dem: xr.DataArray,
+        mask: np.ndarray,
+        value: float
     ):
         """
         Increase the elevation
@@ -273,11 +271,11 @@ class ElevationSolution():
         return increased_dem
 
     def decrease_elevation(
-            self,
-            dem: xr.DataArray,
-            mask: np.ndarray,
-            value: float,
-            distance: float = 0
+        self,
+        dem: xr.DataArray,
+        mask: np.ndarray,
+        value: float,
+        distance: float = 0
     ):
         """
         Decrease the elevation

@@ -26,7 +26,6 @@ from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
 
-
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
@@ -521,5 +520,6 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 
 
 if __name__ == '__main__':
-    gdf = gpd.read_file(r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example\polygons_vectors\whirinaki\polygons\polygons.shp")
+    gdf = gpd.read_file(
+        r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example\polygons_vectors\whirinaki\polygons\polygons.shp")
     whirinaki(None)

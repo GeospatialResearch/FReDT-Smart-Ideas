@@ -26,13 +26,13 @@ class PrecipitationGenerator():
     """This class is to generate precipitation"""
 
     def __init__(
-            self,
-            flood_model_path: Path,
-            precipitation_path: Path,
-            terrain_bounding_box: xr.Dataset,
-            start_time: datetime,
-            end_time: datetime,
-            crs: int = 2193
+        self,
+        flood_model_path: Path,
+        precipitation_path: Path,
+        terrain_bounding_box: xr.Dataset,
+        start_time: datetime,
+        end_time: datetime,
+        crs: int = 2193
     ) -> None:
         """
         Generate precipitation
@@ -92,8 +92,8 @@ class PrecipitationGenerator():
         return precipitation_subset
 
     def format_precipitation(
-            self,
-            precipitation_subset: xr.Dataset
+        self,
+        precipitation_subset: xr.Dataset
     ) -> xr.Dataset:
         """
         Format precipitation for easy processing, this includes:
@@ -132,8 +132,8 @@ class PrecipitationGenerator():
         return formatted_precipitation_subset
 
     def padding_box_generator(
-            self,
-            padding_value: int
+        self,
+        padding_value: int
     ) -> list[dict]:
         """
         Generate padding box to clip precipitation data
@@ -165,9 +165,9 @@ class PrecipitationGenerator():
         return padding_box
 
     def clip_precipitation(
-            self,
-            padding_value: int,
-            precipitation_data: xr.Dataset
+        self,
+        padding_value: int,
+        precipitation_data: xr.Dataset
     ) -> xr.Dataset:
         """
         Clip precipitation data, the steps include:
@@ -205,8 +205,8 @@ class PrecipitationGenerator():
         return clipped_precipitation
 
     def reproject_precipitation(
-            self,
-            precipitation_data: xr.Dataset
+        self,
+        precipitation_data: xr.Dataset
     ) -> xr.Dataset:
         """
         Reproject precipitation data
@@ -232,9 +232,9 @@ class PrecipitationGenerator():
         return reprojected_precipitation_data
 
     def write_out_precipitation(
-            self,
-            precipitation_path: Path,
-            precipitation_data: xr.Dataset
+        self,
+        precipitation_path: Path,
+        precipitation_data: xr.Dataset
     ):
         """
         Write out precipitation as netCDF file
@@ -253,8 +253,8 @@ class PrecipitationGenerator():
         )
 
     def format_each_precipitation_timestep(
-            self,
-            clipped_precipitation
+        self,
+        clipped_precipitation
     ):
         """
         Format each precipitation timestep from clipped precipitation data
@@ -378,9 +378,9 @@ class PrecipitationFloodModelGenerator():
     """This class is to generate precipitation for flood model"""
 
     def __init__(
-            self,
-            flood_model_path: Path,
-            combined_precipitation_data: xr.Dataset
+        self,
+        flood_model_path: Path,
+        combined_precipitation_data: xr.Dataset
     ) -> None:
         """
         Generate precipitaiton for flood model (LISFLOOD-FP).
@@ -397,8 +397,8 @@ class PrecipitationFloodModelGenerator():
         self.combined_precipitation_data = combined_precipitation_data
 
     def assign_each_precipitation_timestep(
-            self,
-            precipitation_var: netCDF4.Variable
+        self,
+        precipitation_var: netCDF4.Variable
     ) -> None:
         """
         Assign precipitation values to precipitation variable
@@ -500,5 +500,3 @@ class PrecipitationFloodModelGenerator():
 
         # Generate precipitation for flood model
         self.precipitation_generator()
-
-

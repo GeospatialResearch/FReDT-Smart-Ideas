@@ -27,7 +27,6 @@ from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_out
 from src.eddie_floodresilience.flood_model.flooded_buildings import (
     find_flooded_buildings, store_flooded_buildings_in_database)
 
-
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
