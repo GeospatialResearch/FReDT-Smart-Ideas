@@ -25,12 +25,12 @@ dependencies:
   - hydromt_wflow
   - whitebox_tools
   - pip:
-    - gwwapi
-    - hydroengine
-    - pyet
-    - xclim
-    - xsdba
-    - pykrige
-    - gstools
-    - whitebox
-    - whitebox-workflows
+      - gwwapi
+      - hydroengine
+      - pyet
+      - xclim
+      - xsdba
+      - pykrige
+      - gstools
+      - whitebox
+      - whitebox-workflows

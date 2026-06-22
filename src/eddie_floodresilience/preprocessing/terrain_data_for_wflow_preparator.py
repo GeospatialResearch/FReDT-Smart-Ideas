@@ -1,30 +1,31 @@
 """Generate data for wflow from terrain attributes generated before"""
 
+import logging
 import os
+from pathlib import Path
 from typing import Tuple
 
-from osgeo import gdal
-import rioxarray as rxr
-import xarray as xr
-import numpy as np
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 import pyflwdir
+import rioxarray as rxr
+import xarray as xr
 from hydromt import flw
 
-from pathlib import Path
-import logging
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
 
 class TerrainDataWflowPreparator:
     """This class is to prepare terrain data for wflow"""
 
     def __init__(
-            self,
-            path: Path,
-            origin_filename: str = '8m_geofabric'
+        self,
+        path: Path,
+        origin_filename: str = '8m_geofabric'
     ) -> None:
         """
         Prepare terrain data for wflow
@@ -75,7 +76,7 @@ class TerrainDataWflowPreparator:
         # Derive flow directions with outlets at the edges
         da_flwdir = flw.d8_from_dem(
             da_elv=self.ds_hydro_org.squeeze(),
-            max_depth=-1,    # max depression pour point depth; -1 means no local pits
+            max_depth=-1,  # max depression pour point depth; -1 means no local pits
             outlets="edge",  # option: "edge" (default), "min", "idxs_pit"
             idxs_pit=None,
             gdf_riv=self.gdf_riv_org,  # user supplied river network to aid flow direction derivation
@@ -99,13 +100,13 @@ class TerrainDataWflowPreparator:
         return flwdir, ds_hydro, dims
 
     def terrain_and_stream_generator(
-            self,
-            flwdir: pyflwdir.FlwdirRaster,
-            ds_hydro: xr.Dataset,
-            dims: tuple[str, ...],
-            long_name: str,
-            units: str,
-            variable_name: str
+        self,
+        flwdir: pyflwdir.FlwdirRaster,
+        ds_hydro: xr.Dataset,
+        dims: tuple[str, ...],
+        long_name: str,
+        units: str,
+        variable_name: str
     ) -> xr.Dataset:
         """
         Generate dataset of terrain and stream dataset
@@ -135,39 +136,38 @@ class TerrainDataWflowPreparator:
             terrain_data = flwdir.dem_adjust(
                 elevtn=self.ds_hydro_org.squeeze().values
             )
-            
+
             # Set up attributes
             attrs = {
                 "_FillValue": -9999,
                 "long_name": long_name,
                 "units": units
             }
-            
+
         elif variable_name == 'uparea':
             # Generate upstream area
             terrain_data = flwdir.upstream_area(
                 unit='km2'
             )
-            
+
             # Set up attributes
             attrs = {
                 "_FillValue": -9999,
                 "long_name": long_name,
                 "units": units
             }
-            
+
         else:
             # Generate stream order
             terrain_data = flwdir.stream_order()
-            
+
             # Set up attributes
             attrs = {
                 "_FillValue": np.uint8(225),
                 "long_name": long_name,
                 "units": units
             }
-            
-        
+
         # Add terrain/stream attribute
         ds_hydro[f'{variable_name}'] = xr.Variable(
             dims,
@@ -178,9 +178,9 @@ class TerrainDataWflowPreparator:
         return ds_hydro
 
     def slope_generator(
-            self,
-            ds_hydro: xr.Dataset,
-            dims: tuple[str, ...]
+        self,
+        ds_hydro: xr.Dataset,
+        dims: tuple[str, ...]
     ) -> xr.Dataset:
         """
         Generate terrain attributes - slope
@@ -222,10 +222,10 @@ class TerrainDataWflowPreparator:
         return ds_hydro
 
     def basin_generator(
-            self,
-            flwdir: pyflwdir.FlwdirRaster,
-            ds_hydro: xr.Dataset,
-            dims: tuple[str, ...]
+        self,
+        flwdir: pyflwdir.FlwdirRaster,
+        ds_hydro: xr.Dataset,
+        dims: tuple[str, ...]
     ) -> Tuple[xr.Dataset, gpd.GeoDataFrame]:
         """
         Generate terrain attributes - basin
@@ -271,9 +271,9 @@ class TerrainDataWflowPreparator:
         return ds_hydro, gdf_basins
 
     def write_out_hydro_dataset(
-            self,
-            ds_hydro: xr.Dataset,
-            gdf_basins: gpd.GeoDataFrame
+        self,
+        ds_hydro: xr.Dataset,
+        gdf_basins: gpd.GeoDataFrame
     ) -> None:
         """
         Generate terrain attributes - basin

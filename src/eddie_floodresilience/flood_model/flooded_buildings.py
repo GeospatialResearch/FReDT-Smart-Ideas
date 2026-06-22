@@ -138,9 +138,10 @@ def retrieve_building_outlines(conn: Connection, area_of_interest: gpd.GeoDataFr
     crs = area_of_interest.crs.to_epsg()
     # Construct the query to find buildings within the area of interest
     command_text = """
-    SELECT building_outline_id, geometry FROM nz_building_outlines
-    WHERE ST_INTERSECTS(nz_building_outlines.geometry, ST_GeomFromText(:aoi_wkt, :crs));
-    """
+                   SELECT building_outline_id, geometry
+                   FROM nz_building_outlines
+                   WHERE ST_INTERSECTS(nz_building_outlines.geometry, ST_GeomFromText(:aoi_wkt, :crs)); \
+                   """
     query = text(command_text).bindparams(
         aoi_wkt=str(aoi_wkt),
         crs=str(crs)

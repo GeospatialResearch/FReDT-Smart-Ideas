@@ -88,13 +88,13 @@ def create_building_layers(conn: Connection, workspace_name: str, data_store_nam
     # More complex layer that has to do dynamic sql queries against model output ID to fetch
     flood_status_layer_name = "building_flood_status"
     flooded_buildings_sql_query = """
-        SELECT *,
-               is_flooded::int AS is_flooded_int
-        FROM nz_building_outlines
-                 LEFT OUTER JOIN building_flood_status USING (building_outline_id)
-        WHERE building_outline_lifecycle ILIKE 'current'
-        AND flood_model_id=%scenario%
-    """
+                                  SELECT *,
+                                         is_flooded::int AS is_flooded_int
+                                  FROM nz_building_outlines
+                                           LEFT OUTER JOIN building_flood_status USING (building_outline_id)
+                                  WHERE building_outline_lifecycle ILIKE 'current'
+                                    AND flood_model_id = %scenario % \
+                                  """
     xml_escaped_sql = saxutils.escape(flooded_buildings_sql_query, entities={r"'": "&apos;", "\n": "&#xd;"})
 
     flood_status_xml_query = rf"""
@@ -179,9 +179,9 @@ def add_model_output_to_geoserver(model_output_path: pathlib.Path, model_id: int
     create_viridis_style_if_not_exists()
 
 
-def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path):
+def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path) -> None:
     """
-    Converts the ASCII raster (CRS=2193) to a GeoTiff file.
+    Convert an ASCII raster (CRS=2193) to a GeoTiff file.
 
     Parameters
     ----------
@@ -190,14 +190,13 @@ def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path):
     gtiff_filepath : pathlib.Path
         The path to the result GeoTiff file.
     """
-
     with rio.open(asc_path) as src:
         # Read the first band's data into a numpy array
         asc_data = src.read(1)
 
         # Extract metadata profile and update driver to GTiff
         meta = src.meta.copy()
-        meta.update(driver='GTiff', crs=rio.crs.CRS.from_epsg(2193))
+        meta.update(driver='GTiff', crs=rio.crs.CRS.from_epsg(2193))  # pylint: disable=c-extension-no-member
 
         # Write data to a new GTiff
         with rio.open(gtiff_filepath, 'w', **meta) as dst:

@@ -75,7 +75,7 @@ def cache_results(flood_model_id: int, scenario_options: dict) -> int:
 @app.task(base=OnFailureStateTask)
 def check_cache(scenario_options: dict) -> int | None:
     """
-    Checks cache table for model output generated from identical scenario_options, and finds matching model ID.
+    Check cache table for model output generated from identical scenario_options, and finds matching model ID.
 
     Parameters
     ----------
@@ -150,7 +150,7 @@ def read_location_geojson(location_geojson: str | None, landcover_name: str | No
         The landcover type to change landcover to.
 
     Returns
-    _______
+    -------
     gpd.GeoDataFrame
         The GeoDataFrame containing polygons with a column named "landcover_name".
 

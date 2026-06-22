@@ -1,15 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Tue Apr  7 10:28:16 2026
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: mng42
-"""
+"""This script formats and writes precipitation data for BG-Flood inputs."""
+# pylint: disable=duplicate-code
 
 from datetime import datetime
 import logging
 from pathlib import Path
-
-from osgeo import gdal # Import gdal before rasterio
 
 import netCDF4
 import numpy as np
@@ -25,7 +36,7 @@ log = logging.getLogger(__name__)
 
 class PrecipitationGenerator():
     """This class is to generate precipitation"""
-    
+
     def __init__(
         self,
         flood_model_path: Path,
@@ -59,7 +70,7 @@ class PrecipitationGenerator():
         self.start_time = start_time
         self.end_time = end_time
         self.crs = crs
-    
+
     def extract_precipitation_within_time(self) -> xr.Dataset:
         """
         Extract precipitation within given time
@@ -69,32 +80,31 @@ class PrecipitationGenerator():
         precipitation_subset : xr.Dataset
             Precipitation data within given time
         """
-        
         # Extract time information (month and year) from start_time.
         # This is just within a month.
         # But it should be able to read different months,
         # and it will be scripted in the future
         given_year = self.start_time.year
         given_month = f"{self.start_time.month:02d}"  # Ex: 01, 02, etc.
-        
+
         # Set up path to precipitation file
         precipitation_name = f"precipitation_nz_{given_year}{given_month}.nc"
         precipitation_given_time_path = self.precipitation_path / precipitation_name
-        
+
         # Read the precipitation file that contains given time
         precipitation_given_time = xr.open_dataset(precipitation_given_time_path)
-    
+
         # Extract precipitation within time
         precipitation_subset = precipitation_given_time.sel(
-                time=slice(self.start_time, self.end_time)
-            )
-        
+            time=slice(self.start_time, self.end_time)
+        )
+
         return precipitation_subset
-    
+
     def format_precipitation(
-            self,
-            precipitation_subset: xr.Dataset
-            ) -> xr.Dataset:
+        self,
+        precipitation_subset: xr.Dataset
+    ) -> xr.Dataset:
         """
         Format precipitation for easy processing, this includes:
             - rename variable
@@ -113,43 +123,43 @@ class PrecipitationGenerator():
         """
         # Rename variable
         precipitation_subset = precipitation_subset.rename({
-                'pr': 'rainfall_depth'
-            })
-        
+            'pr': 'rainfall_depth'
+        })
+
         # Set spatial dimensions
         precipitation_subset = precipitation_subset.rio.set_spatial_dims(
-                x_dim='lon',
-                y_dim='lat'
-            )
-        
+            x_dim='lon',
+            y_dim='lat'
+        )
+
         # Set crs to make sure the precipitation has crs
         precipitation_subset = precipitation_subset.rio.write_crs("EPSG:4326")
-        
+
         # Reproject crs
         formatted_precipitation_subset = precipitation_subset.rio.reproject("EPSG:2193")
-        
+
         return formatted_precipitation_subset
-        
+
     def padding_box_generator(
-            self,
-            padding_value: int
-        ) -> list[dict]:
+        self,
+        padding_value: int
+    ) -> list[dict]:
         """
         Generate padding box to clip precipitation data
-        
+
         Parameters
         ----------
-        padding_values: int
+        padding_value: int
             Value of padding
-        
+
         Returns
         -------
         terrain_padding_box : list[dict]
-            Padding box of terrain data. 
+            Padding box of terrain data.
             This is wider than bounding box.
         """
         xmin, ymin, xmax, ymax = self.terrain_bounding_box.bounds
-        
+
         padding_box = [{
             'type': 'Polygon',
             'coordinates': [[
@@ -160,20 +170,20 @@ class PrecipitationGenerator():
                 [xmin - padding_value, ymin - padding_value]
             ]]
         }]
-        
+
         return padding_box
-    
+
     def clip_precipitation(
-            self,
-            padding_value: int,
-            precipitation_data: xr.Dataset
-        ) -> xr.Dataset:
+        self,
+        padding_value: int,
+        precipitation_data: xr.Dataset
+    ) -> xr.Dataset:
         """
         Clip precipitation data, the steps include:
             - clip precipitation data
             - convert clipped values to float32
             - empty attributes of clipped precipitation
-        
+
         Parameters
         ----------
         padding_value : int
@@ -188,27 +198,27 @@ class PrecipitationGenerator():
         """
         # Generate padding box
         precipitation_padding_box = self.padding_box_generator(padding_value)
-        
+
         # Clip precipitation
         clipped_precipitation = precipitation_data.rio.clip(
             precipitation_padding_box, from_disk=True
         )
-        
+
         # Convert clipped values to float32 to easily procress in the future
         clipped_precipitation = clipped_precipitation.astype('float32')
-        
+
         # Empty attributes of precipitation data after clipping
         clipped_precipitation.attrs = {}
-        
+
         return clipped_precipitation
-    
+
     def reproject_precipitation(
-            self,
-            precipitation_data: xr.Dataset
-        ) -> xr.Dataset:
+        self,
+        precipitation_data: xr.Dataset
+    ) -> xr.Dataset:
         """
         Reproject precipitation data
-        
+
         Parameters
         ----------
         precipitation_data : xr.Dataset
@@ -225,17 +235,17 @@ class PrecipitationGenerator():
             resolution=8,  # 8m for now. It will be changed into coded resolution in the future
             resampling=Resampling.nearest
         )
-        
+
         return reprojected_precipitation_data
-    
+
     def write_out_precipitation(
-            self,
-            precipitation_path: Path,
-            precipitation_data: xr.Dataset
-        ):
+        self,
+        precipitation_path: Path,
+        precipitation_data: xr.Dataset
+    ) -> None:
         """
         Write out precipitation as netCDF file
-        
+
         Parameters
         ----------
         precipitation_path : Path
@@ -248,18 +258,18 @@ class PrecipitationGenerator():
             precipitation_path,
             engine='netcdf4'
         )
-            
+
     def format_each_precipitation_timestep(
-            self,
-            clipped_precipitation
-        ):
+        self,
+        clipped_precipitation: xr.Dataset
+    ) -> None:
         """
         Format each precipitation timestep from clipped precipitation data
 
         Parameters
         ----------
-        clipped_precipitation : TYPE
-            DESCRIPTION.
+        clipped_precipitation : xr.Dataset
+            The clipped precipitation data
 
         Returns
         -------
@@ -269,25 +279,24 @@ class PrecipitationGenerator():
         # Create fine precipitation folder
         fine_precipitation_folder = self.flood_model_path / "precipitation"
         fine_precipitation_folder.mkdir(
-            parents=True, 
+            parents=True,
             exist_ok=True
         )
-        
+
         # Loop through each precipitation time step to format and write out
         for i, t in tqdm(list(enumerate(clipped_precipitation.time)), desc="Formatting precipitation"):
-            
             # Extract each precipitation timestep
             each_precipitation_timestep = clipped_precipitation.sel(time=t)
-            
+
             # Reproject each precipitation timestep
             reprojected_each_precipitation_timestep = self.reproject_precipitation(each_precipitation_timestep)
-            
+
             # Clip each precipitation timestep
             clipped_reprojected_each_precipitation_timestep = self.clip_precipitation(
                 1160,  # This value is constant
                 reprojected_each_precipitation_timestep
             )
-            
+
             # Write out to precipitation folder
             fine_precipitation_path = fine_precipitation_folder / f"precipitation_{i:03d}.nc"
             self.write_out_precipitation(
@@ -306,15 +315,15 @@ class PrecipitationGenerator():
         """
         # Collect files of all precipitation timesteps
         precipitation_timesteps_files = sorted(
-            self.flood_model_path.glob("precipitation/precipitation_*.nc")    
+            self.flood_model_path.glob("precipitation/precipitation_*.nc")
         )
-        
+
         return precipitation_timesteps_files
-            
+
     def combine_precipitation_timesteps(self) -> xr.Dataset:
         """
         Read and write out all precipitation timesteps into one precipitation data
-        
+
         Returns
         -------
         combined_precipitation_timestep : xr.Dataset
@@ -323,16 +332,16 @@ class PrecipitationGenerator():
         log.info("Combining all precipitation timesteps")
         # Collect all files of precipitation timesteps
         precipitation_timesteps_files = self.collect_precipitation_timesteps()
-        
+
         # Read/combine all files of precipitation timesteps
         combined_precipitation_timesteps = xr.open_mfdataset(
             precipitation_timesteps_files,
             combine='nested',
             concat_dim='time'
         )
-        
+
         return combined_precipitation_timesteps
-    
+
     def precipitation_data_generator(self) -> xr.Dataset:
         """
         Generate precipitation data for flood model (LISFLOOD-FP)
@@ -342,36 +351,36 @@ class PrecipitationGenerator():
         combined_precipitation_timesteps : xr.Dataset
             Precipitation that combines all timesteps
         """
-        ## Clip coarse precipitation before fine resolution
+        # Clip coarse precipitation before fine resolution
         # Extract precipitation within given time
         coarse_precipitation_subset = self.extract_precipitation_within_time()
-        
+
         # Format coarse precipitation
         formatted_coarse_precipitation_subset = self.format_precipitation(coarse_precipitation_subset)
-        
+
         # Clip coarse precipitation
         clipped_coarse_precipitation = self.clip_precipitation(
             12600,
             formatted_coarse_precipitation_subset
         )
-        
+
         # Format each precipitation timestep
         self.format_each_precipitation_timestep(clipped_coarse_precipitation)
-        
+
         # Generate precipitation data that combines all timesteps
         combined_precipitation_timesteps = self.combine_precipitation_timesteps()
-        
+
         return combined_precipitation_timesteps
-        
-       
+
+
 class PrecipitationFloodModelGenerator():
     """This class is to generate precipitation for flood model"""
-    
+
     def __init__(
-            self,
-            flood_model_path: Path,
-            combined_precipitation_data: xr.Dataset
-        ) -> None:
+        self,
+        flood_model_path: Path,
+        combined_precipitation_data: xr.Dataset
+    ) -> None:
         """
         Generate precipitaiton for flood model (LISFLOOD-FP).
         The outfile_precipitation variable will be used throughout this class
@@ -381,15 +390,15 @@ class PrecipitationFloodModelGenerator():
         flood_model_path : Path
             Directory to folder storing flood model data
         combined_precipitation_data : xr.Dataset
-            Precipitation data where all timesteps are combined and processed 
+            Precipitation data where all timesteps are combined and processed.
         """
         self.flood_model_path = flood_model_path
         self.combined_precipitation_data = combined_precipitation_data
-    
+
     def assign_each_precipitation_timestep(
-            self,
-            precipitation_var: netCDF4.Variable
-        ) -> None:
+        self,
+        precipitation_var: netCDF4.Variable  # pylint: disable=no-member
+    ) -> None:
         """
         Assign precipitation values to precipitation variable
 
@@ -398,39 +407,24 @@ class PrecipitationFloodModelGenerator():
         precipitation_var : netCDF4.Variable
             Precipitation variable that needs assigning values separately
         """
-        
         for i, t in tqdm(
             list(enumerate(self.combined_precipitation_data.time)),
             desc="Converting precipitation units to mm/hr"
         ):
             # Extract each precipitation timesteps
             each_precipitation_timestep = self.combined_precipitation_data.sel(time=t)['rainfall_depth']
-            
+
             # Convert units to mm/hr
             each_precipitation_timestep = each_precipitation_timestep.astype('float32') * 3600
-            
+
             # Write to precipitation variable
             precipitation_var[i, :, :] = each_precipitation_timestep.values
-        
-    def precipitation_generator(self) -> netCDF4.Variable:
-        """
-        Generate variables of outfile precipitation
 
-        Parameters
-        ----------
-        outfile_precipitation : netCDF4.Dataset
-            Precipitation data written out as netCDF file with dimensions
-        outfile_precipitation_time : int
-            Time variable of outfile precipitation
-
-        Returns
-        -------
-        precipitation_var : netCDF4.Variable
-            Precipitation variable that needs assigning values separately
-        """
+    def precipitation_generator(self) -> None:  # pylint: disable=no-member
+        """Generate variables of outfile precipitation."""
         # Open netCDF precipitation file
         outfile_precipitation_path = self.flood_model_path / "precipitation_dynamic.nc"
-        outfile_precipitation = netCDF4.Dataset(
+        outfile_precipitation = netCDF4.Dataset(  # pylint: disable=no-member
             outfile_precipitation_path,
             'w', format='NETCDF4'
         )
@@ -439,7 +433,7 @@ class PrecipitationFloodModelGenerator():
         outfile_precipitation_x = self.combined_precipitation_data.x.size
         outfile_precipitation_y = self.combined_precipitation_data.y.size
         outfile_precipitation_time = self.combined_precipitation_data.time.size
-        
+
         # Generate dimensions in precipitation netCDF file
         outfile_precipitation.createDimension(
             'time',
@@ -453,7 +447,7 @@ class PrecipitationFloodModelGenerator():
             'y',
             outfile_precipitation_y
         )
-        
+
         # Create variables
         time_var = outfile_precipitation.createVariable(
             'time', 'float32', ('time',)
@@ -476,12 +470,12 @@ class PrecipitationFloodModelGenerator():
         time_var.axis = 'T'
         x_var.axis = 'X'
         y_var.axis = 'Y'
-        
+
         # Assign values
         time_var[:] = np.arange(outfile_precipitation_time)
         x_var[:] = self.combined_precipitation_data.x.values
         y_var[:] = self.combined_precipitation_data.y.values
-        
+
         # Assign each precipitation timestep
         self.assign_each_precipitation_timestep(precipitation_var)
 
@@ -489,12 +483,6 @@ class PrecipitationFloodModelGenerator():
         outfile_precipitation.close()
         log.info(f"Finished writing precipitation data {outfile_precipitation_path}")
 
-            
     def precipitation_for_flood_model_generator(self) -> None:
         """Generate precipitation for flood model (LISFLOOD-FP)"""
-        
-        # Generate precipitation for flood model
         self.precipitation_generator()
-
-        
-        
