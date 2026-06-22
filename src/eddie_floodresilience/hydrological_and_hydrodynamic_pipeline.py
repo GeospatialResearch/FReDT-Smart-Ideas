@@ -339,10 +339,10 @@ class HydrologicalAndHydrodynamicPipeline:
         # (this would be for both landcover and elevation solutions)
         if self.polygons is not None:
             # Apply solutions
-            self.total_solutions()
+            # self.total_solutions()
 
             # Generate wflow data
-            self.wflow_data_pipeline()
+            # self.wflow_data_pipeline()
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline()
@@ -350,7 +350,7 @@ class HydrologicalAndHydrodynamicPipeline:
         # Apply elevation solution
         elif self.vectors is not None:
             # Apply solutions
-            self.total_solutions()
+            # self.total_solutions()
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline()
@@ -358,10 +358,10 @@ class HydrologicalAndHydrodynamicPipeline:
         # Original scenario
         else:
             # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # self.terrain_data_pipeline()
 
             # Generate wflow data
-            self.wflow_data_pipeline()
+            # self.wflow_data_pipeline()
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline()
@@ -589,7 +589,8 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 
 if __name__ == '__main__':
     gdf = gpd.read_file(
-        r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example\polygons_vectors\
-        whirinaki\polygons\polygons.shp"
+        r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example"
+        r"\polygons_vectors\whirinaki\polygons\polygons.shp"
     )
     whirinaki(None)
+    whirinaki(gdf)
