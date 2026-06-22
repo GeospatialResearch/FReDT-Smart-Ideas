@@ -27,7 +27,7 @@ from newzealidar.utils import get_dem_band_and_resolution_by_geometry
 import numpy as np
 import pandas as pd
 import pyproj
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 import xarray as xr
 
 from src.eddie_floodresilience.dynamic_boundary_conditions.river import align_rec_osm
@@ -126,7 +126,7 @@ def get_min_elevation_river_input_point(rec_inflows_row: pd.Series, hydro_dem: x
 
 
 def get_rec_inflows_with_input_points(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame,
         rec_network_data: gpd.GeoDataFrame,
         distance_m: int = 300) -> gpd.GeoDataFrame:
@@ -137,8 +137,8 @@ def get_rec_inflows_with_input_points(
 
     Parameters
     -----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     rec_network_data : gpd.GeoDataFrame
@@ -161,25 +161,24 @@ def get_rec_inflows_with_input_points(
     # Obtain data for REC river inflow segments whose boundary points align with the boundary points of OSM waterways
     # within a specified distance threshold
     aligned_rec_inflows = align_rec_osm.get_rec_inflows_aligned_to_osm(
-        engine, catchment_area, rec_network_data, distance_m)
+        conn, catchment_area, rec_network_data, distance_m)
 
     log.info("Determining the river input points used for the BG-Flood model.")
     # Get the boundary lines of the Hydrologically Conditioned DEM
-    dem_boundary_lines = process_hydro_dem.get_hydro_dem_boundary_lines(engine, catchment_area)
+    dem_boundary_lines = process_hydro_dem.get_hydro_dem_boundary_lines(conn, catchment_area)
     # Perform a spatial join between the REC inflow data and the Hydro DEM boundary lines
     rec_inflows = gpd.sjoin(aligned_rec_inflows, dem_boundary_lines, how="left", predicate="intersects")
     # Merge with the Hydro DEM boundary lines data and remove unnecessary columns
     rec_inflows = rec_inflows.merge(dem_boundary_lines, on="dem_boundary_line_no", how="left")
     rec_inflows = rec_inflows.drop(columns=["index_right"])
     # Retrieve the Hydro DEM data and resolution for the specified catchment area
-    hydro_dem, res_no = get_dem_band_and_resolution_by_geometry(engine, catchment_area)
+    hydro_dem, res_no = get_dem_band_and_resolution_by_geometry(conn, catchment_area)
     # Buffer the Hydro DEM boundary lines using the Hydro DEM resolution
     rec_inflows["dem_boundary_line_buffered"] = rec_inflows["dem_boundary_line"].buffer(distance=res_no, cap_style=2)
     # Add the Hydro DEM resolution information
     rec_inflows["dem_resolution"] = res_no
-    # Create an empty GeoDataFrame to store REC inflows input
-    rec_inflows_w_input_points = gpd.GeoDataFrame()
     # Iterate through each row in the 'rec_inflows' GeoDataFrame
+    rows_to_add = []
     for _, row in rec_inflows.iterrows():
         # Locate the river input point used for BG-Flood model river input from the Hydro DEM
         river_input_point = get_min_elevation_river_input_point(row, hydro_dem)
@@ -187,11 +186,10 @@ def get_rec_inflows_with_input_points(
         row['dem_elevation'] = river_input_point['dem_elevation'][0]
         # Assign the river input point geometry to the 'river_input_point' column in the current 'row'
         row['river_input_point'] = river_input_point['river_input_point'][0]
-        # Append the updated 'row' to the 'rec_inflows_w_input_points' GeoDataFrame
-        rec_inflows_w_input_points = rec_inflows_w_input_points.append(row, ignore_index=True)
-    # Set 'river_input_point' as the geometry column and maintain the same CRS
-    rec_inflows_w_input_points = gpd.GeoDataFrame(
-        rec_inflows_w_input_points, geometry="river_input_point", crs=rec_inflows.crs)
+        # Append the updated 'row' to the list used to create the 'rec_inflows_w_input_points' GeoDataFrame
+        rows_to_add.append(row)
+    # Create an GeoDataFrame from the list to store REC inflows input
+    rec_inflows_w_input_points = gpd.GeoDataFrame(rows_to_add, geometry="river_input_point", crs=rec_inflows.crs)
     # Reset the index to ensure a clean sequential order
     rec_inflows_w_input_points = rec_inflows_w_input_points.reset_index(drop=True)
     return rec_inflows_w_input_points

@@ -84,29 +84,30 @@ def main(
     setup_logging(log_level)
     # Connect to the database
     engine = setup_environment.get_database()
-    # Get catchment area
-    catchment_area = get_catchment_area(selected_polygon_gdf, to_crs=4326)
+    with engine.connect() as conn:
+        # Get catchment area
+        catchment_area = get_catchment_area(selected_polygon_gdf, to_crs=4326)
 
-    # BG-Flood Model Directory
-    bg_flood_dir = config.EnvVariable.FLOOD_MODEL_DIR
-    # Remove any existing rainfall model inputs in the BG-Flood directory
-    rainfall_model_input.remove_existing_rain_inputs(bg_flood_dir)
+        # BG-Flood Model Directory
+        bg_flood_dir = config.EnvVariable.FLOOD_MODEL_DIR
+        # Remove any existing rainfall model inputs in the BG-Flood directory
+        rainfall_model_input.remove_existing_rain_inputs(bg_flood_dir)
 
-    # Fetch rainfall sites data from the HIRDS website and store it to the database
-    rainfall_sites.rainfall_sites_to_db(engine)
+        # Fetch rainfall sites data from the HIRDS website and store it to the database
+        rainfall_sites.rainfall_sites_to_db(conn)
 
-    # Compute the coverage areas (Thiessen Polygons) for all rainfall sites across NZ and store them in the database
-    thiessen_polygons.thiessen_polygons_to_db(engine)
+        # Compute the coverage areas (Thiessen Polygons) for all rainfall sites across NZ and store them in the database
+        thiessen_polygons.thiessen_polygons_to_db(conn)
 
-    # Get rainfall sites coverage areas (Thiessen Polygons) that intersect or are within the catchment area
-    sites_in_catchment = thiessen_polygons.thiessen_polygons_from_db(engine, catchment_area)
-    # Fetch and store rainfall depth data for all sites within the catchment area in the database
-    hirds_rainfall_data_to_db.rainfall_data_to_db(engine, sites_in_catchment, idf=False)
+        # Get rainfall sites coverage areas (Thiessen Polygons) that intersect or are within the catchment area
+        sites_in_catchment = thiessen_polygons.thiessen_polygons_from_db(conn, catchment_area)
+        # Fetch and store rainfall depth data for all sites within the catchment area in the database
+        hirds_rainfall_data_to_db.rainfall_data_to_db(conn, sites_in_catchment, idf=False)
 
-    # Retrieve rainfall depth data from the database for all sites within the catchment area based on a
-    # user-requested scenario
-    rain_depth_in_catchment = hirds_rainfall_data_from_db.rainfall_data_from_db(
-        engine, sites_in_catchment, rcp, time_period, ari, idf=False)
+        # Retrieve rainfall depth data from the database for all sites within the catchment area based on a
+        # user-requested scenario
+        rain_depth_in_catchment = hirds_rainfall_data_from_db.rainfall_data_from_db(
+            conn, sites_in_catchment, rcp, time_period, ari, idf=False)
 
     # Get hyetograph data for all sites within the catchment area
     hyetograph_data = hyetograph.get_hyetograph_data(

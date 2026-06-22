@@ -1,0 +1,36 @@
+name: wflow_005_003
+channels:
+  - conda-forge
+dependencies:
+  - cdsapi
+  - pcraster
+  - wradlib
+  - xarray
+  - netCDF4
+  - rioxarray
+  - rasterio
+  - geopandas >= 0.13
+  - pyogrio
+  - matplotlib
+  - numpy
+  - pandas=1.5.3
+  - hdf5
+  - h5py
+  - gdal=3.6.2
+  - dask >= 2023.6.0
+  - distributed >= 2023.6.0
+  - ipykernel
+  - spyder-kernels=3.0
+  - pip
+  - hydromt_wflow
+  - whitebox_tools
+  - pip:
+      - gwwapi
+      - hydroengine
+      - pyet
+      - xclim
+      - xsdba
+      - pykrige
+      - gstools
+      - whitebox
+      - whitebox-workflows

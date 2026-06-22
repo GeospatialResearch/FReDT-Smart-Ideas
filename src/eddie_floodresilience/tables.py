@@ -43,7 +43,7 @@ class RiverNetworkExclusions(Base):
     """  # pylint: disable=too-few-public-methods
 
     __tablename__ = "rec_network_exclusions"
-    rec_network_id = Column(Integer, primary_key=True,
+    rec_network_id = Column(Integer, primary_key=True, autoincrement=True,
                             comment="An identifier for the river network associated with each run")
     objectid = Column(Integer, primary_key=True,
                       comment="An identifier for the REC river object matching from the 'rec_data' table")

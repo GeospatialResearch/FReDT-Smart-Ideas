@@ -29,7 +29,7 @@ from typing import Dict
 import geopandas as gpd
 import pandas as pd
 import requests
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 from sqlalchemy.sql import text
 
 from eddie.digitaltwin import tables
@@ -142,36 +142,36 @@ def get_slr_data_from_takiwa() -> gpd.GeoDataFrame:
     return slr_nz_with_geom
 
 
-def store_slr_data_to_db(engine: Engine) -> None:
+def store_slr_data_to_db(conn: Connection) -> None:
     """
     Store sea level rise data to the database.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     """
     # Define the table name for storing the sea level rise data
     table_name = "sea_level_rise"
     # Check if the table already exists in the database
-    if tables.check_table_exists(engine, table_name):
+    if tables.check_table_exists(conn, table_name):
         log.info(f"'{table_name}' data already exists in the database.")
     else:
         # Read sea level rise data from the NZ Sea level rise datasets
         slr_nz = get_slr_data_from_takiwa()
         # Store the sea level rise data to the database table
         log.info(f"Adding '{table_name}' data to the database.")
-        slr_nz.to_postgis(table_name, engine, index=False, if_exists="replace")
+        slr_nz.to_postgis(table_name, conn, index=False, if_exists="replace")
 
 
-def get_closest_slr_data(engine: Engine, single_query_loc: pd.Series) -> gpd.GeoDataFrame:
+def get_closest_slr_data(conn: Connection, single_query_loc: pd.Series) -> gpd.GeoDataFrame:
     """
     Retrieve the closest sea level rise data for a single query location from the database.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     single_query_loc : pd.Series
         Pandas Series containing the location coordinate and additional information used for retrieval.
 
@@ -207,20 +207,20 @@ def get_closest_slr_data(engine: Engine, single_query_loc: pd.Series) -> gpd.Geo
         geom=str(query_loc_geom["geometry"][0])
     )
     # Execute the query and retrieve the data as a GeoDataFrame
-    query_data = gpd.GeoDataFrame.from_postgis(query, engine, geom_col="geometry")
+    query_data = gpd.GeoDataFrame.from_postgis(query, conn, geom_col="geometry")
     # Add the position information to the retrieved data
     query_data["position"] = single_query_loc["position"]
     return query_data
 
 
-def get_slr_data_from_db(engine: Engine, tide_data: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def get_slr_data_from_db(conn: Connection, tide_data: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Retrieve the closest sea level rise data from the database for all locations in the provided tide data.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     tide_data : gpd.GeoDataFrame
         A GeoDataFrame containing tide data with added time information (seconds, minutes, hours) and location details.
 
@@ -237,7 +237,7 @@ def get_slr_data_from_db(engine: Engine, tide_data: gpd.GeoDataFrame) -> gpd.Geo
     # Iterate over each query location
     for _, row in tide_data_loc.iterrows():
         # Retrieve the closest sea level rise data from the database for the current query location
-        query_loc_data = get_closest_slr_data(engine, row)
+        query_loc_data = get_closest_slr_data(conn, row)
         # Add a column to the retrieved data to store the geometry of the tide data location
         query_loc_data["tide_data_loc"] = row["geometry"]
         # Concatenate the closest sea level rise data for the query location with the overall sea level rise data

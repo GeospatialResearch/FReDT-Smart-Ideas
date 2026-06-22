@@ -25,7 +25,7 @@ import logging
 import geopandas as gpd
 from geovoronoi import points_to_coords, voronoi_regions_from_coords
 import pandas as pd
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 from sqlalchemy.sql import text
 
 from eddie.digitaltwin import tables
@@ -34,14 +34,14 @@ from eddie.digitaltwin.utils import get_nz_boundary
 log = logging.getLogger(__name__)
 
 
-def get_sites_within_aoi(engine: Engine, area_of_interest: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def get_sites_within_aoi(conn: Connection, area_of_interest: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Get all rainfall sites within the area of interest from the database and return the required data as a GeoDataFrame.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     area_of_interest : gpd.GeoDataFrame
         A GeoDataFrame representing the area of interest.
 
@@ -60,7 +60,7 @@ def get_sites_within_aoi(engine: Engine, area_of_interest: gpd.GeoDataFrame) -> 
     """
     query = text(command_text).bindparams(aoi_polygon=str(aoi_polygon))
     # Execute the query and retrieve the results as a GeoDataFrame
-    sites_in_aoi = gpd.GeoDataFrame.from_postgis(query, engine, geom_col="geometry", crs=4326)
+    sites_in_aoi = gpd.GeoDataFrame.from_postgis(query, conn, geom_col="geometry", crs=4326)
     # Reset the index
     sites_in_aoi.reset_index(drop=True, inplace=True)
     return sites_in_aoi
@@ -117,41 +117,41 @@ def thiessen_polygons_calculator(
     return rainfall_sites_voronoi
 
 
-def thiessen_polygons_to_db(engine: Engine) -> None:
+def thiessen_polygons_to_db(conn: Connection) -> None:
     """
     Store the data representing the Thiessen polygons, site information, and the area covered by
     each rainfall site in the database.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     """
     table_name = "rainfall_sites_voronoi"
     # Check if the table already exists in the database
-    if tables.check_table_exists(engine, table_name):
+    if tables.check_table_exists(conn, table_name):
         log.info(f"'{table_name}' data already exists in the database.")
     else:
         # Get the boundary of New Zealand
-        nz_boundary = get_nz_boundary(engine, to_crs=4326)
+        nz_boundary = get_nz_boundary(conn, to_crs=4326)
         # Get all rainfall sites within the boundary of New Zealand from the database
-        sites_in_nz = get_sites_within_aoi(engine, nz_boundary)
+        sites_in_nz = get_sites_within_aoi(conn, nz_boundary)
         # Calculate the Thiessen polygons, i.e. the area covered by each rainfall site
         log.info(f"Calculating '{table_name}'.")
         rainfall_sites_voronoi = thiessen_polygons_calculator(nz_boundary, sites_in_nz)
         # Store the Thiessen polygons data in the database
         log.info(f"Adding '{table_name}' data to the database.")
-        rainfall_sites_voronoi.to_postgis(f"{table_name}", engine, if_exists="replace")
+        rainfall_sites_voronoi.to_postgis(f"{table_name}", conn, if_exists="replace")
 
 
-def thiessen_polygons_from_db(engine: Engine, catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def thiessen_polygons_from_db(conn: Connection, catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Get rainfall sites coverage areas (Thiessen polygons) that intersect or are within the catchment area.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
 
@@ -175,7 +175,7 @@ def thiessen_polygons_from_db(engine: Engine, catchment_area: gpd.GeoDataFrame) 
     # Retrieve the data from the database
     sites_in_catchment = gpd.GeoDataFrame.from_postgis(
         query,
-        engine,
+        conn,
         geom_col="geometry", crs=4326
     )
     # Reset the index

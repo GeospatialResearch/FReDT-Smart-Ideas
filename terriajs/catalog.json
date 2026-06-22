@@ -1,0 +1,50 @@
+{
+  "homeCamera": {
+    "west": 168.384,
+    "south": -46.383,
+    "east": 169.405,
+    "north": -46.035
+  },
+  "catalog": [
+    {
+      "type": "group",
+      "name": "Model land cover change flood scenarios",
+      "isOpen": true,
+      "members": [
+        {
+          "type": "wps",
+          "name": "Mataura 2020 Baseline",
+          "description": "Model a land cover change scenario that will impact the flood scenario",
+          "url": "$BACKEND_URL/wps",
+          "identifier": "mataura2020baseline"
+        },
+        {
+          "type": "wps",
+          "name": "Mataura 2020 Land Cover Change",
+          "description": "Model a land cover change scenario that will impact the flood scenario",
+          "url": "$BACKEND_URL/wps",
+          "identifier": "mataura2020"
+        }
+      ]
+    }
+  ],
+  "baseMaps": {
+    "items": [
+      {
+        "item": {
+          "id": "basemap-linz-aerial",
+          "type": "wmts",
+          "url": "https://basemaps.linz.govt.nz/v1/tiles/aerial/WebMercatorQuad/WMTSCapabilities.xml?api=c01k0qh9ca8rae7b5wm22g5b9eg",
+          "layer": "aerial"
+        },
+        "image": "https://basemaps.linz.govt.nz/favicon-32x32.png"
+      }
+    ],
+    "enabledBaseMaps": [
+      "basemap-linz-aerial",
+      "basemap-openstreetmap"
+    ],
+    "defaultBaseMapId": "basemap-linz-aerial",
+    "previewBaseMapId": "basemap-openstreetmap"
+  }
+}

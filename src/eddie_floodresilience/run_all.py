@@ -21,8 +21,6 @@ import pathlib
 from eddie.digitaltwin import cache_new_results, retrieve_from_instructions
 from eddie.digitaltwin.utils import LogLevel
 from eddie.run_all import create_sample_polygon, main
-from src.eddie_floodresilience.dynamic_boundary_conditions.rainfall import main_rainfall
-from src.eddie_floodresilience.dynamic_boundary_conditions.rainfall.rainfall_enum import HyetoMethod, RainInputType
 from src.eddie_floodresilience.dynamic_boundary_conditions.river import main_river
 from src.eddie_floodresilience.dynamic_boundary_conditions.river.river_enum import BoundType
 from src.eddie_floodresilience.dynamic_boundary_conditions.tide import main_tide_slr
@@ -34,17 +32,6 @@ DEFAULT_MODULES_TO_PARAMETERS = {
         "instruction_json_path": pathlib.Path("src/eddie_floodresilience/static_boundary_instructions.json").as_posix()
     },
     process_hydro_dem: {
-        "log_level": LogLevel.INFO
-    },
-    main_rainfall: {
-        "rcp": 2.6,
-        "time_period": "2031-2050",
-        "ari": 100,
-        "storm_length_mins": 2880,
-        "time_to_peak_mins": 1440,
-        "increment_mins": 10,
-        "hyeto_method": HyetoMethod.ALT_BLOCK,
-        "input_type": RainInputType.UNIFORM,
         "log_level": LogLevel.INFO
     },
     main_tide_slr: {

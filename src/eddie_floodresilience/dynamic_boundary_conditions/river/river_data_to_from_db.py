@@ -24,7 +24,7 @@ import logging
 
 import geopandas as gpd
 import pandas as pd
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 from sqlalchemy.sql import text
 
 from eddie.digitaltwin.tables import check_table_exists
@@ -33,37 +33,37 @@ from src.eddie_floodresilience.dynamic_boundary_conditions.river import river_da
 log = logging.getLogger(__name__)
 
 
-def store_rec_data_to_db(engine: Engine) -> None:
+def store_rec_data_to_db(conn: Connection) -> None:
     """
     Store REC data in the database.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     """
     # Define the table name for storing the REC data
     table_name = "rec_data"
     # Check if the table already exists in the database
-    if check_table_exists(engine, table_name):
+    if check_table_exists(conn, table_name):
         log.info(f"'{table_name}' already exists in the database.")
     else:
         # Retrieve REC data from NIWA's OpenData API
-        rec_data = river_data_from_niwa.fetch_rec_data_from_niwa(engine)
+        rec_data = river_data_from_niwa.fetch_rec_data_from_niwa(conn)
         # Store the REC data to the database table
         log.info(f"Adding '{table_name}' to the database.")
-        rec_data.to_postgis(table_name, engine, index=False, if_exists="replace")
+        rec_data.to_postgis(table_name, conn, index=False, if_exists="replace")
         log.info(f"Successfully added '{table_name}' to the database.")
 
 
-def get_sdc_data_from_db(engine: Engine, catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def get_sdc_data_from_db(conn: Connection, catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Retrieve sea-draining catchment data from the database that intersects with the given catchment area.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
 
@@ -84,12 +84,12 @@ def get_sdc_data_from_db(engine: Engine, catchment_area: gpd.GeoDataFrame) -> gp
         catchment_polygon=str(catchment_polygon)
     )
     # Execute the query and create a GeoDataFrame from the result
-    sdc_data = gpd.GeoDataFrame.from_postgis(sea_drain_query, engine, geom_col="geometry")
+    sdc_data = gpd.GeoDataFrame.from_postgis(sea_drain_query, conn, geom_col="geometry")
     return sdc_data
 
 
 def get_rec_data_with_sdc_from_db(
-    engine: Engine,
+    conn: Connection,
     catchment_area: gpd.GeoDataFrame,
     river_network_id: int
 ) -> gpd.GeoDataFrame:
@@ -101,8 +101,8 @@ def get_rec_data_with_sdc_from_db(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     river_network_id : int
@@ -115,7 +115,7 @@ def get_rec_data_with_sdc_from_db(
         that identifies the associated sea-draining catchment for each REC geometry.
     """
     # Get sea-draining catchment data from the database
-    sdc_data = get_sdc_data_from_db(engine, catchment_area)
+    sdc_data = get_sdc_data_from_db(conn, catchment_area)
     # Unify the sea-draining catchment polygons into a single polygon
     sdc_polygon = sdc_data.unary_union
     # Create a GeoDataFrame representing the unified sea-draining catchment area
@@ -132,7 +132,7 @@ def get_rec_data_with_sdc_from_db(
         combined_polygon=str(combined_polygon)
     )
     # Execute the query and retrieve the REC data from the database
-    rec_data = gpd.GeoDataFrame.from_postgis(rec_query, engine, geom_col="geometry")
+    rec_data = gpd.GeoDataFrame.from_postgis(rec_query, conn, geom_col="geometry")
     # Determine the sea-draining catchment for each REC geometry (using the 'within' predicate)
     rec_data_join_sdc = (
         gpd.sjoin(rec_data, sdc_data[["catch_id", "geometry"]], how="left", predicate="within")
@@ -147,6 +147,6 @@ def get_rec_data_with_sdc_from_db(
     # Get the object IDs of REC geometries that are not fully contained within sea-draining catchments
     rec_network_exclusions = rec_data_join_sdc[rec_data_join_sdc["catch_id"].isna()].reset_index(drop=True)
     # Add excluded REC geometries in the River Network to the relevant database table
-    river_network_to_from_db.add_network_exclusions_to_db(engine, river_network_id, rec_network_exclusions,
+    river_network_to_from_db.add_network_exclusions_to_db(conn, river_network_id, rec_network_exclusions,
                                                           exclusion_cause="crossing multiple sea-draining catchments")
     return rec_data_with_sdc

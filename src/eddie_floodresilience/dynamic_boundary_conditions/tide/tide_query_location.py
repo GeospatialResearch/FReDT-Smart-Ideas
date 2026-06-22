@@ -21,7 +21,7 @@ import logging
 
 import geopandas as gpd
 from shapely.geometry import LineString, Point
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 from sqlalchemy.sql import text
 
 log = logging.getLogger(__name__)
@@ -32,15 +32,15 @@ class NoTideDataException(Exception):
 
 
 def get_regional_council_clipped_from_db(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Retrieve regional council clipped data from the database based on the catchment area.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
 
@@ -61,12 +61,12 @@ def get_regional_council_clipped_from_db(
         catchment_polygon=str(catchment_polygon)
     )
     # Execute the query and retrieve the result as a GeoDataFrame
-    regions_clipped = gpd.GeoDataFrame.from_postgis(query, engine, geom_col="geometry")
+    regions_clipped = gpd.GeoDataFrame.from_postgis(query, conn, geom_col="geometry")
     return regions_clipped
 
 
 def get_nz_coastline_from_db(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame,
         distance_km: int = 1) -> gpd.GeoDataFrame:
     """
@@ -74,8 +74,8 @@ def get_nz_coastline_from_db(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     distance_km : int = 1
@@ -101,7 +101,7 @@ def get_nz_coastline_from_db(
         catchment_area_buffered_polygon=str(catchment_area_buffered_polygon)
     )
     # Execute the query and retrieve the result as a GeoDataFrame
-    coastline = gpd.GeoDataFrame.from_postgis(query, engine, geom_col="geometry")
+    coastline = gpd.GeoDataFrame.from_postgis(query, conn, geom_col="geometry")
     return coastline
 
 
@@ -240,7 +240,7 @@ def get_non_intersection_centroid_position(
 
 
 def get_tide_query_locations(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame,
         distance_km: int = 1) -> gpd.GeoDataFrame:
     """
@@ -248,8 +248,8 @@ def get_tide_query_locations(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     distance_km : int = 1
@@ -267,13 +267,13 @@ def get_tide_query_locations(
     """
     log.info("Identifying query locations used for fetching 'tide' data from NIWA.")
     # Get the regional council clipped data for the catchment area
-    regions_clipped = get_regional_council_clipped_from_db(engine, catchment_area)
+    regions_clipped = get_regional_council_clipped_from_db(conn, catchment_area)
     # Determine the non-intersection area
     non_intersection_area = catchment_area.overlay(regions_clipped, how='difference')
     # Check if there is no non-intersection area
     if non_intersection_area.empty:
         # Get the New Zealand coastline data within the specified distance of the catchment area
-        coastline = get_nz_coastline_from_db(engine, catchment_area, distance_km)
+        coastline = get_nz_coastline_from_db(conn, catchment_area, distance_km)
         # Check if coastline data is empty
         if coastline.empty:
             # If no coastline is found, raise an exception

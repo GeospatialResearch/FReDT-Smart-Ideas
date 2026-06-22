@@ -22,7 +22,6 @@ from typing import Union
 
 import numpy as np
 import pandas as pd
-import plotly.express as px
 from scipy.interpolate import interp1d
 
 from src.eddie_floodresilience.dynamic_boundary_conditions.rainfall.rainfall_enum import HyetoMethod
@@ -61,9 +60,10 @@ def get_transposed_data(rain_depth_in_catchment: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_interpolated_data(
-        transposed_catchment_data: pd.DataFrame,
-        increment_mins: int,
-        interp_method: str) -> pd.DataFrame:
+    transposed_catchment_data: pd.DataFrame,
+    increment_mins: int,
+    interp_method: str
+) -> pd.DataFrame:
     """
     Perform temporal interpolation on the transposed scenario data to the desired time interval
     for sites within the catchment area.
@@ -183,11 +183,12 @@ def get_storm_length_increment_data(interp_increment_data: pd.DataFrame, storm_l
 
 
 def add_time_information(
-        site_data: pd.DataFrame,
-        storm_length_mins: int,
-        time_to_peak_mins: Union[int, float],
-        increment_mins: int,
-        hyeto_method: HyetoMethod) -> pd.DataFrame:
+    site_data: pd.DataFrame,
+    storm_length_mins: int,
+    time_to_peak_mins: Union[int, float],
+    increment_mins: int,
+    hyeto_method: HyetoMethod
+) -> pd.DataFrame:
     """
     Add time information (seconds, minutes, and hours column) to the hyetograph data based on the
     selected hyetograph method.
@@ -260,11 +261,12 @@ def add_time_information(
 
 
 def transform_data_for_selected_method(
-        interp_increment_data: pd.DataFrame,
-        storm_length_mins: int,
-        time_to_peak_mins: Union[int, float],
-        increment_mins: int,
-        hyeto_method: HyetoMethod) -> pd.DataFrame:
+    interp_increment_data: pd.DataFrame,
+    storm_length_mins: int,
+    time_to_peak_mins: Union[int, float],
+    increment_mins: int,
+    hyeto_method: HyetoMethod
+) -> pd.DataFrame:
     """
     Transform the storm length incremental rainfall depths for sites within the catchment area based on
     the selected hyetograph method and return hyetograph depths data for all sites within the catchment area
@@ -321,9 +323,10 @@ def transform_data_for_selected_method(
 
 
 def hyetograph_depth_to_intensity(
-        hyetograph_depth: pd.DataFrame,
-        increment_mins: int,
-        hyeto_method: HyetoMethod) -> pd.DataFrame:
+    hyetograph_depth: pd.DataFrame,
+    increment_mins: int,
+    hyeto_method: HyetoMethod
+) -> pd.DataFrame:
     """
     Convert hyetograph depths data to hyetograph intensities data for all sites within the catchment area.
 
@@ -355,12 +358,13 @@ def hyetograph_depth_to_intensity(
 
 
 def get_hyetograph_data(
-        rain_depth_in_catchment: pd.DataFrame,
-        storm_length_mins: int,
-        time_to_peak_mins: Union[int, float],
-        increment_mins: int,
-        interp_method: str,
-        hyeto_method: HyetoMethod) -> pd.DataFrame:
+    rain_depth_in_catchment: pd.DataFrame,
+    storm_length_mins: int,
+    time_to_peak_mins: Union[int, float],
+    increment_mins: int,
+    interp_method: str,
+    hyeto_method: HyetoMethod
+) -> pd.DataFrame:
     """
     Get hyetograph intensities data for all sites within the catchment area and return it in Pandas DataFrame format.
 
@@ -425,58 +429,3 @@ def hyetograph_data_wide_to_long(hyetograph_data: pd.DataFrame) -> pd.DataFrame:
         # Concatenate the time slice to the long-format hyetograph data.
         hyetograph_data_long = pd.concat([hyetograph_data_long, hyeto_time_slice])
     return hyetograph_data_long
-
-
-def hyetograph(hyetograph_data: pd.DataFrame, ari: float) -> None:
-    """
-    Create interactive individual hyetograph plots for sites within the catchment area.
-
-    Parameters
-    ----------
-    hyetograph_data : pd.DataFrame
-        Hyetograph intensities data for sites within the catchment area.
-    ari : float
-        Average Recurrence Interval (ARI) value. Valid options are 1.58, 2, 5, 10, 20, 30, 40, 50, 60, 80, 100, or 250.
-    """
-    for site_id in hyetograph_data.columns.values[:-3]:
-        # Retrieve the hyetograph data for the current site, including time and rain intensity measurements.
-        hyeto_site_data = hyetograph_data[[f"{site_id}", "mins", "hours", "seconds"]]
-        # Rename the column
-        hyeto_site_data.columns.values[0] = "rain_intensity_mmhr"
-        # Create a bar chart using Plotly
-        hyeto_fig = px.bar(
-            hyeto_site_data,
-            title=f"{ari}-year storm: site {site_id}",
-            x="mins",
-            y="rain_intensity_mmhr",
-            labels={"mins": "Time (Minutes)",
-                    "rain_intensity_mmhr": "Rainfall Intensity (mm/hr)"}
-        )
-        # Customize the layout of the hyetograph figure.
-        hyeto_fig.update_layout(
-            title_font_size=20,
-            title_x=0.5,
-            bargap=0,
-            updatemenus=[
-                {
-                    "type": "dropdown",
-                    "direction": "down",
-                    "x": 0.99,
-                    "y": 0.99,
-                    "buttons": [
-                        {
-                            "args": ["type", "bar"],
-                            "label": "Bar Chart",
-                            "method": "restyle"
-                        },
-                        {
-                            "args": ["type", "line"],
-                            "label": "Line Chart",
-                            "method": "restyle"
-                        }
-                    ]
-                }
-            ]
-        )
-        # Display the hyetograph figure.
-        hyeto_fig.show()

@@ -26,7 +26,7 @@ from typing import Dict, List
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Point
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 
 from src.eddie_floodresilience.dynamic_boundary_conditions.river import osm_waterways
 from src.eddie_floodresilience.flood_model import process_hydro_dem
@@ -39,7 +39,7 @@ class NoRiverDataException(Exception):
 
 
 def get_rec_network_data_on_bbox(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame,
         rec_network_data: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
@@ -48,8 +48,8 @@ def get_rec_network_data_on_bbox(
 
     Parameters
     -----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     rec_network_data : gpd.GeoDataFrame
@@ -67,7 +67,7 @@ def get_rec_network_data_on_bbox(
         If no REC river segment is found crossing the catchment boundary.
     """
     # Obtain the spatial extent of the hydro DEM
-    _, hydro_dem_extent, _ = process_hydro_dem.retrieve_hydro_dem_info(engine, catchment_area)
+    _, hydro_dem_extent, _ = process_hydro_dem.retrieve_hydro_dem_info(conn, catchment_area)
     # Select features that intersect with the hydro DEM extent
     rec_on_bbox = rec_network_data[rec_network_data.intersects(hydro_dem_extent)].reset_index(drop=True)
     # Check if there are REC river segments that cross the hydro DEM extent
@@ -291,7 +291,7 @@ def get_multi_intersect_inflows(rec_on_bbox: gpd.GeoDataFrame) -> gpd.GeoDataFra
 
 
 def get_rec_inflows_on_bbox(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame,
         rec_network_data: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
@@ -300,8 +300,8 @@ def get_rec_inflows_on_bbox(
 
     Parameters
     -----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     rec_network_data : gpd.GeoDataFrame
@@ -320,7 +320,7 @@ def get_rec_inflows_on_bbox(
     """
     log.info("Extracting REC river segments that are inflows into the requested catchment area.")
     # Get REC river network segments that intersect with the catchment area boundary
-    rec_on_bbox = get_rec_network_data_on_bbox(engine, catchment_area, rec_network_data)
+    rec_on_bbox = get_rec_network_data_on_bbox(conn, catchment_area, rec_network_data)
     # Get REC river segments that intersect the catchment boundary once and flow into the catchment area
     single_intersect_inflow = get_single_intersect_inflows(rec_on_bbox)
     # Get REC river segments that intersect the catchment boundary multiple times and flow into the catchment area
@@ -332,7 +332,7 @@ def get_rec_inflows_on_bbox(
 
 
 def get_osm_waterways_on_bbox(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Retrieve OpenStreetMap (OSM) waterway data that intersects with the catchment boundary,
@@ -340,8 +340,8 @@ def get_osm_waterways_on_bbox(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
 
@@ -352,7 +352,7 @@ def get_osm_waterways_on_bbox(
         along with the corresponding intersection points on the boundary.
     """
     # Obtain the spatial extent of the hydro DEM
-    _, hydro_dem_extent, _ = process_hydro_dem.retrieve_hydro_dem_info(engine, catchment_area)
+    _, hydro_dem_extent, _ = process_hydro_dem.retrieve_hydro_dem_info(conn, catchment_area)
     # Fetch OSM waterway data for the catchment area
     osm_waterways_data = osm_waterways.get_osm_waterways_data(catchment_area)
 
@@ -428,7 +428,7 @@ def align_rec_with_osm(
 
 
 def get_rec_inflows_aligned_to_osm(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame,
         rec_network_data: gpd.GeoDataFrame,
         distance_m: int = 300) -> gpd.GeoDataFrame:
@@ -438,8 +438,8 @@ def get_rec_inflows_aligned_to_osm(
 
     Parameters
     -----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     rec_network_data : gpd.GeoDataFrame
@@ -459,9 +459,9 @@ def get_rec_inflows_aligned_to_osm(
         If no REC river segment is found crossing the catchment boundary.
     """
     # Obtain REC river network segments where water flows into the catchment area
-    rec_inflows_on_bbox = get_rec_inflows_on_bbox(engine, catchment_area, rec_network_data)
+    rec_inflows_on_bbox = get_rec_inflows_on_bbox(conn, catchment_area, rec_network_data)
     # Retrieve OpenStreetMap (OSM) waterway data that intersects with the catchment area boundary
-    osm_waterways_on_bbox = get_osm_waterways_on_bbox(engine, catchment_area)
+    osm_waterways_on_bbox = get_osm_waterways_on_bbox(conn, catchment_area)
     # Align REC river inflow boundary points with OSM waterway boundary points within the specified distance
     aligned_rec_osm = align_rec_with_osm(rec_inflows_on_bbox, osm_waterways_on_bbox, distance_m)
     # Extract relevant columns

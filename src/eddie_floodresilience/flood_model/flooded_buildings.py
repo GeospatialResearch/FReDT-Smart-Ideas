@@ -22,21 +22,21 @@ import geopandas as gpd
 import pandas as pd
 import rasterio as rio
 import shapely
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 from sqlalchemy.sql import text
 import xarray
 
 from src.eddie_floodresilience.flood_model.serve_model import create_building_database_views_if_not_exists
 
 
-def store_flooded_buildings_in_database(engine: Engine, buildings: pd.DataFrame, flood_model_id: int) -> None:
+def store_flooded_buildings_in_database(conn: Connection, buildings: pd.DataFrame, flood_model_id: int) -> None:
     """
     Append the details of which buildings are flooded for a given flood_model_id to the database.
 
     Parameters
     ----------
-    engine: Engine
-        The sqlalchemy database connection engine
+    conn: Connection
+        The sqlalchemy database connection
     buildings : pd.DataFrame
         DataFrame containing a mapping of building_ids to their flood status for the current model run
     flood_model_id : int
@@ -45,12 +45,12 @@ def store_flooded_buildings_in_database(engine: Engine, buildings: pd.DataFrame,
     # Associate the building flood status dataframe with the current model id
     buildings["flood_model_id"] = flood_model_id
     # Append the dataframe to the database
-    buildings.to_sql("building_flood_status", engine, if_exists="append", index=True)
+    buildings.to_sql("building_flood_status", conn, if_exists="append", index=True)
     # Create geoserver endpoints for database views if they do not already exist
-    create_building_database_views_if_not_exists()
+    create_building_database_views_if_not_exists(conn)
 
 
-def find_flooded_buildings(engine: Engine,
+def find_flooded_buildings(conn: Connection,
                            area_of_interest: gpd.GeoDataFrame,
                            flood_model_output_path: pathlib.Path,
                            flood_depth_threshold: float) -> pd.DataFrame:
@@ -61,8 +61,8 @@ def find_flooded_buildings(engine: Engine,
 
     Parameters
     ----------
-    engine: Engine
-        The sqlalchemy database connection engine
+    conn: Connection
+        The sqlalchemy database connection
     area_of_interest : gpd.GeoDataFrame
         A GeoDataFrame with a polygon specifying the area to get buildings for.
     flood_model_output_path : pathlib.Path
@@ -77,11 +77,12 @@ def find_flooded_buildings(engine: Engine,
     """
     # Open flood output and read the maximum depth raster
     with xarray.open_dataset(flood_model_output_path, decode_coords="all") as ds:
-        max_depth_raster = ds["hmax_P0"]
+        max_band_name = "hmax_P0" if flood_model_output_path.suffix == ".nc" else "band_data"
+        max_depth_raster = ds[max_band_name]
     # Find areas flooded in a polygon format, if they are deeper than flood_depth_threshold
     thresholded_flood_polygons = polygonize_flooded_area(max_depth_raster, flood_depth_threshold)
     # Get building outlines from database
-    buildings = retrieve_building_outlines(engine, area_of_interest)
+    buildings = retrieve_building_outlines(conn, area_of_interest)
     # Categorise buildings as flooded or not flooded
     return categorise_buildings_as_flooded(buildings, thresholded_flood_polygons)
 
@@ -116,14 +117,14 @@ def categorise_buildings_as_flooded(building_polygons: gpd.GeoDataFrame,
     return filtered_buildings
 
 
-def retrieve_building_outlines(engine: Engine, area_of_interest: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def retrieve_building_outlines(conn: Connection, area_of_interest: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Retrieve building outlines for an area of interest from the database.
 
     Parameters
     ----------
-    engine: Engine
-        The sqlalchemy database connection engine
+    conn: Connection
+        The sqlalchemy database connection
     area_of_interest : gpd.GeoDataFrame
         A GeoDataFrame polygon specifying the area of interest to retrieve buildings in.
 
@@ -137,15 +138,16 @@ def retrieve_building_outlines(engine: Engine, area_of_interest: gpd.GeoDataFram
     crs = area_of_interest.crs.to_epsg()
     # Construct the query to find buildings within the area of interest
     command_text = """
-    SELECT building_outline_id, geometry FROM nz_building_outlines
-    WHERE ST_INTERSECTS(nz_building_outlines.geometry, ST_GeomFromText(:aoi_wkt, :crs));
-    """
+                   SELECT building_outline_id, geometry
+                   FROM nz_building_outlines
+                   WHERE ST_INTERSECTS(nz_building_outlines.geometry, ST_GeomFromText(:aoi_wkt, :crs)); \
+                   """
     query = text(command_text).bindparams(
         aoi_wkt=str(aoi_wkt),
         crs=str(crs)
     )
     # Execute the query and retrieve the result as a GeoDataFrame
-    gdf = gpd.GeoDataFrame.from_postgis(query, engine, index_col="building_outline_id", geom_col="geometry")
+    gdf = gpd.GeoDataFrame.from_postgis(query, conn, index_col="building_outline_id", geom_col="geometry")
     return gdf
 
 

@@ -32,29 +32,24 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 import shapely.wkt
-from sqlalchemy import func, select
-from sqlalchemy.engine import Engine
-from sqlalchemy.sql import text
+from sqlalchemy import insert, text
+from sqlalchemy.engine import Connection
 
-from eddie.digitaltwin.tables import (
-    check_table_exists,
-    create_table,
-    execute_query
-)
+from eddie.digitaltwin.tables import check_table_exists, create_table
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.tables import RiverNetwork, RiverNetworkExclusions
 
 log = logging.getLogger(__name__)
 
 
-def get_next_network_id(engine: Engine) -> int:
+def get_next_network_id(conn: Connection) -> int:
     """
     Get the next available REC River Network ID from the River Network Exclusions table.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
 
     Returns
     -------
@@ -62,18 +57,17 @@ def get_next_network_id(engine: Engine) -> int:
         An identifier for the river network associated with each run, representing the next available River Network ID.
     """
     # Check if the River Network Exclusions table exists; if not, create it
-    if not check_table_exists(engine, RiverNetworkExclusions.__tablename__):
-        create_table(engine, RiverNetworkExclusions)
+    if not check_table_exists(conn, RiverNetworkExclusions.__tablename__):
+        create_table(conn, RiverNetworkExclusions)
     # Build a query to find the next available river network ID
-    query = select([func.coalesce(func.max(RiverNetworkExclusions.rec_network_id), 0) + 1])
+    query = text("SELECT COALESCE(MAX(rec_network_id), 0) + 1 from rec_network")
     # Execute the query
-    with engine.connect() as connection:
-        rec_network_id = connection.execute(query).scalar()
+    rec_network_id = conn.execute(query).scalar()
     return rec_network_id
 
 
 def add_network_exclusions_to_db(
-    engine: Engine,
+    conn: Connection,
     rec_network_id: int,
     rec_network_exclusions: gpd.GeoDataFrame,
     exclusion_cause: str
@@ -83,8 +77,8 @@ def add_network_exclusions_to_db(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     rec_network_id : int
         An identifier for the river network associated with the current run.
     rec_network_exclusions : gpd.GeoDataFrame
@@ -101,7 +95,7 @@ def add_network_exclusions_to_db(
         # Insert 'rec_network_id' to associate it with the river network of the current run
         rec_network_exclusions.insert(0, "rec_network_id", rec_network_id)
         # Record excluded REC geometries in the relevant table in the database
-        rec_network_exclusions.to_postgis(RiverNetworkExclusions.__tablename__, engine, if_exists="append")
+        rec_network_exclusions.to_postgis(RiverNetworkExclusions.__tablename__, conn, if_exists="append")
         # Convert the excluded REC river segment object IDs to a list
         excluded_ids = rec_network_exclusions["objectid"].tolist()
         # Log a warning message indicating the reason and IDs of the excluded REC river segments
@@ -168,7 +162,7 @@ def get_network_output_metadata(
 
 
 def store_rec_network_to_db(
-    engine: Engine,
+    conn: Connection,
     catchment_area: gpd.GeoDataFrame,
     rec_network_id: int,
     rec_network: nx.Graph,
@@ -179,8 +173,8 @@ def store_rec_network_to_db(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     rec_network_id : int
@@ -205,30 +199,30 @@ def store_rec_network_to_db(
     network_data.to_file(str(network_data_path), driver="GeoJSON")
 
     # Create the REC Network table in the database if it doesn't exist
-    create_table(engine, RiverNetwork)
+    create_table(conn, RiverNetwork)
     # Get metadata related to the REC Network Output
     network_path, network_data_path, geometry = get_network_output_metadata(
         network_path, network_data_path, catchment_area)
     # Create a new query object representing the REC Network metadata
-    query = RiverNetwork(
+    query = insert(RiverNetwork).values(
         rec_network_id=rec_network_id,
         network_path=network_path,
         network_data_path=network_data_path,
         geometry=geometry)
     # Execute the query to store the REC Network metadata in the database
-    execute_query(engine, query)
+    conn.execute(query)
     # Log a message indicating the successful storage of REC network metadata in the database
     log.info("Successfully added the REC river network metadata to the database.")
 
 
-def get_existing_network_metadata_from_db(engine: Engine, catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def get_existing_network_metadata_from_db(conn: Connection, catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Retrieve existing REC river network metadata for the specified catchment area from the database.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
 
@@ -238,7 +232,7 @@ def get_existing_network_metadata_from_db(engine: Engine, catchment_area: gpd.Ge
         A GeoDataFrame containing the existing REC river network metadata for the specified catchment area.
     """
     # Create the REC Network table in the database if it doesn't exist
-    create_table(engine, RiverNetwork)
+    create_table(conn, RiverNetwork)
     # Extract the catchment polygon from the catchment area and convert it to Well-Known Text (WKT) format
     catchment_polygon = catchment_area["geometry"].iloc[0]
     catchment_polygon_wkt = shapely.wkt.dumps(catchment_polygon, rounding_precision=6)
@@ -252,18 +246,21 @@ def get_existing_network_metadata_from_db(engine: Engine, catchment_area: gpd.Ge
         catchment_polygon_wkt=str(catchment_polygon_wkt)
     )
     # Fetch the query result as a GeoPandas DataFrame
-    existing_network_meta = gpd.GeoDataFrame.from_postgis(query, engine, geom_col="geometry")
+    existing_network_meta = gpd.GeoDataFrame.from_postgis(query, conn, geom_col="geometry")
     return existing_network_meta
 
 
-def get_existing_network(engine: Engine, existing_network_meta: gpd.GeoDataFrame) -> Tuple[nx.Graph, gpd.GeoDataFrame]:
+def get_existing_network(
+    conn: Connection,
+    existing_network_meta: gpd.GeoDataFrame
+) -> Tuple[nx.Graph, gpd.GeoDataFrame]:
     """
     Retrieve existing REC river network and its associated data.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     existing_network_meta : gpd.GeoDataFrame
         A GeoDataFrame containing the metadata for the existing REC river network.
 
@@ -289,7 +286,7 @@ def get_existing_network(engine: Engine, existing_network_meta: gpd.GeoDataFrame
         rec_network_id=str(rec_network_id)
     )
     # Query the database to retrieve exclusion data for the existing REC river network
-    rec_network_exclusions = gpd.GeoDataFrame.from_postgis(query, engine, geom_col="geometry")
+    rec_network_exclusions = gpd.GeoDataFrame.from_postgis(query, conn, geom_col="geometry")
     # Group exclusion data by the cause of exclusion
     grouped_data = rec_network_exclusions.groupby("exclusion_cause")
     # Iterate through grouped exclusion data, where each group represents a cause of exclusion

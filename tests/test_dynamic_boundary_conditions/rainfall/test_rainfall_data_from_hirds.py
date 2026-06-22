@@ -46,10 +46,10 @@ class RainfallDataFromHirdsTest(unittest.TestCase):
 
     @staticmethod
     def get_block_structures(
-            depth_layout: List[rainfall_data_from_hirds.BlockStructure],
-            intensity_layout: List[rainfall_data_from_hirds.BlockStructure],
-            start: Optional[int] = None,
-            end: Optional[int] = None) -> List[rainfall_data_from_hirds.BlockStructure]:
+        depth_layout: List[rainfall_data_from_hirds.BlockStructure],
+        intensity_layout: List[rainfall_data_from_hirds.BlockStructure],
+        start: Optional[int] = None,
+        end: Optional[int] = None) -> List[rainfall_data_from_hirds.BlockStructure]:
         """
         Get a list of BlockStructures from both depth and intensity layouts.
 
@@ -185,7 +185,11 @@ class RainfallDataFromHirdsTest(unittest.TestCase):
 
     @pytest.mark.skipif(
         EnvVariable.IS_ON_GITHUB_ACTIONS,
-        reason="Failing on GitHub Actions. See Issue https://github.com/GeospatialResearch/Digital-Twins/issues/367"
+        reason="""
+        Failing on GitHub Actions. See Issue https://github.com/GeospatialResearch/Digital-Twins/issues/367.
+        Also failing due to inaccessible API due to HIRDS API changes. 
+        See Issue https://github.com/GeospatialResearch/eddie_floodresilience/issues/17.
+        """
     )
     def test_get_data_from_hirds_not_empty(self):
         """Test to ensure that the rainfall depths and intensities data fetched from the HIRDS website is not empty."""

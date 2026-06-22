@@ -25,6 +25,8 @@ import os
 import pathlib
 from xml.sax import saxutils
 
+import rasterio as rio
+from sqlalchemy.engine import Connection
 import xarray as xr
 
 from eddie import geoserver
@@ -60,7 +62,7 @@ def convert_nc_to_gtiff(nc_file_path: pathlib.Path) -> pathlib.Path:
     return pathlib.Path(os.getcwd()) / gtiff_filepath
 
 
-def create_building_layers(workspace_name: str, data_store_name: str) -> None:
+def create_building_layers(conn: Connection, workspace_name: str, data_store_name: str) -> None:
     """
     Create dynamic GeoServer layers "nz_building_outlines" and "building_flood_status" for the given workspace.
     If they already exist then do nothing.
@@ -68,10 +70,12 @@ def create_building_layers(workspace_name: str, data_store_name: str) -> None:
 
     Parameters
     ----------
+    conn : Connection
+        The connection used to connect to the database.
     workspace_name : str
         The name of the workspace to create views for.
     data_store_name : str
-         The name of the datastore that the building layer is being created from.
+        The name of the datastore that the building layer is being created from.
 
     Raises
     ----------
@@ -79,18 +83,18 @@ def create_building_layers(workspace_name: str, data_store_name: str) -> None:
         If geoserver responds with an error, raises it as an exception since it is unexpected.
     """
     # Simple layer that is just displaying the nz_building_outlines database table
-    geoserver.create_datastore_layer(workspace_name, data_store_name, layer_name="nz_building_outlines")
+    geoserver.create_datastore_layer(conn, workspace_name, data_store_name, layer_name="nz_building_outlines")
 
     # More complex layer that has to do dynamic sql queries against model output ID to fetch
     flood_status_layer_name = "building_flood_status"
     flooded_buildings_sql_query = """
-        SELECT *,
-               is_flooded::int AS is_flooded_int
-        FROM nz_building_outlines
-                 LEFT OUTER JOIN building_flood_status USING (building_outline_id)
-        WHERE building_outline_lifecycle ILIKE 'current'
-        AND flood_model_id=%scenario%
-    """
+                                  SELECT *,
+                                         is_flooded::int AS is_flooded_int
+                                  FROM nz_building_outlines
+                                           LEFT OUTER JOIN building_flood_status USING (building_outline_id)
+                                  WHERE building_outline_lifecycle ILIKE 'current'
+                                    AND flood_model_id = %scenario % \
+                                  """
     xml_escaped_sql = saxutils.escape(flooded_buildings_sql_query, entities={r"'": "&apos;", "\n": "&#xd;"})
 
     flood_status_xml_query = rf"""
@@ -116,10 +120,13 @@ def create_building_layers(workspace_name: str, data_store_name: str) -> None:
         </entry>
       </metadata>
     """
-    geoserver.create_datastore_layer(workspace_name,
-                                     data_store_name,
-                                     layer_name="building_flood_status",
-                                     metadata_elem=flood_status_xml_query)
+    geoserver.create_datastore_layer(
+        conn,
+        workspace_name,
+        data_store_name,
+        layer_name="building_flood_status",
+        metadata_elem=flood_status_xml_query
+    )
 
 
 def create_viridis_style_if_not_exists() -> None:
@@ -128,10 +135,15 @@ def create_viridis_style_if_not_exists() -> None:
     geoserver.add_style(viridis_sld_path, replace=True)
 
 
-def create_building_database_views_if_not_exists() -> None:
+def create_building_database_views_if_not_exists(conn: Connection) -> None:
     """
     Create a GeoServer workspace and building layers using database views if they do not currently exist.
     These only need to be created once per database.
+
+    Parameters
+    ----------
+    conn : Connection
+        The connection used to connect to the database.
     """
     log.debug("Creating building database views if they do not exist")
     db_name = EnvVariable.POSTGRES_DB
@@ -139,7 +151,7 @@ def create_building_database_views_if_not_exists() -> None:
     # Create workspace if it doesn't exist, so that the namespaces can be separated if multiple dbs are running
     data_store_name = geoserver.create_main_db_store(workspace_name)
     # Create SQL view layers so geoserver can dynamically serve building layers based on model outputs.
-    create_building_layers(workspace_name, data_store_name)
+    create_building_layers(conn, workspace_name, data_store_name)
 
 
 def add_model_output_to_geoserver(model_output_path: pathlib.Path, model_id: int) -> None:
@@ -165,3 +177,27 @@ def add_model_output_to_geoserver(model_output_path: pathlib.Path, model_id: int
     # We can remove the temporary raster
     gtiff_filepath.unlink()
     create_viridis_style_if_not_exists()
+
+
+def asc_to_gtiff(asc_path: pathlib.Path, gtiff_filepath: pathlib.Path) -> None:
+    """
+    Convert an ASCII raster (CRS=2193) to a GeoTiff file.
+
+    Parameters
+    ----------
+    asc_path : pathlib.Path
+        The path to the ASCII raster.
+    gtiff_filepath : pathlib.Path
+        The path to the result GeoTiff file.
+    """
+    with rio.open(asc_path) as src:
+        # Read the first band's data into a numpy array
+        asc_data = src.read(1)
+
+        # Extract metadata profile and update driver to GTiff
+        meta = src.meta.copy()
+        meta.update(driver='GTiff', crs=rio.crs.CRS.from_epsg(2193))  # pylint: disable=c-extension-no-member
+
+        # Write data to a new GTiff
+        with rio.open(gtiff_filepath, 'w', **meta) as dst:
+            dst.write(asc_data, 1)

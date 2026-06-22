@@ -31,7 +31,7 @@ from newzealidar.utils import get_dem_band_and_resolution_by_geometry
 import pyproj
 from shapely import LineString
 from shapely.geometry import box
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 import xarray as xr
 
 from eddie.digitaltwin import setup_environment, tables
@@ -41,7 +41,7 @@ log = logging.getLogger(__name__)
 
 
 def retrieve_hydro_dem_info(
-        engine: Engine,
+        conn: Connection,
         catchment_area: gpd.GeoDataFrame) -> Tuple[xr.Dataset, LineString, Union[int, float]]:
     """
     Retrieve the Hydrologically Conditioned DEM (Hydro DEM) data, along with its spatial extent and resolution,
@@ -49,8 +49,8 @@ def retrieve_hydro_dem_info(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
 
@@ -61,7 +61,7 @@ def retrieve_hydro_dem_info(
         and the resolution of the Hydro DEM as either an integer or a float.
     """
     # Retrieve the Hydro DEM data and resolution for the specified catchment area
-    hydro_dem, res_no = get_dem_band_and_resolution_by_geometry(engine, catchment_area)
+    hydro_dem, res_no = get_dem_band_and_resolution_by_geometry(conn, catchment_area)
     # Extract the Coordinate Reference System (CRS) information from the 'hydro_dem' dataset
     hydro_dem_crs = pyproj.CRS(hydro_dem.spatial_ref.crs_wkt)
     # Get the bounding box (spatial extent) of the Hydro DEM and convert it to a GeoDataFrame
@@ -71,14 +71,14 @@ def retrieve_hydro_dem_info(
     return hydro_dem, hydro_dem_extent, res_no
 
 
-def get_hydro_dem_boundary_lines(engine: Engine, catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+def get_hydro_dem_boundary_lines(conn: Connection, catchment_area: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
     """
     Get the boundary lines of the Hydrologically Conditioned DEM.
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
 
@@ -88,7 +88,7 @@ def get_hydro_dem_boundary_lines(engine: Engine, catchment_area: gpd.GeoDataFram
         A GeoDataFrame containing the boundary lines of the Hydrologically Conditioned DEM.
     """
     # Obtain the spatial extent of the hydro DEM
-    _, hydro_dem_extent, _ = retrieve_hydro_dem_info(engine, catchment_area)
+    _, hydro_dem_extent, _ = retrieve_hydro_dem_info(conn, catchment_area)
     # Create a list of LineString segments from the exterior boundary coordinates
     dem_boundary_lines_list = [
         LineString([hydro_dem_extent.coords[i], hydro_dem_extent.coords[i + 1]])
@@ -114,23 +114,24 @@ def ensure_lidar_datasets_initialised() -> None:
     If it is not initialised, then it initialises it by web-scraping OpenTopography which takes a long time.
     """
     # Connect to database
-    engine = setup_environment.get_connection_from_profile()
-    # Check if datasets table initialised
-    if not tables.check_table_exists(engine, "dataset"):
-        # If it is not initialised, then initialise it
-        log.info("dataset table does not exist, initialising LiDAR dataset information.")
-        newzealidar.datasets.main()
-    # Check that datasets_mapping is in the instructions.json file
-    instructions_file_name = "instructions.json"
-    with open(instructions_file_name, "r", encoding="utf-8") as instructions_file:
-        # Load content from the file
-        instructions = json.load(instructions_file)["instructions"]
-    dataset_mapping = instructions.get("dataset_mapping")
-    # If the dataset_mapping does not exist on the instruction file then read it from the database
-    if dataset_mapping is None:
-        # Add dataset_mapping to instructions file, reading from database
-        log.debug("instructions.json missing LiDAR dataset_mapping, filling from database.")
-        newzealidar.utils.map_dataset_name(engine, instructions_file_name)
+    engine = setup_environment.get_database()
+    with engine.connect() as conn:
+        # Check if datasets table initialised
+        if not tables.check_table_exists(conn, "dataset"):
+            # If it is not initialised, then initialise it
+            log.info("dataset table does not exist, initialising LiDAR dataset information.")
+            newzealidar.datasets.main()
+        # Check that datasets_mapping is in the instructions.json file
+        instructions_file_name = "instructions.json"
+        with open(instructions_file_name, "r", encoding="utf-8") as instructions_file:
+            # Load content from the file
+            instructions = json.load(instructions_file)["instructions"]
+        dataset_mapping = instructions.get("dataset_mapping")
+        # If the dataset_mapping does not exist on the instruction file then read it from the database
+        if dataset_mapping is None:
+            # Add dataset_mapping to instructions file, reading from database
+            log.debug("instructions.json missing LiDAR dataset_mapping, filling from database.")
+            newzealidar.utils.map_dataset_name(conn, instructions_file_name)
 
 
 def process_dem(selected_polygon_gdf: gpd.GeoDataFrame) -> None:

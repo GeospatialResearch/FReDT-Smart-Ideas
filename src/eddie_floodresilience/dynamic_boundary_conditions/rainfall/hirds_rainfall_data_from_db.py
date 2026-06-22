@@ -22,7 +22,7 @@ from typing import Optional
 
 import geopandas as gpd
 import pandas as pd
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 from sqlalchemy.sql import text
 
 from src.eddie_floodresilience.dynamic_boundary_conditions.rainfall import hirds_rainfall_data_to_db
@@ -54,7 +54,7 @@ def filter_for_duration(rain_data: pd.DataFrame, duration: str) -> pd.DataFrame:
 
 
 def get_one_site_rainfall_data(
-        engine: Engine,
+        conn: Connection,
         site_id: str,
         rcp: Optional[float],
         time_period: Optional[str],
@@ -66,8 +66,8 @@ def get_one_site_rainfall_data(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     site_id : str
         HIRDS rainfall site ID.
     rcp : Optional[float]
@@ -114,7 +114,7 @@ def get_one_site_rainfall_data(
             time_period=time_period,
             ari=ari
         )
-        rain_data = pd.read_sql_query(query, engine)
+        rain_data = pd.read_sql_query(query, conn)
 
     else:
         # Query for historical data (rcp is None and time_period is None)
@@ -127,7 +127,7 @@ def get_one_site_rainfall_data(
             site_id=site_id,
             ari=ari
         )
-        rain_data = pd.read_sql_query(query, engine)
+        rain_data = pd.read_sql_query(query, conn)
         # Filter for historical data
         rain_data = rain_data.query("category == 'hist'")
     # Filter for duration
@@ -136,7 +136,7 @@ def get_one_site_rainfall_data(
 
 
 def rainfall_data_from_db(
-        engine: Engine,
+        conn: Connection,
         sites_in_catchment: gpd.GeoDataFrame,
         rcp: Optional[float],
         time_period: Optional[str],
@@ -148,8 +148,8 @@ def rainfall_data_from_db(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     sites_in_catchment : gpd.GeoDataFrame
         Rainfall sites coverage areas (Thiessen polygons) that intersect or are within the catchment area.
     rcp : Optional[float]
@@ -178,7 +178,7 @@ def rainfall_data_from_db(
     # Iterate over each site ID in the catchment area
     for site_id in site_ids_in_catchment:
         # Retrieve the rainfall data for the site
-        rain_data = get_one_site_rainfall_data(engine, site_id, rcp, time_period, ari, duration, idf)
+        rain_data = get_one_site_rainfall_data(conn, site_id, rcp, time_period, ari, duration, idf)
         # Concatenate the site's rainfall data to the overall catchment data
         rain_data_in_catchment = pd.concat([rain_data_in_catchment, rain_data], ignore_index=True)
     return rain_data_in_catchment

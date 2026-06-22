@@ -31,7 +31,7 @@ from typing import Optional, TextIO, Tuple, Union
 import geopandas as gpd
 from newzealidar.utils import get_dem_by_geometry
 from sqlalchemy import insert
-from sqlalchemy.engine import Engine
+from sqlalchemy.engine import Connection
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.sql import text
 import xarray as xr
@@ -124,7 +124,7 @@ def get_model_output_metadata(
 
 
 def store_model_output_metadata_to_db(
-    engine: Engine,
+    conn: Connection,
     model_output_path: pathlib.Path,
     catchment_area: gpd.GeoDataFrame
 ) -> int:
@@ -133,8 +133,8 @@ def store_model_output_metadata_to_db(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     model_output_path : pathlib.Path
         The path to the BG Flood model output file.
     catchment_area : gpd.GeoDataFrame
@@ -146,28 +146,27 @@ def store_model_output_metadata_to_db(
         Returns the model id of the new flood_model produced
     """
     # Create the 'bg_flood_model_output' table in the database if it doesn't exist
-    create_table(engine, BGFloodModelOutput)
+    create_table(conn, BGFloodModelOutput)
     # Get the metadata related to the BG Flood model output
     output_name, output_path, geometry = get_model_output_metadata(model_output_path, catchment_area)
     # Create a new query object representing the BG-Flood model output metadata
     query = insert(BGFloodModelOutput).values(file_name=output_name, file_path=output_path, geometry=geometry)
     # Execute the query to store the BG Flood model output metadata in the database while retrieving id
-    with engine.begin() as conn:
-        result = conn.execute(query)
+    result = conn.execute(query)
     model_id = result.inserted_primary_key[0]
     # Log a message indicating the successful storage of BG-Flood model output metadata in the database
     log.info("BG-Flood model output metadata successfully stored in the database.")
     return model_id
 
 
-def model_output_from_db_by_id(engine: Engine, model_id: int) -> pathlib.Path:
+def model_output_from_db_by_id(conn: Connection, model_id: int) -> pathlib.Path:
     """
     Retrieve the path to the model output file from the database by model_id.
 
     Parameters
     ----------
-    engine: Engine
-        The sqlalchemy database connection engine
+    conn: Connection
+        The sqlalchemy database connection
     model_id: int
         The ID of the flood model output being queried for
 
@@ -186,9 +185,9 @@ def model_output_from_db_by_id(engine: Engine, model_id: int) -> pathlib.Path:
         flood_model_id=model_id)
     # Check table exists before querying
     bg_flood_table = "bg_flood_model_output"
-    if not check_table_exists(engine, bg_flood_table):
+    if not check_table_exists(conn, bg_flood_table):
         raise FileNotFoundError(f"{bg_flood_table} table does not exist")
-    row = engine.execute(query).fetchone()
+    row = conn.execute(query).mappings().fetchone()
     # If the row is empty then we could not find the model output
     if row is None:
         raise FileNotFoundError(f"bg_flood_model_output table does not contain row with unique_id: {model_id}")
@@ -198,14 +197,14 @@ def model_output_from_db_by_id(engine: Engine, model_id: int) -> pathlib.Path:
     return latest_output_path
 
 
-def model_extents_from_db_by_id(engine: Engine, model_id: int) -> gpd.GeoDataFrame:
+def model_extents_from_db_by_id(conn: Connection, model_id: int) -> gpd.GeoDataFrame:
     """
     Find the extents of a model output in gpd.GeoDataFrame format.
 
     Parameters
     ----------
-    engine: Engine
-        The sqlalchemy database connection engine
+    conn: Connection
+        The sqlalchemy database connection
     model_id: int
         The ID of the flood model output being queried for
 
@@ -221,29 +220,29 @@ def model_extents_from_db_by_id(engine: Engine, model_id: int) -> gpd.GeoDataFra
     """
     # Execute a query to get the model output record based on the 'flood_model_id' column
     bg_flood_table = "bg_flood_model_output"
-    if not check_table_exists(engine, bg_flood_table):
+    if not check_table_exists(conn, bg_flood_table):
         raise FileNotFoundError(f"{bg_flood_table} table does not exist")
     query = text("SELECT geometry FROM bg_flood_model_output WHERE unique_id=:flood_model_id").bindparams(
         flood_model_id=model_id)
-    geometry = gpd.read_postgis(query, engine, geom_col='geometry')
+    geometry = gpd.read_postgis(query, conn, geom_col='geometry')
     if len(geometry) == 0:
         raise FileNotFoundError(f"{bg_flood_table} table does not have any rows with unique_id = {model_id}")
     return geometry
 
 
-def add_crs_to_model_output(engine: Engine, flood_model_output_id: int) -> None:
+def add_crs_to_model_output(conn: Connection, flood_model_output_id: int) -> None:
     """
     Add Coordinate Reference System (CRS) to the BG-Flood model output.
 
     Parameters
     ----------
-    engine: Engine
-        The sqlalchemy database connection engine
+    conn: Connection
+        The sqlalchemy database connection
     flood_model_output_id: int
         The ID of the flood model output being queried for
     """
     # Get the path to the latest BG-Flood model output file from the database
-    model_output_file = model_output_from_db_by_id(engine, flood_model_output_id)
+    model_output_file = model_output_from_db_by_id(conn, flood_model_output_id)
     # Create a temporary file path for saving modifications before replacing the current latest model output file
     temp_file = model_output_file.with_name(f"{model_output_file.stem}_temp{model_output_file.suffix}")
 
@@ -412,7 +411,7 @@ def prepare_bg_flood_model_inputs(
 
 
 def run_bg_flood_model(
-    engine: Engine,
+    conn: Connection,
     catchment_area: gpd.GeoDataFrame,
     model_output_path: pathlib.Path,
     output_timestep: Union[int, float],
@@ -427,8 +426,8 @@ def run_bg_flood_model(
 
     Parameters
     ----------
-    engine : Engine
-        The engine used to connect to the database.
+    conn : Connection
+        The connection used to connect to the database.
     catchment_area : gpd.GeoDataFrame
         A GeoDataFrame representing the catchment area.
     model_output_path : pathlib.Path
@@ -455,7 +454,7 @@ def run_bg_flood_model(
     # Get the valid BG-Flood Model directory
     bg_flood_dir = get_valid_bg_flood_dir()
     # Get the file path of the Hydro DEM for the catchment area
-    hydro_dem_path_str, _, _, dem_resolution = get_dem_by_geometry(engine, catchment_area)
+    hydro_dem_path_str, _, _, dem_resolution = get_dem_by_geometry(conn, catchment_area)
     hydro_dem_path = pathlib.Path(hydro_dem_path_str)
     # Use dem_resolution if input resolution is not provided
     resolution = dem_resolution if resolution is None else resolution
@@ -549,36 +548,37 @@ def main(
     setup_logging(log_level)
     # Connect to the database
     engine = setup_environment.get_database()
-    # Get catchment area
-    catchment_area = get_catchment_area(selected_polygon_gdf, to_crs=2193)
-    # Get a new file path for saving the BG Flood model output with the current timestamp included in the filename
-    model_output_path = get_new_model_output_path()
+    with engine.connect() as conn:
+        # Get catchment area
+        catchment_area = get_catchment_area(selected_polygon_gdf, to_crs=2193)
+        # Get a new file path for saving the BG Flood model output with the current timestamp included in the filename
+        model_output_path = get_new_model_output_path()
 
-    # Run the BG-Flood Model for the specified catchment area
-    run_bg_flood_model(
-        engine=engine,
-        catchment_area=catchment_area,
-        model_output_path=model_output_path,
-        output_timestep=output_timestep,  # Saving the outputs after each `outputtimestep` seconds
-        end_time=end_time,  # Saving the outputs till `endtime` number of seconds
-        resolution=resolution,
-        mask=mask,
-        gpu_device=gpu_device,
-        small_nc=small_nc
-    )
+        # Run the BG-Flood Model for the specified catchment area
+        run_bg_flood_model(
+            conn=conn,
+            catchment_area=catchment_area,
+            model_output_path=model_output_path,
+            output_timestep=output_timestep,  # Saving the outputs after each `outputtimestep` seconds
+            end_time=end_time,  # Saving the outputs till `endtime` number of seconds
+            resolution=resolution,
+            mask=mask,
+            gpu_device=gpu_device,
+            small_nc=small_nc
+        )
 
-    # Store metadata related to the BG Flood model output in the database
-    model_id = store_model_output_metadata_to_db(engine, model_output_path, catchment_area)
-    # Add CRS to the latest BG-Flood model output
-    add_crs_to_model_output(engine, model_id)
-    # Find buildings that are flooded to a depth greater than or equal to 0.1m
-    log.info("Analysing flooded buildings")
-    flooded_buildings = find_flooded_buildings(engine, catchment_area, model_output_path, flood_depth_threshold=0.1)
-    log.info("Analysed flooded buildings - adding flooded buildings to database")
-    store_flooded_buildings_in_database(engine, flooded_buildings, model_id)
-    # Add the model output to GeoServer for visualization
-    add_model_output_to_geoserver(model_output_path, model_id)
-    return model_id
+        # Store metadata related to the BG Flood model output in the database
+        model_id = store_model_output_metadata_to_db(conn, model_output_path, catchment_area)
+        # Add CRS to the latest BG-Flood model output
+        add_crs_to_model_output(conn, model_id)
+        # Find buildings that are flooded to a depth greater than or equal to 0.1m
+        log.info("Analysing flooded buildings")
+        flooded_buildings = find_flooded_buildings(conn, catchment_area, model_output_path, flood_depth_threshold=0.1)
+        log.info("Analysed flooded buildings - adding flooded buildings to database")
+        store_flooded_buildings_in_database(conn, flooded_buildings, model_id)
+        # Add the model output to GeoServer for visualization
+        add_model_output_to_geoserver(model_output_path, model_id)
+        return model_id
 
 
 if __name__ == "__main__":

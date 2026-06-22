@@ -50,6 +50,7 @@ def get_site_url_key(site_id: str, idf: bool) -> str:
     data = f'{{"site_id":"{site_id}","idf":{idf}}}'
     # Make a POST request
     resp = requests.post(url, headers=headers, data=data)
+    resp.raise_for_status()
     # Convert the response to a DataFrame
     rainfall_results = pd.read_json(resp.text)
     # Get the unique URL key of the requested rainfall site

@@ -26,9 +26,20 @@ class EnvVariable(EnvVarBase):  # pylint: disable=too-few-public-methods
 
     NIWA_API_KEY = EnvVarBase._get_env_variable("NIWA_API_KEY")
 
-    DATA_DIR = pathlib.Path(EnvVarBase._get_env_variable("DATA_DIR"))
-    DATA_DIR_MODEL_OUTPUT = pathlib.Path(EnvVarBase._get_env_variable("DATA_DIR_MODEL_OUTPUT"))
-    FLOOD_MODEL_DIR = pathlib.Path(EnvVarBase._get_env_variable("FLOOD_MODEL_DIR"))
+    DATA_DIR = pathlib.Path(EnvVarBase._get_env_variable("DATA_DIR")).resolve()
+    DATA_DIR_MODEL_OUTPUT = pathlib.Path(EnvVarBase._get_env_variable("DATA_DIR_MODEL_OUTPUT")).resolve()
+    FLOOD_MODEL_DIR = pathlib.Path(EnvVarBase._get_env_variable("FLOOD_MODEL_DIR")).resolve()
+
+    HYDRO_COMBINATION_PATH_MATAURA = (
+        pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "mataura"
+    ).resolve()
+    HYDRO_COMBINATION_PATH_WHIRINAKI = (
+        pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "whirinaki"
+    ).resolve()
+    HYDROMT_PATH = pathlib.Path(EnvVarBase._get_env_variable("HYDROMT_PATH")).resolve()
+    PRECIPITATION_PATH = pathlib.Path(EnvVarBase._get_env_variable("PRECIPITATION_PATH")).resolve()
+
+    IS_GEOSERVER_ACTIVE = EnvVarBase._get_bool_env_variable("IS_GEOSERVER_ACTIVE", True)
 
     # NewZealidar config that we must ensure have values.
     _LIDAR_DIR = EnvVarBase._get_env_variable("LIDAR_DIR")

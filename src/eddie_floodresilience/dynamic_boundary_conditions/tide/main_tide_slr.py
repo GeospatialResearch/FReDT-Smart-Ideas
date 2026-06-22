@@ -143,25 +143,26 @@ def get_valid_parameters_based_on_confidence_level() -> Dict[str, Dict[str, Unio
     """
     # Connect to database
     engine = setup_environment.get_database()
-    slr_table_name = 'sea_level_rise'
-    if not tables.check_table_exists(engine, slr_table_name):
-        # Sea Level Rise data has not been initialised, so initialise it.
-        sea_level_rise_data.store_slr_data_to_db(engine)
+    with engine.connect() as conn:
+        slr_table_name = 'sea_level_rise'
+        if not tables.check_table_exists(conn, slr_table_name):
+            # Sea Level Rise data has not been initialised, so initialise it.
+            sea_level_rise_data.store_slr_data_to_db(conn)
 
-    # Find all distinct combinations of confidence_level with the dependant columns.
-    query = text(f"""
-        SELECT DISTINCT
-            confidence_level,
-            CONCAT(ssp, '-', scenario) AS ssp_scenarios,
-            (DATE_PART('year', now()) + 1)::NUMERIC::BIGINT AS min_year,
-            MAX(year) AS max_year
-        FROM {slr_table_name}
-        GROUP BY
-            confidence_level,
-            ssp,
-            scenario
-    """)
-    query_result = pd.read_sql(query, engine)
+        # Find all distinct combinations of confidence_level with the dependant columns.
+        query = text(f"""
+            SELECT DISTINCT
+                confidence_level,
+                CONCAT(ssp, '-', scenario) AS ssp_scenarios,
+                (DATE_PART('year', now()) + 1)::NUMERIC::BIGINT AS min_year,
+                MAX(year) AS max_year
+            FROM {slr_table_name}
+            GROUP BY
+                confidence_level,
+                ssp,
+                scenario
+        """)
+        query_result = pd.read_sql(query, conn)
 
     # Get the list of percentiles from the column names
     column_names_query = text(r"""
@@ -271,41 +272,42 @@ def main(
         setup_logging(log_level)
         # Connect to the database
         engine = setup_environment.get_database()
-        # Get catchment area
-        catchment_area = get_catchment_area(selected_polygon_gdf, to_crs=2193)
-        # BG-Flood Model Directory
-        bg_flood_dir = config.EnvVariable.FLOOD_MODEL_DIR
-        # Remove any existing uniform boundary model inputs in the BG-Flood directory
-        tide_slr_model_input.remove_existing_boundary_inputs(bg_flood_dir)
+        with engine.connect() as conn:
+            # Get catchment area
+            catchment_area = get_catchment_area(selected_polygon_gdf, to_crs=2193)
+            # BG-Flood Model Directory
+            bg_flood_dir = config.EnvVariable.FLOOD_MODEL_DIR
+            # Remove any existing uniform boundary model inputs in the BG-Flood directory
+            tide_slr_model_input.remove_existing_boundary_inputs(bg_flood_dir)
 
-        # Get the locations used to fetch tide data
-        tide_query_loc = tide_query_location.get_tide_query_locations(engine, catchment_area)
-        # Fetch tide data from NIWA using the tide API
-        tide_data_king = tide_data_from_niwa.get_tide_data(
-            tide_query_loc=tide_query_loc,
-            approach=ApproachType.KING_TIDE,
-            tide_length_mins=tide_length_mins,
-            time_to_peak_mins=time_to_peak_mins,
-            interval_mins=interval_mins)
+            # Get the locations used to fetch tide data
+            tide_query_loc = tide_query_location.get_tide_query_locations(conn, catchment_area)
+            # Fetch tide data from NIWA using the tide API
+            tide_data_king = tide_data_from_niwa.get_tide_data(
+                tide_query_loc=tide_query_loc,
+                approach=ApproachType.KING_TIDE,
+                tide_length_mins=tide_length_mins,
+                time_to_peak_mins=time_to_peak_mins,
+                interval_mins=interval_mins)
 
-        # Store sea level rise data to the database
-        sea_level_rise_data.store_slr_data_to_db(engine)
+            # Store sea level rise data to the database
+            sea_level_rise_data.store_slr_data_to_db(conn)
 
-        # Validate input parameters
-        increment_year = 1
-        is_valid, invalid_reason = validate_slr_parameters(
-            proj_year,
-            confidence_level,
-            ssp_scenario,
-            add_vlm,
-            percentile,
-            increment_year,
-        )
-        if not is_valid:
-            raise ValueError(invalid_reason)
+            # Validate input parameters
+            increment_year = 1
+            is_valid, invalid_reason = validate_slr_parameters(
+                proj_year,
+                confidence_level,
+                ssp_scenario,
+                add_vlm,
+                percentile,
+                increment_year,
+            )
+            if not is_valid:
+                raise ValueError(invalid_reason)
 
-        # Get the closest sea level rise data from the database
-        slr_data = sea_level_rise_data.get_slr_data_from_db(engine, tide_data_king)
+            # Get the closest sea level rise data from the database
+            slr_data = sea_level_rise_data.get_slr_data_from_db(conn, tide_data_king)
 
         # Combine the tide and sea level rise (SLR) data
         tide_slr_data = tide_slr_combine.get_combined_tide_slr_data(

@@ -28,7 +28,7 @@ COPY environment.yml .
 RUN mamba env create -f environment.yml
 
 # Make RUN commands use the new environment:
-SHELL ["conda", "run", "-n", "digitaltwin", "/bin/bash", "-c"]
+SHELL ["conda", "run", "-n", "fredt", "/bin/bash", "-c"]
 COPY lib/ lib
 RUN pip install lib/eddie
 
@@ -36,10 +36,10 @@ RUN <<EOF
     # Export conda environment
     echo "Check GeoFabrics is installed to test environment"
     python -c "import geofabrics"
-    echo "Packaging conda environment - digitaltwin"
+    echo "Packaging conda environment - fredt"
     # Pack conda environment to be shared to runtime image
     # Pack current conda environment to temporary tarball
-    conda-pack --ignore-missing-files -n digitaltwin -o /tmp/env.tar
+    conda-pack --ignore-missing-files -n fredt -o /tmp/env.tar
     mkdir /venv
     cd /venv
     # Extract tarball to /venv
@@ -49,7 +49,7 @@ RUN <<EOF
     /venv/bin/conda-unpack
 EOF
 
-FROM lparkinson/bg_flood:v0.9 AS runtime
+FROM lparkinson/bg_flood:v1.0 AS runtime
 # BG_Flood stage for running the digital twin. Reduces image size significantly if we use a multi-stage build
 WORKDIR /app
 
@@ -60,13 +60,22 @@ ADD --chmod=555 https://github.com/gruntwork-io/health-checker/releases/download
  /usr/local/bin/health-checker
 
 RUN <<EOF
+    set -ex
     # Install dependencies
     apt-get update
     apt-get install -y --no-install-recommends \
       acl \
+      build-essential \
       ca-certificates \
       curl \
-      gettext-base
+      gettext-base \
+      libnetcdf-dev \
+      libnuma-dev \
+      wget
+
+    # Install Julia for running wflow
+    curl -fsSL https://julialang-s3.julialang.org/bin/linux/x64/1.12/julia-1.12.6-linux-x86_64.tar.gz | tar -xz -C /opt/
+
     # Cleanup image and remove junk
     rm -fr /var/lib/apt/lists/*
     # Remove unused packages. Keep curl for health checking in docker-compose
@@ -89,8 +98,27 @@ RUN <<EOF
     done
 EOF
 
+ENV PATH="/opt/julia-1.12.6/bin:$PATH"
+ENV JULIA_DEPOT_PATH="/opt/julia"
+
+# Install Julia package Wflow
+RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="0.8.1")'
+
+COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/rainfall_gauges_HIRDS /Barra
+COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/hydrological_hydrodynamic_mataura_path_001 /stored_data/mataura/hydrological_hydrodynamic_mataura_path_001
+COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/necessary_data /necessary_data
+
 # Copy python virtual environment from build layer
-COPY --chown=root:root --chmod=555 --from=build /venv /venv
+COPY --chown=root:root --chmod=777 --from=build /venv /venv
+USER nonroot
+# download whitebox binaries
+RUN <<EOF
+  set -ex
+  source /venv/bin/activate
+  python -c "from whitebox.whitebox_tools import WhiteboxTools; wbt = WhiteboxTools()"
+EOF
+
+USER root
 
 # Copy source files and essential runtime files
 COPY --chown=root:root --chmod=444 selected_polygon.geojson .
