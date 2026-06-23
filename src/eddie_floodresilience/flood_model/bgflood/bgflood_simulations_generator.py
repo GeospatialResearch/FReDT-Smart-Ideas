@@ -35,11 +35,12 @@ from eddie.digitaltwin.utils import LogLevel, setup_logging
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_output_metadata_to_db
 from src.eddie_floodresilience.flood_model.flooded_buildings import (
-    find_flooded_buildings, store_flooded_buildings_in_database)
+    find_flooded_buildings, store_flooded_buildings_in_database
+)
 from src.eddie_floodresilience.flood_model.serve_model import add_model_output_to_geoserver
 from ..flood_model_inputs_generator import InjectionPointsFloodModelGenerator, TerrainGenerator
 from .bgflood_parameters_generator import ParametersFloodModelGenerator
-from .bgflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
+from .bgflood_precipitation import BGFloodPrecipitationGenerator, BGFloodPrecipitationFloodModelGenerator
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -153,7 +154,7 @@ class BGFloodModelSimulationsGenerator():
         if precipitation_file.exists():
             pass
         else:
-            precipitation_generator = PrecipitationGenerator(
+            precipitation_generator = BGFloodPrecipitationGenerator(
                 self.flood_model_path,
                 self.precipitation_path,
                 self.terrain_bounding_box,
@@ -166,7 +167,7 @@ class BGFloodModelSimulationsGenerator():
             precipitation_data = precipitation_generator.precipitation_data_generator()
 
             # Call out class used to generate precipitation data for flood model
-            precipitation_data_for_flood_model = PrecipitationFloodModelGenerator(
+            precipitation_data_for_flood_model = BGFloodPrecipitationFloodModelGenerator(
                 self.flood_model_path,
                 precipitation_data
             )

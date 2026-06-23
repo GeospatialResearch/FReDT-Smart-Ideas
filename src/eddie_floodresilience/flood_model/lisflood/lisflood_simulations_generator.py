@@ -39,7 +39,7 @@ from .. import serve_model
 from ..flood_model_inputs_generator import InjectionPointsFloodModelGenerator, TerrainGenerator
 from .lisflood_inputs_generator import TerrainFloodModelGenerator
 from .lisflood_parameters_generator import ParametersFloodModelGenerator
-from .lisflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
+from .lisflood_precipitation import LisfloodPrecipitationGenerator, LisfloodPrecipitationFloodModelGenerator
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -159,7 +159,7 @@ class LisFloodModelSimulationsGenerator:
     def precipitation_data_for_flood_model_generator(self) -> None:
         """Generate precipitation data for flood model"""
         # Call out class used to generate precipitation data
-        precipitation_generator = PrecipitationGenerator(
+        precipitation_generator = LisfloodPrecipitationGenerator(
             self.flood_model_path,
             self.precipitation_path,
             self.terrain_bounding_box,
@@ -172,7 +172,7 @@ class LisFloodModelSimulationsGenerator:
         precipitation_data = precipitation_generator.precipitation_data_generator()
 
         # Call out class used to generate precipitation data for flood model
-        precipitation_data_for_flood_model = PrecipitationFloodModelGenerator(
+        precipitation_data_for_flood_model = LisfloodPrecipitationFloodModelGenerator(
             self.flood_model_path,
             precipitation_data
         )
