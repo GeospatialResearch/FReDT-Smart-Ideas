@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Classes to transform data into forms ready for BG-Flood."""
-# pylint: disable=duplicate-code
+"""Classes to create input configuration files for Flood Models."""
 
 import logging
 from datetime import datetime
@@ -29,6 +28,7 @@ import xarray as xr
 from shapely.geometry import box, mapping, Point, Polygon, LineString, MultiLineString, MultiPoint
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -196,7 +196,7 @@ class TerrainGenerator:
         return terrain_bounding_box, terrain_crs_clipped
 
 
-class InjectionPointsandStreamlinesAligner():
+class InjectionPointsAndStreamlinesAligner:
     """This class is to align injection points with streamlines"""
 
     def __init__(
@@ -536,7 +536,7 @@ class InjectionPointsandStreamlinesAligner():
         )
 
         # Best cell
-        row_idx, column_idx = self.find_best_cell(score)
+        row_idx, column_idx = self.find_best_cell(score)  # pylint: disable=unbalanced-tuple-unpacking
 
         # Snapped injection point
         snapped_injection_point = self.convert_index_to_point(
@@ -604,7 +604,7 @@ class InjectionPointsandStreamlinesAligner():
         return new_injection_points
 
 
-class InjectionPointsFloodModelGenerator():
+class InjectionPointsFloodModelGenerator:
     """This class is to generate injection points for flood model"""
 
     def __init__(
@@ -815,7 +815,7 @@ class InjectionPointsFloodModelGenerator():
         dem = terrain_data.z.rio.write_crs("EPSG:2193")
 
         # Set up aligner class
-        injection_points_and_streamlines_aligner = InjectionPointsandStreamlinesAligner(
+        injection_points_and_streamlines_aligner = InjectionPointsAndStreamlinesAligner(
             original_injection_points,
             dem
         )

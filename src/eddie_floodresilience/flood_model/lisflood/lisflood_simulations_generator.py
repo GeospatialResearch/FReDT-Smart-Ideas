@@ -36,7 +36,8 @@ from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_out
 from src.eddie_floodresilience.flood_model.flooded_buildings import (
     find_flooded_buildings, store_flooded_buildings_in_database)
 from .. import serve_model
-from .lisflood_inputs_generator import TerrainGenerator, TerrainFloodModelGenerator, InjectionPointsFloodModelGenerator
+from ..flood_model_inputs_generator import InjectionPointsFloodModelGenerator, TerrainGenerator
+from .lisflood_inputs_generator import TerrainFloodModelGenerator
 from .lisflood_parameters_generator import ParametersFloodModelGenerator
 from .lisflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 
@@ -59,7 +60,7 @@ class LisFloodModelSimulationsGenerator:
         start_time: datetime,
         end_time: datetime,
         crs: int = 2193,
-        polygons: int = None,
+        polygons: str = None,
         vectors: str = None
     ) -> None:
         """
@@ -116,6 +117,8 @@ class LisFloodModelSimulationsGenerator:
             self.hydromt_path,
             self.river_name,
             self.aoi_boundary,
+            self.polygons,
+            self.vectors,
             self.crs
         )
 

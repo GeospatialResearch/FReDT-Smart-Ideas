@@ -37,7 +37,7 @@ from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_out
 from src.eddie_floodresilience.flood_model.flooded_buildings import (
     find_flooded_buildings, store_flooded_buildings_in_database)
 from src.eddie_floodresilience.flood_model.serve_model import add_model_output_to_geoserver
-from .bgflood_inputs_generator import TerrainGenerator, InjectionPointsFloodModelGenerator
+from ..flood_model_inputs_generator import InjectionPointsFloodModelGenerator, TerrainGenerator
 from .bgflood_parameters_generator import ParametersFloodModelGenerator
 from .bgflood_precipitation import PrecipitationGenerator, PrecipitationFloodModelGenerator
 
