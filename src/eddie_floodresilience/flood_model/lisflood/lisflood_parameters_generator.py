@@ -1,15 +1,26 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 27 15:16:47 2026
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: mng42
-"""
+"""This script sets parameter files for LISFLOOD-FP model runs."""
+# pylint: disable=duplicate-code
 
 import logging
 from datetime import datetime
 from pathlib import Path
-
-from osgeo import gdal  # Import gdal before rasterio
 
 import geopandas as gpd
 import pandas as pd
@@ -23,7 +34,7 @@ setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class ParametersFloodModelGenerator():
+class ParametersFloodModelGenerator:
     """This class is to generate parameter files for flood model"""
 
     def __init__(
@@ -80,19 +91,19 @@ class ParametersFloodModelGenerator():
 
     def move_points_inside_aoi(
         self,
-        aoi_coords,
-        xy_coords,
-        buffer_distance,
-        tolerance
-    ):
+        aoi_coords: list[float],
+        xy_coords: list[float],
+        buffer_distance: float,
+        tolerance: float
+    ) -> tuple[float]:
         """
         Move points inside aoi
 
         Parameters
         ----------
-        aoi_coords : list
+        aoi_coords : list[float]
             Coordinates of area of interest
-        xy_coords : list
+        xy_coords : list[float]
             Coordinates of x and y. X and y of each injection point
         buffer_distance : float
             Amount that the points are moved inside
@@ -101,7 +112,7 @@ class ParametersFloodModelGenerator():
 
         Returns
         -------
-        xy_coords : list
+        xy_coords : tuple[float]
             New coordinates of x and y. X and y of each injection point
         """
         # Extract each x and y
@@ -127,7 +138,6 @@ class ParametersFloodModelGenerator():
 
     def bci_generator(self) -> None:
         """Generate bci files - where the locations of injection points are defined"""
-
         bci_path = self.flood_model_path / "bci.bci"
         log.info(f"Genarating bci file {bci_path}")
         # At the moment there is only flow data
@@ -138,7 +148,7 @@ class ParametersFloodModelGenerator():
         injection_points = injection_points.to_crs(2193)
 
         # Write out files
-        with open(bci_path, "w") as bci_parameter:
+        with open(bci_path, "w", encoding="utf-8") as bci_parameter:
             # Set up boundaries before creating the bci files
             xmin = self.terrain_bounding_box.bounds[0]
             ymin = self.terrain_bounding_box.bounds[1]
@@ -155,7 +165,8 @@ class ParametersFloodModelGenerator():
 
             # Write into bci file
             for edge_coordinates in boundary_edges:
-                edge_text = ('{0[0]:<5}{0[1]:<20}{0[2]:<20}{0[3]:<7}{0[4]:<5}\n').format(edge_coordinates)
+                # pylint: disable=consider-using-f-string
+                edge_text = '{0[0]:<5}{0[1]:<20}{0[2]:<20}{0[3]:<7}{0[4]:<5}\n'.format(edge_coordinates)
                 bci_parameter.write(edge_text)
 
             # Get injection points ID from injection_points_flow data
@@ -179,15 +190,7 @@ class ParametersFloodModelGenerator():
                 x, y = self.move_points_inside_aoi(aoi_coords, xy_coords, buffer_distance, tolerance)
 
                 # Set up coordinates text for points
-                injection_points_boundary = [
-                    'P',
-                    x,
-                    y,
-                    'QVAR', f"Q_{each_id}"
-                ]
-                injection_points_text = '{0[0]:<5}{0[1]:<20}{0[2]:<20}{0[3]:<7}{0[4]:<5}\n'.format(
-                    injection_points_boundary
-                )
+                injection_points_text = f'{"P":<5}{x:<20}{y:<20}{"QVAR":<7}{f"Q_{each_id}":<5}\n'
 
                 # Write inside bci file
                 bci_parameter.write(injection_points_text)
@@ -228,7 +231,6 @@ class ParametersFloodModelGenerator():
         file_directory : Path
             A directory to the file which has just been named
         """
-
         number_ids = [
             int(f.stem.split("_")[-1])
             for f in Path(self.flood_model_path).glob(f"{filename}_*")
@@ -244,10 +246,9 @@ class ParametersFloodModelGenerator():
 
     def bdy_generator(self) -> None:
         """Generate bdy files - where the flow data of injection points are stored"""
-
         # Path of flow data (bdy) for flood model
         if self.polygons is not None:
-            bdy_name = self.file_increment_generator(f"bdy_landcover").with_suffix(".bdy")
+            bdy_name = self.file_increment_generator("bdy_landcover").with_suffix(".bdy")
         else:
             bdy_name = self.flood_model_path / "bdy.bdy"
 
@@ -272,7 +273,7 @@ class ParametersFloodModelGenerator():
         flow_df[flow_columns] = (flow_df[flow_columns] / 8).round(4)
 
         # Write out flow data for injection points
-        with open(bdy_name, "w") as discharge_tide:
+        with open(bdy_name, "w", encoding="utf-8") as discharge_tide:
 
             discharge_tide.write("LISFLOOD-FP setup\n")
 
@@ -280,10 +281,7 @@ class ParametersFloodModelGenerator():
             for flow_column in flow_columns:
                 # Create new line for each flow value
                 discharge_tide.write(flow_column + "\n")
-                # Write column names
-                discharge_tide.write(
-                    '{0:<20}seconds\n'.format(flow_df.shape[0])
-                )
+                discharge_tide.write(f'{flow_df.shape[0]:<20}seconds\n')
 
                 # Write flow values
                 for i in range(flow_df.shape[0]):
@@ -304,15 +302,14 @@ class ParametersFloodModelGenerator():
                 line = f"{value:<20.4f}{sec:.0f}\n"
                 discharge_tide.write(line)
 
-    def simulated_seconds_generator(self):
+    def simulated_seconds_generator(self) -> int:
         """
         Generate simulated time in seconds
-        
+
         Returns
         -------
         seconds : int
             Simulated time in seconds from starting to ending times
-        
         """
         # Compute simulated time in seconds
         seconds = int((self.end_time - self.start_time).total_seconds())
@@ -351,7 +348,13 @@ class ParametersFloodModelGenerator():
         return output
 
     def par_generator(self) -> Path:
-        """Generate par files - where all the parameter data are navigated"""
+        """
+        Generate par files - where all the parameter data are navigated
+        Returns
+        -------
+        Path
+            Directory of output files as configured in parameter files
+        """
         par_file_path = self.flood_model_path / "par.par"
         log.info(f"Generating par file {par_file_path}")
         # Create output directory
@@ -386,9 +389,6 @@ class ParametersFloodModelGenerator():
         # Path to Manning's n
         n = str(self.flood_model_path / "manning.asc")
 
-        # Path to precipitation
-        precipitation = str(self.flood_model_path / "precipitation_dynamic.nc")
-
         # Simulated time in seconds
         seconds = self.simulated_seconds_generator()
 
@@ -404,24 +404,29 @@ class ParametersFloodModelGenerator():
             ('bdyfile', bdy),
             ('DEMFile', z),
             ('manningfile', n)
-            # ('dynamicrainfile', precipitation)
         ]
 
         # Write into array
         parameters_array = np.array(parameters_list)
 
         # Write PAR file
-        with open(par_file_path, "w") as parameters:
+        with open(par_file_path, "w", encoding="utf-8") as parameters:
             for each_parameter in range(parameters_array.shape[0]):
                 data_parameter = parameters_array[each_parameter]
-                text_parameter = '{0[0]:<20}{0[1]}\n'.format(data_parameter)
+                text_parameter = f'{data_parameter[0]:<20}{data_parameter[1]}\n'
                 parameters.write(text_parameter)
             parameters.write('acceleration\ndrain_nodata\n\n')
         return output_directory
 
     def parameters_files_generator(self) -> Path:
-        """Generate parameter files for flood model"""
+        """
+        Generate parameter files for flood model
 
+        Returns
+        -------
+        Path
+            Directory of output files as configured in parameter files
+        """
         # Generate bci file
         self.bci_generator()
 

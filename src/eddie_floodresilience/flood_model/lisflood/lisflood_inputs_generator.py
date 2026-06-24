@@ -1,35 +1,41 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 26 22:33:14 2026
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: mng42
-"""
-from typing import Any
+"""Classes to create input configuration files for LISFLOOD-FP."""
+# pylint: disable=duplicate-code,too-many-lines
 
-from osgeo import gdal # Import gdal before rasterio
+from datetime import datetime
+from pathlib import Path
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+import rasterio as rio
 import rioxarray as rxr
 import xarray as xr
 from rasterio.enums import Resampling
 from scipy.ndimage import binary_dilation
-import rasterio as rio
-
-import geopandas as gpd
-import numpy as np
-from shapely.geometry import box
-from shapely.geometry import mapping, Polygon, LineString, MultiLineString
-
-from pathlib import Path
-from shapely.geometry import Point, MultiPoint
-
-import pandas as pd
-from datetime import datetime
+from shapely.geometry import box, mapping, Point, Polygon, LineString, MultiLineString, MultiPoint
 
 from src.eddie_floodresilience.preprocessing.terrain_data_manipulator import TerrainFilter
 from src.eddie_floodresilience.preprocessing.terrain_attributes_generator import TerrainAttributesGenerator
 
 
-
-class TerrainGenerator():
+class TerrainGenerator:
     """This class is to generate terrain data for other classes"""
 
     def __init__(
@@ -87,9 +93,9 @@ class TerrainGenerator():
         return terrain_crs
 
     def clip_terrain_data(
-            self,
-            terrain_crs: xr.Dataset
-        ) -> xr.Dataset:
+        self,
+        terrain_crs: xr.Dataset
+    ) -> xr.Dataset:
         """
         Clip terrain data to the area of interest
 
@@ -105,15 +111,15 @@ class TerrainGenerator():
         """
         # Clip DEM
         terrain_crs_clipped = terrain_crs.rio.clip(
-                [mapping(self.aoi_boundary)]
-            )
+            [mapping(self.aoi_boundary)]
+        )
 
         return terrain_crs_clipped
 
     def extract_terrain_bounding_box(
-            self,
-            terrain_crs_clipped: xr.Dataset
-        ) -> Polygon:
+        self,
+        terrain_crs_clipped: xr.Dataset
+    ) -> Polygon:
         """
         Extract terrain data's bounding box
 
@@ -135,9 +141,9 @@ class TerrainGenerator():
         return terrain_bounding_box
 
     def write_out_terrain_data(
-            self,
-            terrain_crs_clipped : xr.Dataset
-        ) -> None:
+        self,
+        terrain_crs_clipped: xr.Dataset
+    ) -> None:
         """
         Write out clipped terrain data
 
@@ -148,10 +154,10 @@ class TerrainGenerator():
         """
         # Write out
         terrain_crs_clipped.to_netcdf(
-                self.flood_model_path / "8m_geofabric_clipped.nc"
-            )
+            self.flood_model_path / "8m_geofabric_clipped.nc"
+        )
 
-    def terrain_data_generator(self):
+    def terrain_data_generator(self) -> None:
         """
         Generate and write out terrain data after formatting
 
@@ -176,14 +182,15 @@ class TerrainGenerator():
 
         return terrain_bounding_box, terrain_crs_clipped
 
+
 class InjectionPointsandStreamlinesAligner():
     """This class is to align injection points with streamlines"""
 
     def __init__(
-            self,
-            original_injection_points: gpd.GeoDataFrame,
-            dem: xr.DataArray
-    ):
+        self,
+        original_injection_points: gpd.GeoDataFrame,
+        dem: xr.DataArray
+    ) -> None:
         """
         Align injection points with streamlines.
         This is just a temporary solution for this problem.
@@ -205,9 +212,9 @@ class InjectionPointsandStreamlinesAligner():
         )
 
     def clip_dem_around_geometry(
-            self,
-            dem: xr.DataArray,
-            geom
+        self,
+        dem: xr.DataArray,
+        geom: Polygon
     ) -> xr.DataArray:
         """
         Clip DEM around geometry
@@ -216,7 +223,7 @@ class InjectionPointsandStreamlinesAligner():
         ----------
         dem : xr.DataArray
             DEM used for the flood model
-        geom : BaseGeometry
+        geom : Polygon
             Geometry of injection points used for clipping
 
         Returns
@@ -234,8 +241,8 @@ class InjectionPointsandStreamlinesAligner():
         return dem_clip
 
     def get_coords_grids_from_dem(
-            self,
-            dem_clip: xr.DataArray
+        self,
+        dem_clip: xr.DataArray
     ) -> tuple[np.ndarray, np.ndarray]:
         """
         Create coordinate grids from DEM coordinates
@@ -261,11 +268,11 @@ class InjectionPointsandStreamlinesAligner():
         return x_array_coord, y_array_coord
 
     def distance_between_cell_and_point(
-            self,
-            x_array_coord: np.ndarray,
-            y_array_coord: np.ndarray,
-            point: Point
-    ):
+        self,
+        x_array_coord: np.ndarray,
+        y_array_coord: np.ndarray,
+        point: Point
+    ) -> np.ndarray:
         """
         Compute Euclidean distance from each DEM cell to the original injection points
 
@@ -292,9 +299,9 @@ class InjectionPointsandStreamlinesAligner():
         return distance
 
     def distance_between_cell_and_boundary(
-            self,
-            x_array_coord: np.ndarray,
-            y_array_coord: np.ndarray
+        self,
+        x_array_coord: np.ndarray,
+        y_array_coord: np.ndarray
     ) -> np.ndarray:
         """
         Compute distance from each DEM cell
@@ -313,7 +320,6 @@ class InjectionPointsandStreamlinesAligner():
         boundary_distance : np.ndarray
             Distance grid to DEM boundary
         """
-
         boundary_line = self.dem_boundary.boundary
 
         boundary_distance = np.zeros_like(
@@ -335,13 +341,13 @@ class InjectionPointsandStreamlinesAligner():
         return boundary_distance
 
     def compute_weighted_score(
-            self,
-            values: np.ndarray,
-            distances: np.ndarray,
-            boundary_distances: np.ndarray,
-            elevation_weight: float,
-            distance_weight: float,
-            boundary_weight: float
+        self,
+        values: np.ndarray,
+        distances: np.ndarray,
+        boundary_distances: np.ndarray,
+        elevation_weight: float,
+        distance_weight: float,
+        boundary_weight: float
     ) -> np.ndarray:
         """
         Compute score weighted by elevation and distance.
@@ -379,8 +385,8 @@ class InjectionPointsandStreamlinesAligner():
         return score
 
     def find_best_cell(
-            self,
-            score: np.ndarray
+        self,
+        score: np.ndarray
     ) -> tuple[int, int]:
         """
         Find grid cell with the lowest score
@@ -404,10 +410,10 @@ class InjectionPointsandStreamlinesAligner():
         return row_column_position
 
     def convert_index_to_point(
-            self,
-            row_idx: int,
-            column_idx: int,
-            dem_clip: xr.DataArray
+        self,
+        row_idx: int,
+        column_idx: int,
+        dem_clip: xr.DataArray
     ) -> Point:
         """
         Convert grid cell indexes into point
@@ -435,13 +441,13 @@ class InjectionPointsandStreamlinesAligner():
         return new_injection_point
 
     def snap_one_point(
-            self,
-            point: Point,
-            dem: xr.DataArray,
-            buffer_distance: float = 100,
-            elevation_weight: float = 1,
-            distance_weight: float = 0.01,
-            boundary_weight: float = 0.02
+        self,
+        point: Point,
+        dem: xr.DataArray,
+        buffer_distance: float = 100,
+        elevation_weight: float = 1,
+        distance_weight: float = 0.01,
+        boundary_weight: float = 0.02
     ) -> Point:
         """
         Snap a point to a nearby low-elevation DEM grid cell.
@@ -510,7 +516,7 @@ class InjectionPointsandStreamlinesAligner():
         )
 
         # Best cell
-        row_idx, column_idx = self.find_best_cell(score)
+        row_idx, column_idx = self.find_best_cell(score)  # pylint: disable=unbalanced-tuple-unpacking
 
         # Snapped injection point
         snapped_injection_point = self.convert_index_to_point(
@@ -522,11 +528,11 @@ class InjectionPointsandStreamlinesAligner():
         return snapped_injection_point
 
     def snap_multiple_injection_points(
-            self,
-            buffer_distance: float = 100,
-            elevation_weight: float = 1,
-            distance_weight: float = 0.01,
-            boundary_weight: float = 0.02
+        self,
+        buffer_distance: float = 100,
+        elevation_weight: float = 1,
+        distance_weight: float = 0.01,
+        boundary_weight: float = 0.02
     ) -> gpd.GeoDataFrame:
         """
         Snap multiple injection points to nearby low-elevation cells
@@ -548,7 +554,7 @@ class InjectionPointsandStreamlinesAligner():
 
         Returns
         -------
-        new_injection_points: gpd.GeoDataFrame
+        gpd.GeoDataFrame
             New injection points
         """
         # Create empty geometry
@@ -575,6 +581,7 @@ class InjectionPointsandStreamlinesAligner():
         new_injection_points.geometry = new_geometries
 
         return new_injection_points
+
 
 class TerrainFloodModelGenerator():
     """This class is to generate terrain data (DEM and friction) for flood model"""
@@ -615,9 +622,9 @@ class TerrainFloodModelGenerator():
         self.crs = crs
 
     def fill_nan_and_write_nodata(
-            self,
-            terrain_variable
-            ) -> xr.Dataset:
+        self,
+        terrain_variable: xr.Dataset
+    ) -> xr.Dataset:
         """
         Fill NaN and write nodata for a specific terrain data
 
@@ -628,7 +635,7 @@ class TerrainFloodModelGenerator():
 
         Returns
         -------
-        terrain_variable: xr.Dataset
+        xr.Dataset
             Specific terrain data that are filled with -9999 as nodata
         """
         # Fill NaN with -9999
@@ -640,9 +647,9 @@ class TerrainFloodModelGenerator():
         return terrain_variable
 
     def format_terrain_data_pipeline(
-            self,
-            variable_name: str
-            ) -> xr.Dataset:
+        self,
+        variable_name: str
+    ) -> xr.Dataset:
         """
         Format terrain data to be used by flood model, the steps are:
             - drop spatial reference
@@ -677,7 +684,7 @@ class TerrainFloodModelGenerator():
 
         return terrain_variable
 
-    def strahler_for_manning_generator(self):
+    def strahler_for_manning_generator(self) -> None:
         """Generate Strahler order streams raster to filter river in Manning's n"""
         # Split terrain data to collect roughness raster
         TerrainFilter(
@@ -713,10 +720,17 @@ class TerrainFloodModelGenerator():
         # Generate Strahler order streams for manning's n
         strahler_for_manning.strahler_stream_order_generator()
 
-    def resample_roughness(self):
-        """Resample roughness from 4m to 8m"""
+    def resample_roughness(self) -> xr.DataArray:
+        """
+        Resample roughness from 4m to 8m.
+
+        Returns
+        -------
+        xr.DataArray
+            Roughness resampled to 8m
+        """
         # Get roughness path
-        roughness_path = self.flood_model_path / f"4m_geofabric_roughness_split.tif"
+        roughness_path = self.flood_model_path / "4m_geofabric_roughness_split.tif"
 
         # Auto chunk size from native block size
         with rio.open(roughness_path) as src:
@@ -745,7 +759,7 @@ class TerrainFloodModelGenerator():
         )
 
         # Save roughness 8m out
-        roughness_outpath = self.flood_model_path / f"roughness_8m.tif"
+        roughness_outpath = self.flood_model_path / "roughness_8m.tif"
         roughness_8m.rio.to_raster(
             roughness_outpath,
             tiled=True,
@@ -756,10 +770,22 @@ class TerrainFloodModelGenerator():
         return roughness_8m
 
     def strahler_filter_generator(
-            self,
-            roughness: xr.DataArray
-    ):
-        """Generate filtered Strahler Order stream raster"""
+        self,
+        roughness: xr.DataArray
+    ) -> xr.DataArray:
+        """
+        Generate filtered Strahler Order stream raster
+
+        Parameters
+        ----------
+        roughness : xr.DataArray
+            Roughness raster
+
+        Returns
+        -------
+        xr.DataArray
+            Mask to choose only 3 and 4 orders
+        """
         # Get strahler path
         strahler_path = self.flood_model_path / "4m_geofabric_strahler_d8.tif"
 
@@ -784,9 +810,9 @@ class TerrainFloodModelGenerator():
         return strahler_mask_8m
 
     def roughness_to_manning(
-            self,
-            roughness: xr.DataArray,
-            h: float = 1
+        self,
+        roughness: xr.DataArray,
+        h: float = 1
     ) -> xr.DataArray:
         """
         Convert raster of roughness length to Manning's n
@@ -821,9 +847,9 @@ class TerrainFloodModelGenerator():
         return manning_n
 
     def manning_adjustment(
-            self,
-            strahler_mask_raster: bool,
-            manning: xr.DataArray
+        self,
+        strahler_mask_raster: bool,
+        manning: xr.DataArray
     ) -> xr.DataArray:
         """
         Filter out unreasonable Manning's n and adjust river Manning's n
@@ -866,7 +892,7 @@ class TerrainFloodModelGenerator():
 
         return manning_river_adjusted
 
-    def manning_generator(self):
+    def manning_generator(self) -> None:
         """Generate clipped Manning's n from 4m to 8m with adjusted river"""
         if self.adjust_manning:
             # Generate Strahler Order streams and roughness length at 4m
@@ -892,7 +918,7 @@ class TerrainFloodModelGenerator():
 
         else:
             # Roughness path
-            roughness_path = self.flood_model_path / f"8m_geofabric_roughness_split.tif"
+            roughness_path = self.flood_model_path / "8m_geofabric_roughness_split.tif"
 
             # Read roughness raster
             roughness = rxr.open_rasterio(roughness_path)
@@ -919,10 +945,10 @@ class TerrainFloodModelGenerator():
         clipped_manning_for_flood.rio.to_raster(manning_outpath)
 
     def write_out_terrain_data(
-            self,
-            variable_name: str,
-            terrain_variable: xr.Dataset
-        ) -> None:
+        self,
+        variable_name: str,
+        terrain_variable: xr.Dataset
+    ) -> None:
         """
         Write out terrain data as ASCII file
 
@@ -940,9 +966,9 @@ class TerrainFloodModelGenerator():
         terrain_variable.rio.to_raster(terrain_variable_path)
 
     def terrain_data_generator(
-            self,
-            variable_name: str
-            ) -> None:
+        self,
+        variable_name: str
+    ) -> None:
         """
         Generate speific terrain data
 
@@ -968,405 +994,6 @@ class TerrainFloodModelGenerator():
         # Generate manning
         self.manning_generator()
 
-class InjectionPointsandStreamlinesAligner():
-    """This class is to align injection points with streamlines"""
-
-    def __init__(
-            self,
-            original_injection_points: gpd.GeoDataFrame,
-            dem: xr.DataArray
-    ):
-        """
-        Align injection points with streamlines.
-        This is just a temporary solution for this problem.
-        The idea is find the closest and lowest areas to the current injection points.
-
-        Parameters
-        ----------
-        original_injection_points : gpd.GeoDataFrame
-            Original injection points
-        dem : xr.DataArray
-            DEM used for flood model
-        """
-        self.original_injection_points = original_injection_points.to_crs("EPSG:2193")
-        self.dem = dem
-
-        xmin, ymin, xmax, ymax = self.dem.rio.bounds()
-        self.dem_boundary = box(
-            xmin, ymin, xmax, ymax
-        )
-
-    def clip_dem_around_geometry(
-            self,
-            dem: xr.DataArray,
-            geom
-    ) -> xr.DataArray:
-        """
-        Clip DEM around geometry
-
-        Parameters
-        ----------
-        dem : xr.DataArray
-            DEM used for the flood model
-        geom : BaseGeometry
-            Geometry of injection points used for clipping
-
-        Returns
-        -------
-        dem_clip : xr.DataArray
-            DEM clipped to the geometry
-        """
-        # Clip DEM around geometry
-        dem_clip = dem.rio.clip(
-            [geom],
-            crs=2193,
-            drop=True
-        )
-
-        return dem_clip
-
-    def get_coords_grids_from_dem(
-            self,
-            dem_clip: xr.DataArray
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Create coordinate grids from DEM coordinates
-
-        Parameters
-        ----------
-        dem_clip : xr.DataArray
-            DEM clipped to the geometry
-
-        Returns
-        -------
-        x_array_coord : np.ndarray
-            Meshgrid arrays of x coordinates
-        y_array_coord : np.ndarray
-            Meshgrid arrays of y coordinates
-        """
-        # Extract x, y coordinates from DEM that is clipped around geometry
-        x_coord = dem_clip.x.values
-        y_coord = dem_clip.y.values
-
-        x_array_coord, y_array_coord = np.meshgrid(x_coord, y_coord)
-
-        return x_array_coord, y_array_coord
-
-    def distance_between_cell_and_point(
-            self,
-            x_array_coord: np.ndarray,
-            y_array_coord: np.ndarray,
-            point: Point
-    ):
-        """
-        Compute Euclidean distance from each DEM cell to the original injection points
-
-        Parameters
-        ----------
-        x_array_coord : np.ndarray
-            Meshgrid arrays of x coordinates
-        y_array_coord : np.ndarray
-            Meshgrid arrays of y coordinates
-        point : Point
-            Original injection point
-
-        Returns
-        -------
-        distance : np.ndarray
-            Distance grid
-        """
-        # Calculate the distance
-        distance = np.sqrt(
-            (x_array_coord - point.x) ** 2 +
-            (y_array_coord - point.y) ** 2
-        )
-
-        return distance
-
-    def distance_between_cell_and_boundary(
-            self,
-            x_array_coord: np.ndarray,
-            y_array_coord: np.ndarray
-    ) -> np.ndarray:
-        """
-        Compute distance from each DEM cell
-        to DEM boundary.
-
-        Parameters
-        ----------
-        x_array_coord : np.ndarray
-            Meshgrid arrays of x coordinates
-
-        y_array_coord : np.ndarray
-            Meshgrid arrays of y coordinates
-
-        Returns
-        -------
-        boundary_distance : np.ndarray
-            Distance grid to DEM boundary
-        """
-
-        boundary_line = self.dem_boundary.boundary
-
-        boundary_distance = np.zeros_like(
-            x_array_coord,
-            dtype=float
-        )
-
-        for row in range(x_array_coord.shape[0]):
-            for col in range(x_array_coord.shape[1]):
-                point = Point(
-                    x_array_coord[row, col],
-                    y_array_coord[row, col]
-                )
-
-                boundary_distance[row, col] = (
-                    point.distance(boundary_line)
-                )
-
-        return boundary_distance
-
-    def compute_weighted_score(
-            self,
-            values: np.ndarray,
-            distances: np.ndarray,
-            boundary_distances: np.ndarray,
-            elevation_weight: float,
-            distance_weight: float,
-            boundary_weight: float
-    ) -> np.ndarray:
-        """
-        Compute score weighted by elevation and distance.
-        (The target is to find the lowest score)
-
-        Parameters
-        ----------
-        values : np.ndarray
-            DEM cell values
-        distances : np.ndarray
-            Distance grid from original point
-        boundary_distances : np.ndarray
-            Distance to the boundary grid
-        elevation_weight : float
-            Weight values that control the influence of elevation.
-            Default is 1
-        distance_weight : float
-            Weight values that control the influence of distance.
-            Larger values prefer cells closer to the original injection point.
-            Default is 0.01
-        boundary_weight : float
-            Weight values that manage the distance between the injection points and boundary edges
-
-        Returns
-        -------
-        np.ndarray
-            Computed score grid.
-        """
-        # Compute score
-        score = elevation_weight * values + distance_weight * distances + boundary_weight * boundary_distances
-
-        # Ignore nans
-        score[np.isnan(values)] = np.nan
-
-        return score
-
-    def find_best_cell(
-            self,
-            score: np.ndarray
-    ) -> tuple[int, int]:
-        """
-        Find grid cell with the lowest score
-
-        Parameters
-        ----------
-        score : np.ndarray
-            Combined score grid
-
-        Returns
-        -------
-        row_column_position : tuple[int, int]
-            Row and column indexes
-        """
-        # Find the best cell
-        best_index = np.nanargmin(score)
-
-        # Find the row nad column position in the grid
-        row_column_position = np.unravel_index(best_index, score.shape)
-
-        return row_column_position
-
-    def convert_index_to_point(
-            self,
-            row_idx: int,
-            column_idx: int,
-            dem_clip: xr.DataArray
-    ) -> Point:
-        """
-        Convert grid cell indexes into point
-
-        Parameters
-        ----------
-        row_idx : int
-            Grid xell row index
-        column_idx : int
-            Grid cell column index
-        dem_clip : xr.DataArray
-            DEM clipped to the geometry
-
-        Returns
-        -------
-        new_injection_point : Point
-            Injection point at grid cell centre
-        """
-        # Create new injection point
-        new_injection_point = Point(
-            dem_clip.x.values[column_idx],
-            dem_clip.y.values[row_idx]
-        )
-
-        return new_injection_point
-
-    def snap_one_point(
-            self,
-            point: Point,
-            dem: xr.DataArray,
-            buffer_distance: float = 100,
-            elevation_weight: float = 1,
-            distance_weight: float = 0.01,
-            boundary_weight: float = 0.02
-    ) -> Point:
-        """
-        Snap a point to a nearby low-elevation DEM grid cell.
-        The selected point will have the minimised (elevation + weighted_distance * distance)
-
-        Parameters
-        ----------
-        point : Point
-            Original injection point
-        dem : xr.DataArray
-            DEM used for the flood model
-        buffer_distance : float = 100
-            Search radius around the point (metres).
-            Default is 100
-        elevation_weight : float
-            Weight values that control the influence of elevation.
-            Default is 1.
-        distance_weight : float = 0.05
-            Controls balance between lower elevation and closer distance.
-            Larger values prefer closer cells.
-            Default is 0.01
-        boundary_weight : float = 0.02
-            Controls balance lower elevation, closer distance, and distance to the boundary edges.
-            Default is 0.02
-
-        Returns
-        -------
-        snapped_point : Point
-            Snapped point geometry.
-        """
-        # Create search area
-        buffer_geom = point.buffer(buffer_distance)
-
-        # Clip DEM
-        dem_clip = self.clip_dem_around_geometry(
-            dem,
-            buffer_geom
-        )
-
-        # Extract elevation values
-        values = dem_clip.values
-
-        # Coordinate grids
-        x_array_coord, y_array_coord = self.get_coords_grids_from_dem(dem_clip)
-
-        # Distance grid
-        distances = self.distance_between_cell_and_point(
-            x_array_coord,
-            y_array_coord,
-            point
-        )
-
-        boundary_distances = self.distance_between_cell_and_boundary(
-            x_array_coord,
-            y_array_coord
-        )
-
-        # Combined score
-        score = self.compute_weighted_score(
-            values,
-            distances,
-            boundary_distances,
-            elevation_weight,
-            distance_weight,
-            boundary_weight
-        )
-
-        # Best cell
-        row_idx, column_idx = self.find_best_cell(score)
-
-        # Snapped injection point
-        snapped_injection_point = self.convert_index_to_point(
-            row_idx,
-            column_idx,
-            dem_clip
-        )
-
-        return snapped_injection_point
-
-    def snap_multiple_injection_points(
-            self,
-            buffer_distance: float = 100,
-            elevation_weight: float = 1,
-            distance_weight: float = 0.01,
-            boundary_weight: float = 0.02
-    ) -> gpd.GeoDataFrame:
-        """
-        Snap multiple injection points to nearby low-elevation cells
-
-        Parameters
-        ----------
-        buffer_distance : float = 100
-            Search radius around each point (metres).
-            Default is 100
-        elevation_weight : float
-            Weight values that control the influence of elevation.
-            Default is 1.
-        distance_weight : float = 0.01
-            Controls preference for closer cells.
-            Default is 0.01
-        boundary_weight : float = 0.02
-            Controls preference for distance to the edges.
-            Default is 0.02
-
-        Returns
-        -------
-        new_injection_points: gpd.GeoDataFrame
-            New injection points
-        """
-        # Create empty geometry
-        new_geometries = []
-
-        for _, row in self.original_injection_points.iterrows():
-            # Snap all original injection points
-            snapped_point = self.snap_one_point(
-                point=row.geometry,
-                dem=self.dem,
-                buffer_distance=buffer_distance,
-                elevation_weight=elevation_weight,
-                distance_weight=distance_weight,
-                boundary_weight=boundary_weight
-            )
-
-            # Add to new geometries
-            new_geometries.append(snapped_point)
-
-        # Create new injection points
-        new_injection_points = self.original_injection_points.copy()
-
-        # Assign new point geometries
-        new_injection_points.geometry = new_geometries
-
-        return new_injection_points
 
 class InjectionPointsFloodModelGenerator():
     """This class is to generate injection points for flood model"""
@@ -1439,9 +1066,9 @@ class InjectionPointsFloodModelGenerator():
         return rivers_new_projection
 
     def intersect_rivers_and_dem_bounding_box(
-            self,
-            rivers_new_projection: gpd.GeoDataFrame
-            ) -> gpd.GeoSeries:
+        self,
+        rivers_new_projection: gpd.GeoDataFrame
+    ) -> gpd.GeoSeries:
         """
         Generate intersection between rivers and DEM bounding box
 
@@ -1469,9 +1096,9 @@ class InjectionPointsFloodModelGenerator():
         return intersections
 
     def extract_injection_points_from_intersections(
-            self,
-            intersections: gpd.GeoSeries
-            ) -> list[Point]:
+        self,
+        intersections: gpd.GeoSeries
+    ) -> list[Point]:
         """
         Filter intersections and extract injection points
 
@@ -1521,9 +1148,9 @@ class InjectionPointsFloodModelGenerator():
         return points
 
     def prepare_injection_points(
-            self,
-            points: list[Point]
-            ) -> gpd.GeoDataFrame:
+        self,
+        points: list[Point]
+    ) -> gpd.GeoDataFrame:
         """
         Prepare injection points by adding IDs and converting crs
 
@@ -1540,23 +1167,23 @@ class InjectionPointsFloodModelGenerator():
         """
         # Build up geodataframe for points
         points_gdf = gpd.GeoDataFrame(
-                geometry=points,
-                crs=self.crs
-            )
+            geometry=points,
+            crs=self.crs
+        )
 
         # Add ID
         points_gdf['FID'] = [
             f"Q_{i}" for i in range(
                 1, points_gdf.shape[0] + 1
-                )
-            ]
+            )
+        ]
 
         return points_gdf
 
     def align_injection_points_and_streamlines(
-            self,
-            original_injection_points: gpd.GeoDataFrame
-    ):
+        self,
+        original_injection_points: gpd.GeoDataFrame
+    ) -> gpd.GeoDataFrame:
         """
         Align injections points with streamlines
 
@@ -1564,6 +1191,11 @@ class InjectionPointsFloodModelGenerator():
         ----------
         original_injection_points : gpd.GeoDataFrame
             Original injection points
+
+        Returns
+        -------
+        gpd.GeoDataFrame
+            New injection points
         """
         # Get DEM
         terrain_data = xr.open_dataset(self.flood_model_path / "8m_geofabric_clipped.nc")
@@ -1586,8 +1218,8 @@ class InjectionPointsFloodModelGenerator():
         return new_injection_points
 
     def write_out_injection_points(
-            self,
-            new_injection_points: gpd.GeoDataFrame
+        self,
+        new_injection_points: gpd.GeoDataFrame
     ) -> None:
         """
         Write out injection points
@@ -1629,10 +1261,10 @@ class InjectionPointsFloodModelGenerator():
         return rivers_flow
 
     def extract_rivers_flow_for_injection_points(
-            self,
-            rivers_flow: xr.DataArray,
-            points_gdf: gpd.GeoDataFrame
-            ) -> pd.DataFrame:
+        self,
+        rivers_flow: xr.DataArray,
+        points_gdf: gpd.GeoDataFrame
+    ) -> pd.DataFrame:
         """
         Extract rivers' flow from catchment model outputs at injection points
 
@@ -1654,7 +1286,7 @@ class InjectionPointsFloodModelGenerator():
 
         # Extract rivers' flow from catchment model outputs
         # for injection points
-        for i, row in points_gdf.iterrows():
+        for _i, row in points_gdf.iterrows():
             # Get longitude (or x), latitude (or y), and ID
             lon_x = row.geometry.x
             lat_y = row.geometry.y
@@ -1662,10 +1294,10 @@ class InjectionPointsFloodModelGenerator():
 
             # Extract rivers' flow data at injection points
             injection_points_flow = rivers_flow.sel(
-                    x=lon_x,
-                    y=lat_y,
-                    method='nearest'
-                )
+                x=lon_x,
+                y=lat_y,
+                method='nearest'
+            )
 
             # Append to the dictionary
             injection_points_flow_dict[name] = injection_points_flow.values
@@ -1676,10 +1308,10 @@ class InjectionPointsFloodModelGenerator():
         return injection_points_flow_df
 
     def write_out_rivers_flow_within_time(
-            self,
-            injection_points_flow_df: pd.DataFrame,
-            rivers_flow: xr.DataArray
-            ) -> None:
+        self,
+        injection_points_flow_df: pd.DataFrame,
+        rivers_flow: xr.DataArray
+    ) -> None:
         """
         Write out rivers' flow within given time
 
@@ -1695,24 +1327,24 @@ class InjectionPointsFloodModelGenerator():
 
         # Add time to dataframe of injection points' river flows
         injection_points_flow_df.insert(
-                0, "time",
-                times
-            )
+            0, "time",
+            times
+        )
 
         # Extract rivers' flow within given time
         injection_points_flow_df = injection_points_flow_df[
-                (injection_points_flow_df['time'] >= self.start_time) &
-                (injection_points_flow_df['time'] <= self.end_time)
-            ]
+            (injection_points_flow_df['time'] >= self.start_time) &
+            (injection_points_flow_df['time'] <= self.end_time)
+        ]
 
         # Write out csv file
         injection_points_flow_path = self.flood_model_path / "injection_points_flow.csv"
         injection_points_flow_df.to_csv(
-                injection_points_flow_path,
-                index=False
-            )
+            injection_points_flow_path,
+            index=False
+        )
 
-    def injection_points_flow_generator(self):
+    def injection_points_flow_generator(self) -> None:
         """
         Generate injection points and their flow data from catchment model output.
         These injection points will be used in flood model (LISFLOOD-FP)

@@ -1,41 +1,73 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Fri Mar 27 15:16:47 2026
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""Classes to configure and write parameter files for BG-Flood."""
+# pylint: disable=duplicate-code
 
-@author: mng42
-"""
-
-from osgeo import gdal  # Import gdal before rasterio
+import logging
+from datetime import datetime
+from pathlib import Path
+from textwrap import dedent
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from shapely.geometry import Polygon, Point
 
-import pandas as pd
-
-from datetime import datetime
-
-from pathlib import Path
-
-from textwrap import dedent
-
-import shutil
-import logging
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
-class ParametersFloodModelGenerator():
-    """This class is to generate parameter files for flood model"""
+
+class ParametersFloodModelGenerator:
+    """
+    This class is to generate parameter files for flood model
+
+    Attributes
+    ----------
+     flood_model_path : Path
+            Directory to folder storing flood model data
+    terrain_bounding_box : Polygon
+        Bounding's box of terrain data
+    start_time : datetime
+        Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
+    end_time : datetime
+        Ending time details.
+    polygons : str = None
+        Name of polygon file that is used to change the landcover information.
+        This polygon dataframe has 'landcover' column with new values
+    vectors : str = None
+        Name of vector file that is used to change the elevation information.
+        This vector dataframe has 'value' column to specify increasing or decreasing elevation,
+        and 'distance' column to specify how smooth to decrease elevation.
+    injection_points_flow : pd.DataFrame
+        The flow data for each point
+    injection_points : gpd.GeoDataFrame
+        The points geometry for flow data
+    """  # pylint: disable=too-many-instance-attributes
 
     def __init__(
-            self,
-            flood_model_path: Path,
-            terrain_bounding_box: Polygon,
-            start_time: datetime,
-            end_time: datetime,
-            polygons: str = None,
-            vectors: str = None
+        self,
+        flood_model_path: Path,
+        terrain_bounding_box: Polygon,
+        start_time: datetime,
+        end_time: datetime,
+        polygons: str = None,
+        vectors: str = None
     ) -> None:
         """
         Generate parameter files for flood model
@@ -79,8 +111,7 @@ class ParametersFloodModelGenerator():
 
         self.injection_points = gpd.read_file(self.flood_model_path / "injection_points.shp")
 
-
-    def output_folder_generator(self):
+    def output_folder_generator(self) -> None:
         """Generate output folder"""
         log.info("Generating output folder")
         if self.polygons is not None and self.vectors is not None:
@@ -95,23 +126,22 @@ class ParametersFloodModelGenerator():
         prefix = output_name + "_"
 
         next_id = (
-                max(
-                    [
-                        int(f.name.split("_")[-1])
-                        for f in self.flood_model_path.iterdir()
-                        if f.is_dir()
-                           and f.name.startswith(prefix)
-                           and f.name.split("_")[-1].isdigit()
-                    ],
-                    default=0
-                )
-                + 1
+            # pylint: disable=consider-using-generator
+            max(
+                [
+                    int(f.name.split("_")[-1])
+                    for f in self.flood_model_path.iterdir()
+                    if f.is_dir() and f.name.startswith(prefix) and f.name.split("_")[-1].isdigit()
+                ],
+                default=0
+            ) + 1
         )
 
+        # pylint: disable=attribute-defined-outside-init
         self.output_folder = self.flood_model_path / f"{output_name}_{next_id:03d}"
         self.output_folder.mkdir(exist_ok=False)
 
-    def flow_text_file_generator(self):
+    def flow_text_file_generator(self) -> None:
         """Generate flow text data for BG-Flood"""
         log.info("Generating flow text data")
         # Create a loop to generate flow text data for BG-Flood
@@ -119,9 +149,8 @@ class ParametersFloodModelGenerator():
 
             # Choose only flow text columns
             if col.startswith("Q_"):
-
                 # Remove the Q before the flow ID
-                fid = col.split("_")[1]   # e.g. Q_97 → 97
+                fid = col.split("_")[1]  # e.g. Q_97 → 97
 
                 # Extract time
                 times = self.injection_points_flow["time_in_second"].values
@@ -143,9 +172,9 @@ class ParametersFloodModelGenerator():
                 )
 
     def tide_text_file_design(
-            self,
-            direction: str
-    ):
+        self,
+        direction: str
+    ) -> None:
         """
         Design codes for generating tide text data
 
@@ -154,7 +183,7 @@ class ParametersFloodModelGenerator():
         direction : str
             Four edges of DEM - top, bottom, left, and right
         """
-        with open(self.flood_model_path / f"{self.output_folder}/{direction}_bnd.txt", "w") as f:
+        with open(self.flood_model_path / self.output_folder / f"{direction}_bnd.txt", "w", encoding="utf-8") as f:
             # write header
             f.write("# Water level boundary\n")
 
@@ -162,7 +191,7 @@ class ParametersFloodModelGenerator():
             for t in self.injection_points_flow["time_in_second"]:
                 f.write(f"{int(t)}\t0.0\n")
 
-    def tide_text_file_generator(self):
+    def tide_text_file_generator(self) -> None:
         """Generate tide text data for four edges for BG-Flood"""
         log.info("Writing tide boundary configuration.")
         self.tide_text_file_design('top')
@@ -171,12 +200,12 @@ class ParametersFloodModelGenerator():
         self.tide_text_file_design('right')
 
     def move_points_inside_aoi(
-            self,
-            aoi_coords,
-            xy_coords,
-            buffer_distance,
-            tolerance
-    ):
+        self,
+        aoi_coords: list[float],
+        xy_coords: list[float],
+        buffer_distance: float,
+        tolerance: float
+    ) -> tuple[float]:
         """
         Move points inside aoi
 
@@ -219,8 +248,8 @@ class ParametersFloodModelGenerator():
         return x, y
 
     def pixel_bounds_from_centroid(
-            self,
-            point
+        self,
+        point: Point
     ) -> tuple[float, float, float, float]:
         """
         Identify pixel bounds for flow through centroid
@@ -232,7 +261,7 @@ class ParametersFloodModelGenerator():
 
         Returns
         -------
-        pixel_bounds: tuple[float, float, float, float]
+        tuple[float, float, float, float]
             Pixel bounds as (xmin, xmax, ymin, ymax)
         """
         # Get coordinates of centroids
@@ -251,15 +280,15 @@ class ParametersFloodModelGenerator():
             x - 4,  # xmin
             x + 4,  # xmax
             y - 4,  # ymin
-            y + 4   # ymax
+            y + 4  # ymax
         )
 
         return pixel_bounds
 
     def flow_text_data_design(
-            self,
-            flow_id: str,
-            pixel_bounds: tuple[float, float, float, float]
+        self,
+        flow_id: str,
+        pixel_bounds: tuple[float, float, float, float]
     ) -> str:
         """
         Design river text data for BG Flood parameter file
@@ -288,7 +317,7 @@ class ParametersFloodModelGenerator():
         return flow_text
 
     def flow_text_data_generator(
-            self
+        self
     ) -> list:
         """
         Generate river text data for BG-Flood parameter file
@@ -312,9 +341,8 @@ class ParametersFloodModelGenerator():
 
         return flow_lines
 
-    def bg_param_file_generator(self):
+    def bg_param_file_generator(self) -> None:
         """Generate BG-Flood param file"""
-
         if self.vectors is not None:
             terrain_name = str(max(
                 Path(self.flood_model_path).glob("8m_geofabric_clipped_elevation_*.nc"),
@@ -348,15 +376,13 @@ class ParametersFloodModelGenerator():
         # Set up output path
         output_path = self.flood_model_path / f"{self.output_folder}/BG_param.txt"
 
-        with open(output_path, "w") as f:
+        with open(output_path, "w", encoding="utf-8") as f:
             f.write(param_text)
             for line in self.flow_text_data_generator():
                 f.write(line + "\n")
 
-
-    def parameter_files_generator(self):
+    def parameter_files_generator(self) -> None:
         """Generate parameter files to run BG-Flood"""
-
         # Create output folder
         self.output_folder_generator()
 
@@ -368,6 +394,3 @@ class ParametersFloodModelGenerator():
 
         # Generate param files
         self.bg_param_file_generator()
-
-
-
