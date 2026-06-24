@@ -39,7 +39,7 @@ from src.eddie_floodresilience.flood_model.flooded_buildings import (
 )
 from src.eddie_floodresilience.flood_model.serve_model import add_model_output_to_geoserver
 from ..flood_model_inputs_generator import InjectionPointsFloodModelGenerator, TerrainGenerator
-from .bgflood_parameters_generator import ParametersFloodModelGenerator
+from .bgflood_parameters_generator import BGFloodParametersGenerator
 from .bgflood_precipitation import BGFloodPrecipitationGenerator, BGFloodPrecipitationFloodModelGenerator
 
 setup_logging(LogLevel.DEBUG)
@@ -178,7 +178,7 @@ class BGFloodModelSimulationsGenerator():
     def parameter_data_for_flood_model_generator(self) -> None:
         """Generate parameters files for flood model"""
         # Call out class used to generate parameter files
-        parameters_files_generator = ParametersFloodModelGenerator(
+        parameters_files_generator = BGFloodParametersGenerator(
             self.flood_model_path,
             self.terrain_bounding_box,
             self.start_time,

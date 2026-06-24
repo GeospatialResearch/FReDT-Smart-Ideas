@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """Classes to configure and write parameter files for BG-Flood."""
-# pylint: disable=duplicate-code
 
 import logging
 from datetime import datetime
@@ -24,23 +23,23 @@ from textwrap import dedent
 
 import geopandas as gpd
 import numpy as np
-import pandas as pd
 from shapely.geometry import Polygon, Point
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+from ..flood_model_parameters_generator import FloodModelParametersGenerator
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class ParametersFloodModelGenerator:
+class BGFloodParametersGenerator(FloodModelParametersGenerator):
     """
     This class is to generate parameter files for flood model
 
     Attributes
     ----------
-     flood_model_path : Path
-            Directory to folder storing flood model data
+    flood_model_path : Path
+        Directory to folder storing flood model data
     terrain_bounding_box : Polygon
         Bounding's box of terrain data
     start_time : datetime
@@ -58,7 +57,7 @@ class ParametersFloodModelGenerator:
         The flow data for each point
     injection_points : gpd.GeoDataFrame
         The points geometry for flow data
-    """  # pylint: disable=too-many-instance-attributes
+    """
 
     def __init__(
         self,
@@ -90,18 +89,8 @@ class ParametersFloodModelGenerator:
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
         """
-        self.flood_model_path = flood_model_path
-        self.terrain_bounding_box = terrain_bounding_box
-        self.start_time = start_time
-        self.end_time = end_time
+        super().__init__(flood_model_path, terrain_bounding_box, start_time, end_time, polygons, vectors)
 
-        self.seconds = int((end_time - start_time).total_seconds())
-
-        self.polygons = polygons
-        self.vectors = vectors
-
-        # Read injection points flow csv
-        self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
         # Add column that converts time to seconds
         self.injection_points_flow['time_in_second'] = np.arange(
             0,
@@ -113,6 +102,7 @@ class ParametersFloodModelGenerator:
 
     def output_folder_generator(self) -> None:
         """Generate output folder"""
+        # todo identidied as semi-duplicate
         log.info("Generating output folder")
         if self.polygons is not None and self.vectors is not None:
             output_name = "output_landcover_elevation"
@@ -141,7 +131,7 @@ class ParametersFloodModelGenerator:
         self.output_folder = self.flood_model_path / f"{output_name}_{next_id:03d}"
         self.output_folder.mkdir(exist_ok=False)
 
-    def flow_text_file_generator(self) -> None:
+    def write_injection_point_files(self) -> None:
         """Generate flow text data for BG-Flood"""
         log.info("Generating flow text data")
         # Create a loop to generate flow text data for BG-Flood
@@ -198,54 +188,6 @@ class ParametersFloodModelGenerator:
         self.tide_text_file_design('bottom')
         self.tide_text_file_design('left')
         self.tide_text_file_design('right')
-
-    def move_points_inside_aoi(
-        self,
-        aoi_coords: list[float],
-        xy_coords: list[float],
-        buffer_distance: float,
-        tolerance: float
-    ) -> tuple[float]:
-        """
-        Move points inside aoi
-
-        Parameters
-        ----------
-        aoi_coords : list
-            Coordinates of area of interest
-        xy_coords : list
-            Coordinates of x and y. X and y of each injection point
-        buffer_distance : float
-            Amount that the points are moved inside
-        tolerance : float
-            How much differences in distance between injection points and coordinates of area of interest
-
-        Returns
-        -------
-        xy_coords : list
-            New coordinates of x and y. X and y of each injection point
-        """
-        log.info("Moving points inside aoi")
-        # Extract each x and y
-        x, y = xy_coords
-
-        # Extract xmin, ymin, xmax, ymax
-        xmin, ymin, xmax, ymax = aoi_coords
-
-        # Move points inside DEM
-        if abs(y - ymax) <= tolerance:
-            y -= buffer_distance
-
-        elif abs(y - ymin) <= tolerance:
-            y += buffer_distance
-
-        elif abs(x - xmax) <= tolerance:
-            x -= buffer_distance
-
-        elif abs(x - xmin) <= tolerance:
-            x += buffer_distance
-
-        return x, y
 
     def pixel_bounds_from_centroid(
         self,
@@ -341,8 +283,15 @@ class ParametersFloodModelGenerator:
 
         return flow_lines
 
-    def bg_param_file_generator(self) -> None:
-        """Generate BG-Flood param file"""
+    def write_flood_model_parameter_file(self) -> Path:
+        """
+        Generate BG-Flood param file.
+
+        Return
+        ------
+        Path
+            The directory the parameter file was created in.
+        """
         if self.vectors is not None:
             terrain_name = str(max(
                 Path(self.flood_model_path).glob("8m_geofabric_clipped_elevation_*.nc"),
@@ -374,12 +323,14 @@ class ParametersFloodModelGenerator:
         # rainfile = {str(self.flood_model_path / "precipitation_dynamic.nc")}?depth;
 
         # Set up output path
-        output_path = self.flood_model_path / f"{self.output_folder}/BG_param.txt"
+        output_path = self.flood_model_path / self.output_folder / "BG_param.txt"
 
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(param_text)
             for line in self.flow_text_data_generator():
                 f.write(line + "\n")
+
+        return output_path.parent
 
     def parameter_files_generator(self) -> None:
         """Generate parameter files to run BG-Flood"""
@@ -387,10 +338,10 @@ class ParametersFloodModelGenerator:
         self.output_folder_generator()
 
         # Generate flow files
-        self.flow_text_file_generator()
+        self.write_injection_point_files()
 
         # Generate tide files
         self.tide_text_file_generator()
 
         # Generate param files
-        self.bg_param_file_generator()
+        self.write_flood_model_parameter_file()

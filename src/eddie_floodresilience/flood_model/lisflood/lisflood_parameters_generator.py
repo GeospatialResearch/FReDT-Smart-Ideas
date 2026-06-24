@@ -16,110 +16,23 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """This script sets parameter files for LISFLOOD-FP model runs."""
-# pylint: disable=duplicate-code
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
 import numpy as np
-from shapely.geometry import Polygon
 
 from eddie.digitaltwin.utils import LogLevel, setup_logging
+from ..flood_model_parameters_generator import FloodModelParametersGenerator
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class ParametersFloodModelGenerator:
+class LisfloodParametersGenerator(FloodModelParametersGenerator):
     """This class is to generate parameter files for flood model"""
-
-    def __init__(
-        self,
-        flood_model_path: Path,
-        terrain_bounding_box: Polygon,
-        start_time: datetime,
-        end_time: datetime,
-        polygons: str = None,
-        vectors: str = None
-    ) -> None:
-        """
-        Generate parameter files for flood model
-
-        Parameters
-        ----------
-        flood_model_path : Path
-            Directory to folder storing flood model data
-        terrain_bounding_box : Polygon
-            Bounding's box of terrain data
-        start_time : datetime
-            Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
-        end_time : datetime
-            Ending time details.
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
-            This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
-        """
-        self.flood_model_path = flood_model_path
-        self.terrain_bounding_box = terrain_bounding_box
-        self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
-        self.start_time = start_time
-        self.end_time = end_time
-        self.polygons = polygons
-        self.vectors = vectors
-
-    def move_points_inside_aoi(
-        self,
-        aoi_coords: list[float],
-        xy_coords: list[float],
-        buffer_distance: float,
-        tolerance: float
-    ) -> tuple[float]:
-        """
-        Move points inside aoi
-
-        Parameters
-        ----------
-        aoi_coords : list[float]
-            Coordinates of area of interest
-        xy_coords : list[float]
-            Coordinates of x and y. X and y of each injection point
-        buffer_distance : float
-            Amount that the points are moved inside
-        tolerance : float
-            How much differences in distance between injection points and coordinates of area of interest
-
-        Returns
-        -------
-        xy_coords : tuple[float]
-            New coordinates of x and y. X and y of each injection point
-        """
-        # Extract each x and y
-        x, y = xy_coords
-
-        # Extract xmin, ymin, xmax, ymax
-        xmin, ymin, xmax, ymax = aoi_coords
-
-        # Move points inside DEM
-        if abs(y - ymax) <= tolerance:
-            y -= buffer_distance
-
-        elif abs(y - ymin) <= tolerance:
-            y += buffer_distance
-
-        elif abs(x - xmax) <= tolerance:
-            x -= buffer_distance
-
-        elif abs(x - xmin) <= tolerance:
-            x += buffer_distance
-
-        return x, y
 
     def bci_generator(self) -> None:
         """Generate bci files - where the locations of injection points are defined"""
@@ -180,36 +93,6 @@ class ParametersFloodModelGenerator:
                 # Write inside bci file
                 bci_parameter.write(injection_points_text)
 
-    def file_increment_generator(
-        self,
-        filename: str
-    ) -> Path:
-        """
-        Generate increasing files
-
-        Parameters
-        ----------
-        filename : str
-            Filename accords to scenario and order of that scenario
-
-        Returns
-        -------
-        file_directory : Path
-            A directory to the file which has just been named
-        """
-        number_ids = [
-            int(f.stem.split("_")[-1])
-            for f in Path(self.flood_model_path).glob(f"{filename}_*")
-        ]
-
-        # Get next output
-        file_number = max(number_ids, default=0) + 1
-
-        # Output path
-        file_directory = Path(self.flood_model_path) / f"{filename}_{file_number:03d}"
-
-        return file_directory
-
     def bdy_generator(self) -> None:
         """Generate bdy files - where the flow data of injection points are stored"""
         # Path of flow data (bdy) for flood model
@@ -255,52 +138,7 @@ class ParametersFloodModelGenerator:
                     line = f"{value:<20}{sec:.0f}\n"
                     discharge_tide.write(line)
 
-    def simulated_seconds_generator(self) -> int:
-        """
-        Generate simulated time in seconds
-
-        Returns
-        -------
-        seconds : int
-            Simulated time in seconds from starting to ending times
-        """
-        # Compute simulated time in seconds
-        seconds = int((self.end_time - self.start_time).total_seconds())
-
-        return seconds
-
-    def optional_output_generator(self) -> Path:
-        """
-        Set up options for outputs according to sceanrios
-        and create output directory for flood modelling outputs
-
-        Returns
-        -------
-        output_directory : Path
-            Directory of flood model outputs
-        """
-        # Both landcover and elevation solutions
-        if self.polygons is not None and self.vectors is not None:
-            output = self.file_increment_generator("output_landcover_elevation")
-
-        # Only landcover solution
-        elif self.polygons is not None:
-            output = self.file_increment_generator("output_landcover")
-
-        # Only elevation solution
-        elif self.vectors is not None:
-            output = self.file_increment_generator("output_elevation")
-
-        # Original scenario
-        else:
-            output = self.flood_model_path / "output"
-
-        # Create output (if not available)
-        output.mkdir(parents=True, exist_ok=True)
-
-        return output
-
-    def par_generator(self) -> Path:
+    def write_flood_model_parameter_file(self) -> Path:
         """
         Generate par files - where all the parameter data are navigated
         Returns
@@ -342,16 +180,13 @@ class ParametersFloodModelGenerator:
         # Path to Manning's n
         n = str(self.flood_model_path / "manning.asc")
 
-        # Simulated time in seconds
-        seconds = self.simulated_seconds_generator()
-
         # Create parameters list
         parameters_list = [
             ('resroot', 'out'),
             ('dirroot', str(output_directory)),
             ('saveint', 21600),
             ('massint', 500),
-            ('sim_time', f'{seconds}'),
+            ('sim_time', f'{self.seconds}'),
             ('initial_tstep', 5),
             ('bcifile', bci),
             ('bdyfile', bdy),
@@ -371,7 +206,7 @@ class ParametersFloodModelGenerator:
             parameters.write('acceleration\ndrain_nodata\n\n')
         return output_directory
 
-    def parameters_files_generator(self) -> Path:
+    def parameter_files_generator(self) -> Path:
         """
         Generate parameter files for flood model
 
@@ -380,12 +215,16 @@ class ParametersFloodModelGenerator:
         Path
             Directory of output files as configured in parameter files
         """
+        self.write_injection_point_files()
+
+        # Generate par file
+        output_dir = self.write_flood_model_parameter_file()
+        return output_dir
+
+    def write_injection_point_files(self) -> None:
+        """Write injection point files for Lisflood."""
         # Generate bci file
         self.bci_generator()
 
         # Generate bdy file
         self.bdy_generator()
-
-        # Generate par file
-        output_dir = self.par_generator()
-        return output_dir

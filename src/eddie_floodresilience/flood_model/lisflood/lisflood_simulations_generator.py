@@ -38,7 +38,7 @@ from src.eddie_floodresilience.flood_model.flooded_buildings import (
 from .. import serve_model
 from ..flood_model_inputs_generator import InjectionPointsFloodModelGenerator, TerrainGenerator
 from .lisflood_inputs_generator import TerrainFloodModelGenerator
-from .lisflood_parameters_generator import ParametersFloodModelGenerator
+from .lisflood_parameters_generator import LisfloodParametersGenerator
 from .lisflood_precipitation import LisfloodPrecipitationGenerator, LisfloodPrecipitationFloodModelGenerator
 
 setup_logging(LogLevel.DEBUG)
@@ -190,7 +190,7 @@ class LisFloodModelSimulationsGenerator:
             The path to the output directory generated for these parameters
         """
         # Call out class used to generate parameter files
-        parameters_files_generator = ParametersFloodModelGenerator(
+        parameters_files_generator = LisfloodParametersGenerator(
             self.flood_model_path,
             self.terrain_bounding_box,
             self.start_time,
@@ -200,7 +200,7 @@ class LisFloodModelSimulationsGenerator:
         )
 
         # Generate parameter files
-        output_dir = parameters_files_generator.parameters_files_generator()
+        output_dir = parameters_files_generator.parameter_files_generator()
         return output_dir
 
     def flood_model_simulations_generator(self, output_dir: Path) -> int:
