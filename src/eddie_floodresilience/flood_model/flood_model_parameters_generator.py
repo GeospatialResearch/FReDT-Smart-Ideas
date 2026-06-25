@@ -25,7 +25,9 @@ from pathlib import Path
 import pandas as pd
 from shapely.geometry import Polygon
 
+from eddie.digitaltwin.setup_environment import get_database
 from eddie.digitaltwin.utils import LogLevel, setup_logging
+from src.eddie_floodresilience.tables import FloodModelOutput
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -121,6 +123,28 @@ class FloodModelParametersGenerator(ABC):
 
         return x, y
 
+    def reserve_flood_model_id(self) -> int:
+        """
+        Find the next output ID to be used in database and directory and reserve it.
+
+        Returns
+        -------
+        int
+            The new flood model ID
+        """
+        engine = get_database()
+        with engine.connect() as conn:
+            # Create the 'flood_model_output' table in the database if it doesn't exist
+            create_table(conn, FloodModelOutput)
+            # Create a new query object to reserve the flood model id
+            query = insert(FloodModelOutput).values(geometry=self.terrain_bounding_box.wkt)
+            # Execute the query to store the BG Flood model output metadata in the database while retrieving id
+            result = conn.execute(query)
+        model_id = result.inserted_primary_key[0]
+        # Log a message indicating the successful storage of Flood model output metadata in the database
+        log.info(f"Flood model ID {model_id} reserved.")
+        return model_id
+
     def file_increment_generator(
         self,
         filename: str
@@ -151,9 +175,9 @@ class FloodModelParametersGenerator(ABC):
 
         return file_directory
 
-    def optional_output_generator(self) -> Path:
+    def output_folder_generator(self) -> Path:
         """
-        Set up options for outputs according to sceanrios
+        Set up options for outputs according to scenarios
         and create output directory for flood modelling outputs
 
         Returns
@@ -161,26 +185,20 @@ class FloodModelParametersGenerator(ABC):
         output_directory : Path
             Directory of flood model outputs
         """
-        # Both landcover and elevation solutions
+        model_id = self.reserve_flood_model_id()
+        log.info("Generating output folder")
         if self.polygons is not None and self.vectors is not None:
-            output = self.file_increment_generator("output_landcover_elevation")
-
-        # Only landcover solution
+            output_name = "output_landcover_elevation"
         elif self.polygons is not None:
-            output = self.file_increment_generator("output_landcover")
-
-        # Only elevation solution
+            output_name = "output_landcover"
         elif self.vectors is not None:
-            output = self.file_increment_generator("output_elevation")
-
-        # Original scenario
+            output_name = "output_elevation"
         else:
-            output = self.flood_model_path / "output"
+            output_name = "output"
 
-        # Create output (if not available)
-        output.mkdir(parents=True, exist_ok=True)
-
-        return output
+        output_dir = self.flood_model_path / f"{output_name}_{model_id:03d}"
+        output_dir.mkdir(exist_ok=False, parents=True)
+        return output_dir
 
     @abstractmethod
     def parameter_files_generator(self) -> Path:
@@ -194,10 +212,16 @@ class FloodModelParametersGenerator(ABC):
         """
 
     @abstractmethod
-    def write_injection_point_files(self) -> None:
-        """Write injection point files for flood model"""
+    def write_injection_point_files(self, output_dir: Path) -> None:
+        """
+        Write injection point files for flood model.
+
+        Parameters
+        ----------
+        output_dir : Path
+            The output directory for the flood model output.
+        """
 
     @abstractmethod
     def write_flood_model_parameter_file(self) -> Path:
         """Write parameter files for flood model."""
-

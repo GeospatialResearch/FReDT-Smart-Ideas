@@ -100,39 +100,15 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
 
         self.injection_points = gpd.read_file(self.flood_model_path / "injection_points.shp")
 
-    def output_folder_generator(self) -> None:
-        """Generate output folder"""
-        # todo identidied as semi-duplicate
-        log.info("Generating output folder")
-        if self.polygons is not None and self.vectors is not None:
-            output_name = "output_landcover_elevation"
-        elif self.polygons is not None:
-            output_name = "output_landcover"
-        elif self.vectors is not None:
-            output_name = "output_elevation"
-        else:
-            output_name = "output"
+    def write_injection_point_files(self, output_dir: Path) -> None:
+        """
+        Generate flow text data for BG-Flood.
 
-        prefix = output_name + "_"
-
-        next_id = (
-            # pylint: disable=consider-using-generator
-            max(
-                [
-                    int(f.name.split("_")[-1])
-                    for f in self.flood_model_path.iterdir()
-                    if f.is_dir() and f.name.startswith(prefix) and f.name.split("_")[-1].isdigit()
-                ],
-                default=0
-            ) + 1
-        )
-
-        # pylint: disable=attribute-defined-outside-init
-        self.output_folder = self.flood_model_path / f"{output_name}_{next_id:03d}"
-        self.output_folder.mkdir(exist_ok=False)
-
-    def write_injection_point_files(self) -> None:
-        """Generate flow text data for BG-Flood"""
+        Parameters
+        ----------
+        output_dir : Path
+            The output directory for the flood model output.
+        """
         log.info("Generating flow text data")
         # Create a loop to generate flow text data for BG-Flood
         for col in self.injection_points_flow.columns:
@@ -155,7 +131,7 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
                 # <i want to use the output folder path here>
 
                 np.savetxt(
-                    self.output_folder / f"river{fid}.txt",
+                    output_dir / f"river{fid}.txt",
                     out,
                     fmt="%.6f",
                     delimiter="\t"
@@ -335,10 +311,10 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
     def parameter_files_generator(self) -> None:
         """Generate parameter files to run BG-Flood"""
         # Create output folder
-        self.output_folder_generator()
+        output_dir = self.output_folder_generator()
 
         # Generate flow files
-        self.write_injection_point_files()
+        self.write_injection_point_files(output_dir)
 
         # Generate tide files
         self.tide_text_file_generator()

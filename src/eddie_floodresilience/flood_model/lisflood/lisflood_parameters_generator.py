@@ -141,6 +141,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
     def write_flood_model_parameter_file(self) -> Path:
         """
         Generate par files - where all the parameter data are navigated
+
         Returns
         -------
         Path
@@ -149,7 +150,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         par_file_path = self.flood_model_path / "par.par"
         log.info(f"Generating par file {par_file_path}")
         # Create output directory
-        output_directory = self.optional_output_generator()
+        output_directory = self.output_folder_generator()
 
         # Path to bdy file
         if self.polygons is not None:
@@ -215,14 +216,22 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         Path
             Directory of output files as configured in parameter files
         """
-        self.write_injection_point_files()
+        output_dir = self.output_folder_generator()
+        self.write_injection_point_files(output_dir)
 
         # Generate par file
-        output_dir = self.write_flood_model_parameter_file()
+        self.write_flood_model_parameter_file()
         return output_dir
 
-    def write_injection_point_files(self) -> None:
-        """Write injection point files for Lisflood."""
+    def write_injection_point_files(self, output_dir: Path) -> None:
+        """
+        Generate flow text data for BG-Flood.
+
+        Parameters
+        ----------
+        output_dir : Path
+            The output directory for the flood model output.
+        """
         # Generate bci file
         self.bci_generator()
 

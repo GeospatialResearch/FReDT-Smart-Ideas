@@ -92,7 +92,7 @@ class TerrainGenerator:
         """
         # The name of terrain here is for easily building up automation
         # It will be coded in the future
-        terrain_path = self.hydromt_path / f"river_data/{self.river_name}/8m_geofabric.nc"
+        terrain_path = self.hydromt_path / "river_data" / self.river_name / "8m_geofabric.nc"
 
         # Read terrain raster
         terrain = xr.open_dataset(terrain_path)
@@ -706,8 +706,8 @@ class InjectionPointsFloodModelGenerator:
 
         return intersections
 
+    @staticmethod
     def extract_injection_points_from_intersections(
-        self,
         intersections: gpd.GeoSeries
     ) -> list[Point]:
         """
@@ -875,8 +875,8 @@ class InjectionPointsFloodModelGenerator:
 
         return rivers_flow
 
+    @staticmethod
     def extract_rivers_flow_for_injection_points(
-        self,
         rivers_flow: xr.DataArray,
         points_gdf: gpd.GeoDataFrame
     ) -> pd.DataFrame:
