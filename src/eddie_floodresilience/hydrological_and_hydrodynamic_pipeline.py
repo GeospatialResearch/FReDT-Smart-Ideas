@@ -4,7 +4,6 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-from osgeo import gdal
 
 import logging
 from datetime import datetime
@@ -589,8 +588,21 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 
 
 # RIVERTON
-# This is where to check the model
-def riverton():
+def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+    """
+    Run a hydrological and hydrodynamic simulation for Riverton.
+
+    Parameters
+    ----------
+    landcover_scenario_gdf: gpd.GeoDataFrame | None
+            Polygons that are used to change the landcover information.
+            This polygon dataframe has 'landcover_name' column with new values.
+
+    Returns
+    -------
+    int
+        Flood model output ID.
+    """
     hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_riverton_path_001")
     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
     river_name = 'riverton'
@@ -603,8 +615,8 @@ def riverton():
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
-    polygons = None # r'polygons/polygons.shp'
-    vectors = None # r'vectors/vectors.csv'
+    polygons = landcover_scenario_gdf
+    vectors = None  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
     landcover = 'globcover'
@@ -631,7 +643,8 @@ def riverton():
         landcover
     )
 
-    hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+    flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+    return flood_model_output_id
 
 
 if __name__ == '__main__':

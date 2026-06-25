@@ -35,6 +35,7 @@ from src.eddie_floodresilience import config
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
+
 # pylint: disable=too-many-instance-attributes
 class TidalDataGenerator:
     """Generate tidal data"""
