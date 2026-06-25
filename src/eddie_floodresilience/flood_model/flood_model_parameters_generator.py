@@ -32,7 +32,7 @@ log = logging.getLogger(__name__)
 
 
 class FloodModelParametersGenerator(ABC):
-    """This class is to generate parameter files for flood models"""
+    """This class is to generate parameter files for flood models"""  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -200,4 +200,3 @@ class FloodModelParametersGenerator(ABC):
     @abstractmethod
     def write_flood_model_parameter_file(self) -> Path:
         """Write parameter files for flood model."""
-

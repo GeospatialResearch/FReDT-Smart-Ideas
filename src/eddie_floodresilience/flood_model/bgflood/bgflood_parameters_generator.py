@@ -102,7 +102,6 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
 
     def output_folder_generator(self) -> None:
         """Generate output folder"""
-        # todo identidied as semi-duplicate
         log.info("Generating output folder")
         if self.polygons is not None and self.vectors is not None:
             output_name = "output_landcover_elevation"
