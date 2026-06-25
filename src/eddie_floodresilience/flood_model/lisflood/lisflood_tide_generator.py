@@ -1,27 +1,41 @@
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Mar 26 22:33:14 2026
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-@author: mng42
-"""
+"""Classes to create tide files for LISFLOOD-FP."""
+# pylint: disable=duplicate-code,too-many-lines
+# pylint: disable=import-error
 
+import math
+import logging
+from pathlib import Path
+from datetime import datetime
 
-from datetime import date, timedelta
 import pandas as pd
 from pyproj import Transformer
 import geopandas as gpd
-from datetime import datetime
-from pathlib import Path
 import requests
-import math
 from shapely.geometry import Point, Polygon
-from src.eddie_floodresilience import config
-import logging
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+from src.eddie_floodresilience import config
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
+# pylint: disable=too-many-instance-attributes
 class TidalDataGenerator:
     """Generate tidal data"""
 
@@ -34,7 +48,7 @@ class TidalDataGenerator:
             terrain_bounding_box: Polygon
     ) -> None:
         """
-        This class is to generate tidal data
+        Generate tidal data
 
         Parameters
         ----------
@@ -61,23 +75,19 @@ class TidalDataGenerator:
         )
         self.river_outlet_geom = self.river_outlet.geometry.iloc[0]
 
-        self.land = gpd.read_file(
+        land = gpd.read_file(
             self.hydromt_path / 'nz_coastline.shp'
         )
 
         # Merge polygons and edges
-        self.land_union = self.land.unary_union  # All polygons are merged into one
-        self.land_boundary_union = self.land.boundary.unary_union  # All edges are merged into one
+        self.land_union = land.unary_union  # All polygons are merged into one
+        self.land_boundary_union = land.boundary.unary_union  # All edges are merged into one
 
         # Generate nearest coastline point
         self.nearest_point = self.land_boundary_union.interpolate(
             self.land_boundary_union.project(self.river_outlet_geom)
         )
         self.extra_distance = 0  # extra distance from the coastline to the onshore
-
-        # Set up url and headers
-        self.url = "https://api.niwa.co.nz/tides/data"
-        self.niwa_api_key = config.EnvVariable.NIWA_API_KEY
 
     def tidal_point_geom_generator(
             self,
@@ -264,7 +274,7 @@ class TidalDataGenerator:
 
         # Design query params
         params_dict = {
-            "apikey": self.niwa_api_key,
+            "apikey": config.EnvVariable.NIWA_API_KEY,
             "lat": float(tidal_lat),
             "long": float(tidal_lon),
             "numberOfDays": n_days,
@@ -299,7 +309,7 @@ class TidalDataGenerator:
 
         # Extract tidal data from NIWA API
         tidal_dict = requests.get(
-            self.url,
+            "https://api.niwa.co.nz/tides/data",
             params=param_dict
         ).json()
 
@@ -308,7 +318,7 @@ class TidalDataGenerator:
     def resample_tidal_data(
             self,
             tidal_dict: dict
-    ):
+    ) -> pd.DataFrame:
         """
         Resample tidal data into 1 hour interval
 
@@ -320,7 +330,7 @@ class TidalDataGenerator:
         Returns
         -------
         tidal_df : pd.DataFrame
-            DataFrame of tidal data
+            Data frame of tidal data
         """
         # Set up tidal dataframe
         tidal_df = pd.DataFrame(tidal_dict['values'])
@@ -349,7 +359,7 @@ class TidalDataGenerator:
 
         return tidal_df
 
-    def tide_checker(self):
+    def tide_checker(self) -> bool:
         """
         Check if the flood aoi boundary includes coastal or is fully inland.
         If includes coastal, True, if not, False
@@ -373,8 +383,16 @@ class TidalDataGenerator:
         )
         return False
 
-    def tidal_data_generator(self):
-        """Generate tidal data from NIWA API"""
+    def tidal_data_generator(self) -> pd.DataFrame | None:
+        """
+        Generate tidal data from NIWA API
+
+        Returns
+        -------
+        pd.DataFrame or None
+            If there is coastline within the area of interest, then tide_df
+            If not, then None
+        """
         # There is coastline within the area of interest
         if self.tide_checker():
             # Generate nearshore tidal point
@@ -388,7 +406,7 @@ class TidalDataGenerator:
 
             # Add more seconds
             tidal_df["seconds"] = (
-                    tidal_df.index - tidal_df.index[0]
+                tidal_df.index - tidal_df.index[0]
             ).total_seconds()
 
             # Generate tidal dataframe
@@ -401,8 +419,6 @@ class TidalDataGenerator:
         # The area of interest is inland
         else:
             return None
-
-
 
 # # Check code
 # tide_generator = TidalDataGenerator(

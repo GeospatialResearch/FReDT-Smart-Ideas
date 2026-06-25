@@ -214,7 +214,6 @@ class ParametersFloodModelGenerator:
             # Write into bci
             bci_parameter.write(onshore_tidal_point_text)
 
-
     def file_increment_generator(
         self,
         filename: str
