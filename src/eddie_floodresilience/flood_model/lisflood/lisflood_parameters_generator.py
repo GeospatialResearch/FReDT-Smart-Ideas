@@ -34,6 +34,7 @@ setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
+# pylint: disable=too-many-instance-attributes
 class ParametersFloodModelGenerator:
     """This class is to generate parameter files for flood model"""
 
@@ -194,25 +195,29 @@ class ParametersFloodModelGenerator:
                 # Write inside bci file
                 bci_parameter.write(injection_points_text)
 
-        if self.tide_df is not None:
-            # Add tide geometry
-            # Read tidal point
-            onshore_tidal_point_gdf = gpd.read_file(
-                self.flood_model_path / "tidal_point.shp"
-            )
-            # Setup tidal point format for bci
-            onshore_tidal_point_format = [
-                'P',
-                onshore_tidal_point_gdf.geometry.iloc[0].x,
-                onshore_tidal_point_gdf.geometry.iloc[0].y,
-                'HVAR', 'Tide'
-            ]
-            # Design text for tidal point format
-            onshore_tidal_point_text = '{0[0]:<5}{0[1]:<20.3f}{0[2]:<20.3f}{0[3]:<7}{0[4]:<5}\n'.format(
-                onshore_tidal_point_format
-            )
-            # Write into bci
-            bci_parameter.write(onshore_tidal_point_text)
+            if self.tide_df is not None:
+                # Add tide geometry
+                # Read tidal point
+                onshore_tidal_point_gdf = gpd.read_file(
+                    self.flood_model_path / "tidal_point.shp"
+                )
+                # Setup tidal point format for bci
+                onshore_tidal_point_format = [
+                    'P',
+                    onshore_tidal_point_gdf.geometry.iloc[0].x,
+                    onshore_tidal_point_gdf.geometry.iloc[0].y,
+                    'HVAR', 'Tide'
+                ]
+                # Design text for tidal point format
+                onshore_tidal_point_text = (
+                    f"{onshore_tidal_point_format[0]:<5}"
+                    f"{onshore_tidal_point_format[1]:<20.3f}"
+                    f"{onshore_tidal_point_format[2]:<20.3f}"
+                    f"{onshore_tidal_point_format[3]:<7}"
+                    f"{onshore_tidal_point_format[4]:<5}\n"
+                )
+                # Write into bci
+                bci_parameter.write(onshore_tidal_point_text)
 
     def file_increment_generator(
         self,
@@ -294,7 +299,7 @@ class ParametersFloodModelGenerator:
             if self.tide_df is not None:
                 # Write tide data (only one point)
                 discharge_tide.write("Tide\n")
-                discharge_tide.write('{0:<20}seconds\n'.format(self.tide_df.shape[0]))
+                discharge_tide.write(f'{self.tide_df.shape[0]:<20}seconds\n')
                 # Write tide values
                 for i in range(self.tide_df.shape[0]):
                     value = self.tide_df['value'].iloc[i]

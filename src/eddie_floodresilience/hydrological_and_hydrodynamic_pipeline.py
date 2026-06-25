@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-
+from osgeo import gdal
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -357,11 +357,11 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
-
-            # Generate wflow data
-            self.wflow_data_pipeline()
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
+            #
+            # # Generate wflow data
+            # self.wflow_data_pipeline()
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline()
