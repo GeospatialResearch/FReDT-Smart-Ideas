@@ -14,8 +14,13 @@ from datetime import datetime
 from pathlib import Path
 import requests
 import math
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon
+from src.eddie_floodresilience import config
+import logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
 
+setup_logging(LogLevel.DEBUG)
+log = logging.getLogger(__name__)
 
 class TidalDataGenerator:
     """Generate tidal data"""
@@ -25,7 +30,8 @@ class TidalDataGenerator:
             flood_model_path: Path,
             hydromt_path: Path,
             start_time: datetime,
-            end_time: datetime
+            end_time: datetime,
+            terrain_bounding_box: Polygon
     ) -> None:
         """
         This class is to generate tidal data
@@ -40,11 +46,14 @@ class TidalDataGenerator:
             Starting time of simulation
         end_time : str
             Ending time of simulation
+        terrain_bounding_box : Polygon
+            Bounding's box of terrain data
         """
         self.flood_model_path = flood_model_path
         self.hydromt_path = hydromt_path
         self.start_time = start_time
         self.end_time = end_time
+        self.terrain_bounding_box = terrain_bounding_box
 
         # River outlet
         self.river_outlet = gpd.read_file(
@@ -68,7 +77,7 @@ class TidalDataGenerator:
 
         # Set up url and headers
         self.url = "https://api.niwa.co.nz/tides/data"
-        self.headers = {"x-apikey": "MLnPC2sBzVkbvk6mdEyRxGNcTZDRv8y4"}
+        self.niwa_api_key = config.EnvVariable.NIWA_API_KEY
 
     def tidal_point_geom_generator(
             self,
@@ -255,6 +264,7 @@ class TidalDataGenerator:
 
         # Design query params
         params_dict = {
+            "apikey": self.niwa_api_key,
             "lat": float(tidal_lat),
             "long": float(tidal_lon),
             "numberOfDays": n_days,
@@ -290,8 +300,7 @@ class TidalDataGenerator:
         # Extract tidal data from NIWA API
         tidal_dict = requests.get(
             self.url,
-            params=param_dict,
-            headers=self.headers
+            params=param_dict
         ).json()
 
         return tidal_dict
@@ -340,28 +349,58 @@ class TidalDataGenerator:
 
         return tidal_df
 
+    def tide_checker(self):
+        """
+        Check if the flood aoi boundary includes coastal or is fully inland.
+        If includes coastal, True, if not, False
+
+        Returns
+        -------
+        bool
+            True if coastal, False if not
+        """
+        # Check if flood aoi boundary intersects with coastline, True, else, False
+        if self.terrain_bounding_box.intersects(self.land_boundary_union):
+            log.info(
+                "There is coastline within the area of interest. "
+                "Tide data will be generated."
+            )
+            return True
+
+        log.info(
+            "The area of interest is inland. "
+            "No tide data will be generated."
+        )
+        return False
+
     def tidal_data_generator(self):
         """Generate tidal data from NIWA API"""
-        # Generate nearshore tidal point
-        nearshore_tidal_point_gdf = self.tidal_point_geom_checker_and_generator()
+        # There is coastline within the area of interest
+        if self.tide_checker():
+            # Generate nearshore tidal point
+            nearshore_tidal_point_gdf = self.tidal_point_geom_checker_and_generator()
 
-        # Extract tidal data from NIWA API
-        tidal_dict = self.query_params_generator(nearshore_tidal_point_gdf)
+            # Extract tidal data from NIWA API
+            tidal_dict = self.query_params_generator(nearshore_tidal_point_gdf)
 
-        # Resample tidal data
-        tidal_df = self.resample_tidal_data(tidal_dict)
+            # Resample tidal data
+            tidal_df = self.resample_tidal_data(tidal_dict)
 
-        # Add more seconds
-        tidal_df["seconds"] = (
-                tidal_df.index - tidal_df.index[0]
-        ).total_seconds()
+            # Add more seconds
+            tidal_df["seconds"] = (
+                    tidal_df.index - tidal_df.index[0]
+            ).total_seconds()
 
-        # Generate tidal dataframe
-        tidal_df.to_csv(
-            self.flood_model_path / 'tidal_point_df.csv'
-        )
+            # Generate tidal dataframe
+            tidal_df.to_csv(
+                self.flood_model_path / 'tidal_point_df.csv'
+            )
 
-        return tidal_df
+            return tidal_df
+
+        # The area of interest is inland
+        else:
+            return None
 
 
 
