@@ -215,8 +215,8 @@ class TidalDataGenerator:
 
         return nearshore_tidal_point_gdf
 
+    @staticmethod
     def nearshore_tidal_point_crs_conversion(
-            self,
             nearshore_tidal_point_gdf: gpd.GeoDataFrame
     ) -> tuple[float, float]:
         """
