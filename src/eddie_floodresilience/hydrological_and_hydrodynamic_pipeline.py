@@ -610,7 +610,7 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
-    num_threads = 8
+    num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1209555.319, 4849977.393, 1222804.726, 4864906.303]
     adjust_manning = False
     flood_model = 'lisflood-fp'
