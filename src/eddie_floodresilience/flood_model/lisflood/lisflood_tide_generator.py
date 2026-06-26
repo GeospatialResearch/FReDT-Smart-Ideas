@@ -421,12 +421,3 @@ class TidalDataGenerator:
         else:
             return None
 
-# # Check code
-# tide_generator = TidalDataGenerator(
-#     Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_riverton_path_001"),
-#     Path(r"D:\data_checking_tide"),
-#     datetime.fromisoformat("2020-02-03T00:00:00"),
-#     datetime.fromisoformat("2020-02-05T00:00:00")
-# )
-#
-# tide_df = tide_generator.tidal_data_generator()
