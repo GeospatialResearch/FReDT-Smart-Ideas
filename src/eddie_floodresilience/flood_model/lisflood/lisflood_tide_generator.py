@@ -19,16 +19,17 @@
 # pylint: disable=duplicate-code,too-many-lines
 # pylint: disable=import-error
 
-import math
 import logging
-from pathlib import Path
+import math
 from datetime import datetime
+from pathlib import Path
 
-import pandas as pd
-from pyproj import Transformer
 import geopandas as gpd
+import pandas as pd
 import requests
+from pyproj import Transformer
 from shapely.geometry import Point, Polygon
+
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 from src.eddie_floodresilience import config
 
@@ -266,9 +267,8 @@ class TidalDataGenerator:
             Dictionary of parameters used for extracting tidal data from NIWA API
         """
         # Get tidal lat, lon
-        tidal_lat, tidal_lon = self.nearshore_tidal_point_crs_conversion(
-            nearshore_tidal_point_gdf
-        )
+        nearshore_tidal_point_gdf_4326 = nearshore_tidal_point_gdf.to_crs(4326)
+        tidal_point = nearshore_tidal_point_gdf_4326.geometry.iloc[0]
 
         # Get number of days
         n_days = (self.end_time - self.start_time).days
@@ -276,8 +276,8 @@ class TidalDataGenerator:
         # Design query params
         params_dict = {
             "apikey": config.EnvVariable.NIWA_API_KEY,
-            "lat": float(tidal_lat),
-            "long": float(tidal_lon),
+            "lat": float(tidal_point.y),
+            "long": float(tidal_point.x),
             "numberOfDays": n_days,
             "startDate": self.start_time.strftime("%Y-%m-%d"),
             "datum": 'MSL',
