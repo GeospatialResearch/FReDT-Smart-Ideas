@@ -92,13 +92,12 @@ class TerrainGenerator:
         """
         # The name of terrain here is for easily building up automation
         # It will be coded in the future
-        terrain_path = self.hydromt_path / f"river_data/{self.river_name}/8m_geofabric.nc"
+        terrain_path = self.hydromt_path / "river_data" / self.river_name / "8m_geofabric.nc"
 
         # Read terrain raster
-        terrain = xr.open_dataset(terrain_path)
-
-        # Make sure terrain has crs
-        terrain_crs = terrain.rio.write_crs(self.crs)
+        with xr.open_dataset(terrain_path) as terrain:
+            # Make sure terrain has crs
+            terrain_crs = terrain.rio.write_crs(self.crs)
 
         return terrain_crs
 
