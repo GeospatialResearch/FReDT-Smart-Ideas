@@ -202,19 +202,15 @@ class ParametersFloodModelGenerator:
                     self.flood_model_path / "tidal_point.shp"
                 )
                 # Setup tidal point format for bci
-                onshore_tidal_point_format = [
-                    'P',
-                    onshore_tidal_point_gdf.geometry.iloc[0].x,
-                    onshore_tidal_point_gdf.geometry.iloc[0].y,
-                    'HVAR', 'Tide'
-                ]
+                onshore_tidal_point = onshore_tidal_point_gdf.geometry.iloc[0]
+
                 # Design text for tidal point format
                 onshore_tidal_point_text = (
-                    f"{onshore_tidal_point_format[0]:<5}"
-                    f"{onshore_tidal_point_format[1]:<20.3f}"
-                    f"{onshore_tidal_point_format[2]:<20.3f}"
-                    f"{onshore_tidal_point_format[3]:<7}"
-                    f"{onshore_tidal_point_format[4]:<5}\n"
+                    f"{'P':<5}"
+                    f"{onshore_tidal_point.x:<20.3f}"
+                    f"{onshore_tidal_point.y:<20.3f}"
+                    f"{'HVAR':<7}"
+                    f"{'Tide':<5}\n"
                 )
                 # Write into bci
                 bci_parameter.write(onshore_tidal_point_text)
