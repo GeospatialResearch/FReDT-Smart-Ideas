@@ -16,8 +16,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Classes to create tide files for LISFLOOD-FP."""
-# pylint: disable=duplicate-code,too-many-lines
-# pylint: disable=import-error
 
 import logging
 import math
@@ -27,7 +25,6 @@ from pathlib import Path
 import geopandas as gpd
 import pandas as pd
 import requests
-from pyproj import Transformer
 from shapely.geometry import Point, Polygon
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
@@ -67,8 +64,8 @@ class TidalDataGenerator:
         """
         self.flood_model_path = flood_model_path
         self.hydromt_path = hydromt_path
-        self.start_time = start_time
-        self.end_time = end_time
+        self.number_of_days = (end_time - start_time).days
+        self.start_date = start_time.strftime("%Y-%m-%d")
         self.terrain_bounding_box = terrain_bounding_box
 
         # River outlet
@@ -77,226 +74,150 @@ class TidalDataGenerator:
         )
         self.river_outlet_geom = self.river_outlet.geometry.iloc[0]
 
-        land = gpd.read_file(
+        self.land = gpd.read_file(
             self.hydromt_path / 'nz_coastline.shp'
         )
 
-        # Merge polygons and edges
-        self.land_union = land.unary_union  # All polygons are merged into one
-        self.land_boundary_union = land.boundary.unary_union  # All edges are merged into one
+        # Merge all land edges into one
+        self.land_boundary_union = self.land.boundary.unary_union  # All edges are merged into one
 
         # Generate nearest coastline point
         self.nearest_point = self.land_boundary_union.interpolate(
             self.land_boundary_union.project(self.river_outlet_geom)
         )
-        self.extra_distance = 0  # extra distance from the coastline to the onshore
 
-    def tidal_point_geom_generator(
-            self,
-            dir_x: float,
-            dir_y: float
-    ) -> gpd.GeoDataFrame:
+    def design_tidal_point_from_inland_river_outlet(self) -> Point:
         """
-        Generate tidal point geometry
-
-        Parameters
-        ----------
-        dir_x : float
-            X direction
-        dir_y : float
-            Y direction
+        Generate tidal point from inland river outlet.
+        If the river outlet is inland, make it as tidal point.
+        If it is on the coastline, nudge 5m further inland, and make it as tidal point.
 
         Returns
         -------
-        nearshore_tidal_point_gdf : gpd.GeoDataFrame
-            Tidal point nearshore GeoDataFrame
+        tidal_point_from_inland_river_outlet : Point
+            Tidal point generated from inland river outlet
         """
-        # Calculate current distance to the coastline
+        # Calculate the current distance between the nearest point and river outlet
+        dir_x = self.river_outlet_geom.x - self.nearest_point.x
+        dir_y = self.river_outlet_geom.y - self.nearest_point.y
         current_distance = math.sqrt(dir_x ** 2 + dir_y ** 2)
 
-        # Extra distance is 0 means that taking river outlet as the tidal point
-        if self.extra_distance == 0:
-            nearshore_tidal_point = self.river_outlet_geom
+        if current_distance != 0:
+            # If the river outlet is inland, make it as tidal point
+            tidal_point_from_inland_river_outlet = self.river_outlet_geom
+
         else:
-            # Normalise direction unit based on current distance
-            # If current distance is 0 - river outlet on the coast line
-            # This if is only for when the river outlet is already offshore or on the coastline
-            if current_distance == 0:
-                unit_dir_x, unit_dir_y = 1, 1
+            # If the river outlet is on the coastline, nudge 5m further inland
+            # and make it tidal point
+            # Scale x and y direction into 1 for easy modififcation
+            unit_x = dir_x / current_distance
+            unit_y = dir_y / current_distance
 
-            # If current distance is not 0 - river outlet in the offshore
-            else:
-                unit_dir_x = dir_x / current_distance
-                unit_dir_y = dir_y / current_distance
-
-            # Move nearshore
-            nearshore_tidal_point = Point(
-                self.nearest_point.x - unit_dir_x * self.extra_distance,
-                self.nearest_point.y - unit_dir_y * self.extra_distance
+            # Write out tidal point and nudge 5m further inland at the same time
+            tidal_point_from_inland_river_outlet = Point(
+                self.river_outlet_geom.x + unit_x * 5,
+                self.river_outlet_geom.y + unit_y * 5
             )
 
-        # Convert to GeoDataframe
-        nearshore_tidal_point_gdf = gpd.GeoDataFrame(
-            geometry=[nearshore_tidal_point],
+        return tidal_point_from_inland_river_outlet
+
+    def design_tidal_point_from_offshore_river_outlet(self) -> Point:
+        """
+        Generate tidal point from offshore river outlet.
+        If the river outlet is offshore, choose the symmetrically opposite inland point as tidal point
+
+        Returns
+        -------
+        tidal_point_from_offshore_river_outlet : Point
+            Tidal point generated from offshore river outlet
+        """
+        # Generate tidal point generated from offshore river outlet
+        # by choosing the symmetrically opposite inland point
+        tidal_point_from_offshore_river_outlet = Point(
+            2 * self.nearest_point.x - self.river_outlet_geom.x,
+            2 * self.nearest_point.y - self.river_outlet_geom.y
+        )
+
+        return tidal_point_from_offshore_river_outlet
+
+    def generate_tidal_point_from_river_outlet(self) -> gpd.GeoDataFrame:
+        """
+        Check if the river outlet is inland or offshore then generate the tidal point
+
+        Returns
+        -------
+        tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point generated from river outlet
+        """
+        # Merge all land polygons into one
+        land_union = self.land.unary_union
+
+        # Check if the river outlet is inland or offshore
+        if land_union.contains(self.river_outlet_geom):
+            # If the river outlet is inland
+            tidal_point = self.design_tidal_point_from_inland_river_outlet()
+        else:
+            # If the river outlet is offshore
+            tidal_point = self.design_tidal_point_from_offshore_river_outlet()
+
+        # Convert tidal point into GeoDataFrame
+        tidal_point_gdf = gpd.GeoDataFrame(
+            geometry=[tidal_point],
             crs=2193
         )
 
-        return nearshore_tidal_point_gdf
-
-    def tidal_point_outland_geom_generator(self) -> gpd.GeoDataFrame:
-        """
-        Generate tidal point geometry outside land
-        where the river outlet is offshore or on the coastline
-
-        Returns
-        -------
-        nearshore_tidal_point : gpd.GeoDataFrame
-            Tidal point nearshore GeoDataFrame
-        """
-        # Calculate direction from coast to outlet
-        dir_x = self.river_outlet_geom.x - self.nearest_point.x
-        dir_y = self.river_outlet_geom.y - self.nearest_point.y
-
-        # Generate nearshore tidal point
-        nearshore_tidal_point_gdf = self.tidal_point_geom_generator(
-            dir_x,
-            dir_y
-        )
-
-        return nearshore_tidal_point_gdf
-
-    def tidal_point_inland_geom_generator(self) -> gpd.GeoDataFrame:
-        """
-        Generate tidal point geometry outside land
-        where the river outlet is inside land
-
-        Returns
-        -------
-        nearshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point nearshore GeoDataFrame
-        """
-        # If the river outlet is inside land,
-        # the symmetrically opposite-through-coastline point will be used as tidal point.
-        # Reflect river outlet across coastline
-        reflected_x = 2 * self.nearest_point.x - self.river_outlet_geom.x
-        reflected_y = 2 * self.nearest_point.y - self.river_outlet_geom.y
-
-        # Calculate direction from coast to outlet
-        dir_x = reflected_x - self.nearest_point.x
-        dir_y = reflected_y - self.nearest_point.y
-
-        # Generate nearshore tidal point geodataframe
-        nearshore_tidal_point_gdf = self.tidal_point_geom_generator(
-            dir_x,
-            dir_y
-        )
-
-        return nearshore_tidal_point_gdf
-
-    def tidal_point_geom_checker_and_generator(self) -> gpd.GeoDataFrame:
-        """
-        Check if the river outlet is inside, outside land, or on the coastline
-        and then generate tidal point
-
-        Returns
-        -------
-        nearshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point nearshore GeoDataFrame
-        """
-        # Check if the tidal point is inside or outside land then generate tidal point
-        if not self.land_union.contains(self.river_outlet_geom):
-            nearshore_tidal_point_gdf = self.tidal_point_outland_geom_generator()
-        else:
-            nearshore_tidal_point_gdf = self.tidal_point_inland_geom_generator()
-
         # Write out
-        nearshore_tidal_point_gdf.to_file(
+        tidal_point_gdf.to_file(
             self.flood_model_path / "tidal_point.shp"
         )
 
-        return nearshore_tidal_point_gdf
+        return tidal_point_gdf
 
-    @staticmethod
-    def nearshore_tidal_point_crs_conversion(
-            nearshore_tidal_point_gdf: gpd.GeoDataFrame
-    ) -> tuple[float, float]:
-        """
-        Reproject tidal point
-
-        Parameters
-        ----------
-        nearshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point nearshore GeoDataFrame
-
-        Returns
-        -------
-        tidal_lat : float
-            tidal point latitude
-        tidal_lon : float
-            tidal point longitude
-        """
-        # Get river outlet x, y
-        tidal_point_geom = nearshore_tidal_point_gdf.geometry.iloc[0]
-
-        # Set up crs transformer
-        transformer = Transformer.from_crs("EPSG:2193", "EPSG:4326", always_xy=True)
-
-        # Convert x, y coordinates into lon, lat
-        tidal_lon, tidal_lat = transformer.transform(
-            tidal_point_geom.x,
-            tidal_point_geom.y
-        )
-
-        return tidal_lat, tidal_lon
-
-    def query_params_designer(
+    def design_query_params(
             self,
-            nearshore_tidal_point_gdf: gpd.GeoDataFrame
+            tidal_point_gdf: gpd.GeoDataFrame
     ) -> dict:
         """
         Design query with parameters to extract tidal data from NIWA API
 
         Parameters
         ----------
-        nearshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point nearshore GeoDataFrame
+        tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point generated from river outlet
 
         Returns
         -------
         params_dict : dict
             Dictionary of parameters used for extracting tidal data from NIWA API
         """
-        # Get tidal lat, lon
-        nearshore_tidal_point_gdf_4326 = nearshore_tidal_point_gdf.to_crs(4326)
-        tidal_point = nearshore_tidal_point_gdf_4326.geometry.iloc[0]
-
-        # Get number of days
-        n_days = (self.end_time - self.start_time).days
+        # Convert tidal point from crs 2193 to 4326
+        tidal_point_gdf_4326 = tidal_point_gdf.to_crs(4326)
+        tidal_point_4326 = tidal_point_gdf_4326.geometry.iloc[0]
 
         # Design query params
         params_dict = {
             "apikey": config.EnvVariable.NIWA_API_KEY,
-            "lat": float(tidal_point.y),
-            "long": float(tidal_point.x),
-            "numberOfDays": n_days,
-            "startDate": self.start_time.strftime("%Y-%m-%d"),
+            "lat": float(tidal_point_4326.y),
+            "long": float(tidal_point_4326.x),
+            "numberOfDays": self.number_of_days,
+            "startDate": self.start_date,
             "datum": 'MSL',
             "interval": 10
         }
 
         return params_dict
 
-    def query_params_generator(
+    def generate_query_params(
             self,
-            nearshore_tidal_point_gdf: gpd.GeoDataFrame
+            tidal_point_gdf: gpd.GeoDataFrame
     ) -> dict:
         """
         Extract tidal data from NIWA API using the designed query
 
         Parameters
         ----------
-        nearshore_tidal_point_gdf : gdp.GeoDataFrame
-            Tidal point nearshore GeoDataFrame
+        tidal_point_gdf : gdp.GeoDataFrame
+            Tidal point generated from river outlet
 
         Returns
         -------
@@ -304,8 +225,8 @@ class TidalDataGenerator:
             Dictionary of tidal time and values extracted from NIWA API
         """
         # Design parameter dictionary
-        param_dict = self.query_params_designer(
-            nearshore_tidal_point_gdf
+        param_dict = self.design_query_params(
+            tidal_point_gdf
         )
 
         # Extract tidal data from NIWA API
@@ -349,7 +270,7 @@ class TidalDataGenerator:
         tidal_df = tidal_df.set_index('time')
 
         # Convert datum to NZVD2016
-        tidal_df['value'] = tidal_df['value'] - 0.11 + 1
+        tidal_df['value'] = tidal_df['value'] - 0.11
 
         tidal_df.to_csv(
             self.flood_model_path / 'tidal_point_df_query.csv'
@@ -360,15 +281,15 @@ class TidalDataGenerator:
 
         return tidal_df
 
-    def tide_checker(self) -> bool:
+    def check_tide_existence(self) -> bool:
         """
         Check if the flood aoi boundary includes coastal or is fully inland.
-        If includes coastal, True, if not, False
+        If includes coastal, the tide exists (True), if not, there is no tide (False)
 
         Returns
         -------
         bool
-            True if coastal, False if not
+            True if coastal and tide exists, False if not and there is no tide
         """
         # Check if flood aoi boundary intersects with coastline, True, else, False
         if self.terrain_bounding_box.intersects(self.land_boundary_union):
@@ -384,7 +305,7 @@ class TidalDataGenerator:
         )
         return False
 
-    def tidal_data_generator(self) -> pd.DataFrame | None:
+    def generate_tidal_data(self) -> pd.DataFrame | None:
         """
         Generate tidal data from NIWA API
 
@@ -395,12 +316,12 @@ class TidalDataGenerator:
             If not, then None
         """
         # There is coastline within the area of interest
-        if self.tide_checker():
-            # Generate nearshore tidal point
-            nearshore_tidal_point_gdf = self.tidal_point_geom_checker_and_generator()
+        if self.check_tide_existence():
+            # Generate tidal point from river outlet
+            tidal_point_gdf = self.generate_tidal_point_from_river_outlet()
 
             # Extract tidal data from NIWA API
-            tidal_dict = self.query_params_generator(nearshore_tidal_point_gdf)
+            tidal_dict = self.generate_query_params(tidal_point_gdf)
 
             # Resample tidal data
             tidal_df = self.resample_tidal_data(tidal_dict)
@@ -420,4 +341,3 @@ class TidalDataGenerator:
         # The area of interest is inland
         else:
             return None
-

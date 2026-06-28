@@ -603,7 +603,7 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     int
         Flood model output ID.
     """
-    hydro_combination_path = Path(r"D:\Digital_Twin_data\hydrological_hydrodynamic_riverton_path_001")
+    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_RIVERTON
     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
     river_name = 'riverton'
     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
@@ -648,9 +648,14 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 
 
 if __name__ == '__main__':
-    gdf = gpd.read_file(
-        r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example"
-        r"\polygons_vectors\whirinaki\polygons\polygons.shp"
-    )
-    whirinaki(None)
-    whirinaki(gdf)
+    # Whirinaki
+    # gdf = gpd.read_file(
+    #     r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example"
+    #     r"\polygons_vectors\whirinaki\polygons\polygons.shp"
+    # )
+    # whirinaki(None)
+    # whirinaki(gdf)
+
+    # Riverton
+    riverton(None)
+

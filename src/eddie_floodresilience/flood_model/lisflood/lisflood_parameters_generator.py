@@ -89,7 +89,7 @@ class ParametersFloodModelGenerator:
             self.terrain_bounding_box
         )
         # Generate tide dataframe
-        self.tide_df = tide_df_generator.tidal_data_generator()
+        self.tide_df = tide_df_generator.generate_tidal_data()
 
     def move_points_inside_aoi(
         self,
@@ -297,11 +297,8 @@ class ParametersFloodModelGenerator:
                 discharge_tide.write("Tide\n")
                 discharge_tide.write(f'{self.tide_df.shape[0]:<20}seconds\n')
                 # Write tide values
-                for i in range(self.tide_df.shape[0]):
-                    value = self.tide_df['value'].iloc[i]
-                    sec = self.tide_df['seconds'].iloc[i]
-
-                    line = f"{value:<20.4f}{sec:.0f}\n"
+                for _idx, row in self.tide_df.iterrows():
+                    line = f"{row.value:<20.4f}{row.seconds:.0f}\n"
                     discharge_tide.write(line)
 
     def simulated_seconds_generator(self) -> int:
