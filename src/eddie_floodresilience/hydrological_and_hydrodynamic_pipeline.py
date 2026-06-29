@@ -357,8 +357,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
 
             # Generate wflow data
             self.wflow_data_pipeline()
@@ -604,9 +604,9 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
         Flood model output ID.
     """
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_RIVERTON
-    forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    forcing_name = 'riverton'  # Forcing data is already pre-processed
     river_name = 'riverton'
-    precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
+    precipitation_path = EnvVariable.PRECIPITATION_PATH / "mataura"  # Mataura data is for Southland
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
