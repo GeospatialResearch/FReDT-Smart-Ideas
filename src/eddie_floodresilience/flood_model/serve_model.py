@@ -23,11 +23,12 @@ or other clients.
 import logging
 import os
 import pathlib
+from datetime import datetime
 from xml.sax import saxutils
 
 import rasterio as rio
-from sqlalchemy.engine import Connection
 import xarray as xr
+from sqlalchemy.engine import Connection
 
 from eddie import geoserver
 from src.eddie_floodresilience.config import EnvVariable
@@ -50,7 +51,11 @@ def convert_nc_to_gtiff(nc_file_path: pathlib.Path) -> pathlib.Path:
     pathlib.Path
         The filepath of the new GeoTiff file.
     """
-    new_name = f"{nc_file_path.stem}.tif"
+    # Create new unique file name to avoid clobbering
+    time = datetime.now().strftime("%Y%m%d%H%M%S")
+    output_dir = nc_file_path.parent
+    new_name = f"{output_dir.name}-{time}-out.tif"
+    
     log.info(f"Converting {nc_file_path.name} to {new_name}")
     temp_dir = pathlib.Path("tmp/gtiff")
     # Create temporary storage folder if it does not already exist
