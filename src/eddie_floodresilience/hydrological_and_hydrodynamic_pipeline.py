@@ -372,8 +372,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # # OTAUTAU
 # def main():
-#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_otautau_path_009")
-#     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_otautau_path_013")
+#     forcing_name = 'otautau' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
 #     river_name = 'otautau'
 #     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
 #     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
@@ -385,11 +385,11 @@ class HydrologicalAndHydrodynamicPipeline:
 #     adjust_manning = False
 #     flood_model = 'bg-flood'
 #
-#     polygons = None # r'polygons/polygons.shp'
+#     polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
 #     vectors = None # r'vectors/vectors.csv'
 #     resolution = 200
 #     threshold = 25000
-#     landcover = 'globcover'
+#     landcover = 'globcover_modified'
 #
 #     # Set up hydraulic and hydrodynamic pipeline
 #     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -421,7 +421,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # # WAIMEA
 # def main():
-#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_waimea_path_005")
+#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_waimea_path_027")
 #     forcing_name = Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001") # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
 #     river_name = 'waimea'
 #     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
@@ -432,7 +432,7 @@ class HydrologicalAndHydrodynamicPipeline:
 #     num_threads = 8
 #     flood_aoi_boundary = [1274171.417, 4896113.968, 1279068.442, 4899628.700]
 #     adjust_manning = False
-#     flood_model = 'lisflood-fp'
+#     flood_model = 'bg-flood'
 #
 #     polygons = None # r'polygons/polygons.shp'
 #     vectors = None # r'vectors/vectors.csv'
@@ -484,7 +484,7 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
         Flood model output ID.
     """
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_MATAURA
-    forcing_name = 'mataura'
+    forcing_name = 'mataura'  # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
     river_name = 'mataura'
     precipitation_path = EnvVariable.PRECIPITATION_PATH / "mataura"
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")

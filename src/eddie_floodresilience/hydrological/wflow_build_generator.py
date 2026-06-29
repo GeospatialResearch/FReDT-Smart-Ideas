@@ -255,6 +255,8 @@ class WflowBuildGenerator:
         """
         if self.landcover.startswith("globcover"):
             landcover_mapping = "globcover_mapping_default"
+        elif self.landcover == 'globcover_modified':
+            landcover_mapping = str(self.hydromt_path / "globcover_mapping_modified.csv")
         else:
             landcover_mapping = str(self.hydromt_path / "lcdb_mapping.csv")
 
