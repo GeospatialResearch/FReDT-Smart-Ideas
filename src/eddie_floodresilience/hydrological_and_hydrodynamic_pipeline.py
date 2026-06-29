@@ -587,10 +587,74 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     return flood_model_output_id
 
 
-if __name__ == '__main__':
-    gdf = gpd.read_file(
-        r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example"
-        r"\polygons_vectors\whirinaki\polygons\polygons.shp"
+# RIVERTON
+def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+    """
+    Run a hydrological and hydrodynamic simulation for Riverton.
+
+    Parameters
+    ----------
+    landcover_scenario_gdf: gpd.GeoDataFrame | None
+            Polygons that are used to change the landcover information.
+            This polygon dataframe has 'landcover_name' column with new values.
+
+    Returns
+    -------
+    int
+        Flood model output ID.
+    """
+    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_RIVERTON
+    forcing_name = 'riverton'  # Forcing data is already pre-processed
+    river_name = 'riverton'
+    precipitation_path = EnvVariable.PRECIPITATION_PATH / "mataura"  # Mataura data is for Southland
+    start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+    end_time = datetime.fromisoformat("2020-02-05T00:00:00")
+
+    num_threads = max(1, cpu_count() - 1)
+    flood_aoi_boundary = [1209555.319, 4849977.393, 1222804.726, 4864906.303]
+    adjust_manning = False
+    flood_model = 'lisflood-fp'
+
+    polygons = landcover_scenario_gdf
+    vectors = None  # r'vectors/vectors.csv'
+    resolution = 200
+    threshold = 25000
+    landcover = 'globcover'
+
+    # Set up hydraulic and hydrodynamic pipeline
+    hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+        hydro_combination_path,
+
+        forcing_name,
+        river_name,
+        precipitation_path,
+        start_time,
+        end_time,
+
+        num_threads,
+        flood_aoi_boundary,
+        adjust_manning,
+        flood_model,
+
+        polygons,
+        vectors,
+        resolution,
+        threshold,
+        landcover
     )
-    whirinaki(None)
-    whirinaki(gdf)
+
+    flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+    return flood_model_output_id
+
+
+if __name__ == '__main__':
+    # Whirinaki
+    # gdf = gpd.read_file(
+    #     r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example"
+    #     r"\polygons_vectors\whirinaki\polygons\polygons.shp"
+    # )
+    # whirinaki(None)
+    # whirinaki(gdf)
+
+    # Riverton
+    riverton(None)

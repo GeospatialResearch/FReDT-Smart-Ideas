@@ -895,8 +895,8 @@ class TerrainFloodModelGenerator():
     def manning_generator(self) -> None:
         """Generate clipped Manning's n from 4m to 8m with adjusted river"""
         if self.adjust_manning:
-            # # Generate Strahler Order streams and roughness length at 4m
-            # self.strahler_for_manning_generator()
+            # Generate Strahler Order streams and roughness length at 4m
+            self.strahler_for_manning_generator()
 
             # Resample roughness to 8m
             roughness_8m = self.resample_roughness()
@@ -908,7 +908,7 @@ class TerrainFloodModelGenerator():
             manning = self.roughness_to_manning(
                 roughness_8m,
                 1
-            )
+            ) * 2
 
             # Adjust Manning's n
             manning_for_flood = self.manning_adjustment(
@@ -1209,9 +1209,9 @@ class InjectionPointsFloodModelGenerator():
 
         # Align injection points with streamlines by snapping
         new_injection_points = injection_points_and_streamlines_aligner.snap_multiple_injection_points(
-            buffer_distance=300,
+            buffer_distance=200,  # other is 300
             elevation_weight=2,
-            distance_weight=0.001,
+            distance_weight=0.01,  # other is 0.001
             boundary_weight=0.5
         ).to_crs("EPSG:2193")
 
