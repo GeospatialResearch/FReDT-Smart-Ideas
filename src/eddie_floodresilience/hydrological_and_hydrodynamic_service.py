@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Defines PyWPS WebProcessingService processes for creating a flood scenarios with hydraulic and hydrodynamic modelling."""
+"""Defines WebProcessingService processes for creating flood scenarios with hydraulic and hydrodynamic modelling."""
 
 import json
 from abc import ABC
@@ -33,9 +33,9 @@ from src.eddie_floodresilience.solutions.total_solutions import GLOBCOVER_CLASSE
 
 class PredefinedScenario(Process, ABC):
     """Abstract base class for a Process for a scenario. Children of this provide the specific task to run."""
-    def __init__(self, title: str, identifier: str, task: Callable, isBaseline=False) -> None:
-        """Define inputs and outputs of the WPS process, and assign process handler."""
 
+    def __init__(self, title: str, identifier: str, task: Callable, isBaseline: bool = False) -> None:
+        """Define inputs and outputs of the WPS process, and assign process handler."""
         # Create bounding box WPS inputs
         if isBaseline:
             # A very simple placeholder configuration for baseline
@@ -102,17 +102,22 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
         The WPS handler function.
     """
 
-    def _handler(request: WPSRequest, response: ExecuteResponse):
+    def _handler(request: WPSRequest, response: ExecuteResponse) -> None:
         """
-                Process handler for modelling a flood scenario
+        Process handler for modelling a flood scenario
 
-                Parameters
-                ----------
-                request : WPSRequest
-                    The WPS request, containing input parameters.
-                response : ExecuteResponse
-                    The WPS response, containing output data.
-                """
+        Parameters
+        ----------
+        request : WPSRequest
+            The WPS request, containing input parameters.
+        response : ExecuteResponse
+            The WPS response, containing output data.
+
+        Returns
+        -------
+        Callable
+            The WPS handler function.
+        """
         if is_baseline:
             # Inputs can be ignored in a baseline
             location_geojson_str = None
@@ -137,13 +142,15 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
             scenario_id = modelling_task.get()
             tasks.cache_results.delay(scenario_id, cache_dict)
 
-        scenario_name = "Baseline" if is_baseline else scenario_id
+        scenario_name = "Baseline" if is_baseline else str(scenario_id)
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
         response.outputs['landcover'].data = json.dumps(landcover_catalog(scenario_id, scenario_name))
         response.outputs['catchmentBoundary'].data = json.dumps(catchment_boundary_catalog(scenario_id, scenario_name))
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id, scenario_name))
-        response.outputs['floodedBuildings'].data = json.dumps(building_flood_status_catalog(scenario_id, scenario_name))
+        response.outputs['floodedBuildings'].data = json.dumps(
+            building_flood_status_catalog(scenario_id, scenario_name)
+        )
 
     return _handler
 
@@ -208,6 +215,9 @@ def building_flood_status_catalog(scenario_id: int, scenario_name: str) -> dict:
     ----------
     scenario_id : int
         The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
+
 
     Returns
     ----------
@@ -277,6 +287,8 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
     ----------
     scenario_id : int
         The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
 
     Returns
     ----------
@@ -336,6 +348,8 @@ def catchment_boundary_catalog(scenario_id: int, scenario_name: str) -> dict:
     ----------
     scenario_id : int
         The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
 
     Returns
     ----------
@@ -371,7 +385,22 @@ def catchment_boundary_catalog(scenario_id: int, scenario_name: str) -> dict:
     }
 
 
-def landcover_catalog(scenario_id: int, scenario_name) -> dict:
+def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
+    """
+    Create a dictionary in the format of a terria js catalog json for the landcover layer.
+
+    Parameters
+    ----------
+    scenario_id : int
+        The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
+
+    Returns
+    ----------
+    dict
+        The TerriaJS catalog item JSON for the building flood status layer.
+    """
     gs_intermediate_workspace = f"{EnvVar.POSTGRES_DB}-intermediate-wflow"
     gs_landcover_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_intermediate_workspace}/ows"
     layer_name = f"{gs_intermediate_workspace}:landcover_{scenario_id}"

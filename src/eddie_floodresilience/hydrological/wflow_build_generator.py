@@ -5,21 +5,52 @@ Created on Thu Apr  9 09:01:33 2026
 @author: mng42
 """
 
+import json
 import logging
-import yaml
 from pathlib import Path
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
-import json
+
+import yaml
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
-class WflowBuildGenerator():
-    """This class is to generate wflow_build.yml for preprocessing data for wflow"""
-    
+
+class WflowBuildGenerator:
+    """
+    This class is to generate wflow_build.yml for preprocessing data for wflow
+
+    Attributes
+    ----------
+    start_time : datetime
+            Starting time of simulation.
+            This should include the spin-up time.
+            Normally, it is 1-year before the flood event.
+    end_time : datetime
+        Ending time of simulation
+        This should include some periods of time after the flood event.
+        Normally, it is about 12 hours or 1 day.
+    resolution : float
+        Resolution for flow data.
+        Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
+    wflow_model_path: Path
+        A directory to where the data_catalog.yml is stored and to run wflow model
+    hydromt_path: Path
+        A directory to where all necessary files are stored to run wflow model
+    river_name: str
+        Name of directory to where the river information files are stored
+    forcing_path: Path
+        A directory to where the forcing files are stored
+    polygons : str = None
+        Name of polygon file that is used to change the landcover information.
+        This polygon dataframe has 'landcover' column with new values
+    landcover : str = 'globcover'
+        Name of land cover dataset. Default is globcover
+    """  # pylint: disable=too-many-instance-attributes
+
     def __init__(
         self,
         start_time: datetime,
@@ -41,14 +72,14 @@ class WflowBuildGenerator():
         ----------
         start_time : datetime
             Starting time of simulation.
-            This should include the spin-up time. 
+            This should include the spin-up time.
             Normally, it is 1-year before the flood event.
         end_time : datetime
             Ending time of simulation
             This should include some periods of time after the flood event.
             Normally, it is about 12 hours or 1 day.
         resolution : float
-            Resolution for flow data. 
+            Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         wflow_model_path: Path
             A directory to where the data_catalog.yml is stored and to run wflow model
@@ -77,7 +108,7 @@ class WflowBuildGenerator():
     def config_section(self) -> dict:
         """
         Write out configuration section
-        
+
         Returns
         -------
         config : dict
@@ -137,13 +168,13 @@ class WflowBuildGenerator():
                     "model.min_streamorder_river": 3
                 }
             }
-        
+
         return config
-    
+
     def basemaps_section(self) -> dict:
         """
         Write out basemaps' section
-        
+
         Returns
         -------
         basemaps : dict
@@ -158,9 +189,9 @@ class WflowBuildGenerator():
                 "res": self.resolution
             }
         }
-        
+
         return basemaps
-    
+
     def rivers_section(self) -> dict:
         """
         Write out rivers' section
@@ -174,7 +205,7 @@ class WflowBuildGenerator():
         river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
 
         # Get river information
-        with open(river_path, "r") as f:
+        with open(river_path, "r", encoding="utf-8") as f:
             river_information = json.load(f)['setup_rivers']
 
         # Generate rivers section
@@ -210,13 +241,13 @@ class WflowBuildGenerator():
                 "min_area": 10.0
             }
         }
-        
+
         return lakes
-    
+
     def landcover_section(self) -> dict:
         """
         Write out landcover's section
-        
+
         Returns
         -------
         lulc : dict
@@ -236,9 +267,9 @@ class WflowBuildGenerator():
                 "lulc_mapping_fn": landcover_mapping
             }
         }
-        
+
         return landcover
-    
+
     def lai_section(self) -> dict:
         """
         Write out LAI section
@@ -256,15 +287,15 @@ class WflowBuildGenerator():
                 "lulc_sampling_method": "any",
                 "lulc_zero_classes": [200, 210, 220],
                 "buffer": 2
-            }    
+            }
         }
-        
+
         return lai
-    
+
     def soil_section(self) -> dict:
         """
         Write out soil section
-        
+
         Returns
         -------
         soil : dict
@@ -277,7 +308,7 @@ class WflowBuildGenerator():
                 "ptf_ksatver": "brakensiek"
             }
         }
-        
+
         return soil
 
     def precipitation_section(self) -> dict:
@@ -344,7 +375,7 @@ class WflowBuildGenerator():
     def constant_parameters_section(self) -> dict:
         """
         Write out constant parameters' section
-        
+
         Returns
         -------
         constant_parameters : dict
@@ -352,7 +383,7 @@ class WflowBuildGenerator():
         """
         # Read Json file to collect some site information
         river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
-        with open(river_path, "r") as f:
+        with open(river_path, "r", encoding="utf-8") as f:
             constant_parameters_for_site = json.load(f)['setup_constant_pars']
 
         # Generate constant parameters
@@ -363,7 +394,7 @@ class WflowBuildGenerator():
                 "cf_soil": 0.038,
                 "EoverR": 0.11,
                 "InfiltCapPath": constant_parameters_for_site['InfiltCapPath'],
-                "InfiltCapSoil": constant_parameters_for_site['InfiltCapSoil'], # whirinaki: 1, mataura:300
+                "InfiltCapSoil": constant_parameters_for_site['InfiltCapSoil'],  # whirinaki: 1, mataura:300
                 "MaxLeakage": 0,
                 "rootdistpar": -500,
                 "TT": 0,
@@ -375,14 +406,14 @@ class WflowBuildGenerator():
                 "G_TT": 1.3,
             }
         }
-        
+
         return constant_parameters
-        
+
     def write_section(self) -> dict:
         """
         Write out "write" section.
         This section is to provide conditions for some files to be written correctly
-        
+
         Returns
         -------
         write : dict
@@ -403,9 +434,9 @@ class WflowBuildGenerator():
                 "write_geoms": {},
                 "write_config": {}
             }
-        
+
         return write_section
-    
+
     def wflow_build_section(self) -> dict:
         """
         Organise wflow build's section
@@ -455,26 +486,25 @@ class WflowBuildGenerator():
                     self.constant_parameters_section(),
                     self.write_section()
                 ]
-        
+
         # Generate wflow build section
         for each_section in sections_list:
             wflow_build.update(each_section)
-        
+
         return wflow_build
-            
+
     def write_out_wflow_build(
-            self,
-            wflow_build
-        ) -> None:
+        self,
+        wflow_build: dict
+    ) -> None:
         """
         Write out wflow_build.yml
-        
+
         Parameters
         ----------
         wflow_build : dict
             A dictionary contains information of all sections
         """
-
         if self.polygons is not None:
             # Find existing file
             existing_file = sorted(
@@ -492,19 +522,18 @@ class WflowBuildGenerator():
             output_filename = self.wflow_model_path / "wflow_build.yml"
 
         log.info(f"Writing out {output_filename}")
-        # Geenrate content for wflow_build.yml
-        with open(output_filename, "w") as output_file:
+        # Generate content for wflow_build.yml
+        with open(output_filename, "w", encoding="utf-8") as output_file:
             yaml.dump(
                 wflow_build,
                 output_file,
                 sort_keys=False
             )
-    
-    def wflow_build_generator(self):
+
+    def wflow_build_generator(self) -> None:
         """Generate data_catalog.yml file"""
         # Set up content for wflow_build file
         wflow_build = self.wflow_build_section()
-        
+
         # Write wflow_build file
         self.write_out_wflow_build(wflow_build)
-    
