@@ -55,7 +55,7 @@ def convert_nc_to_gtiff(nc_file_path: pathlib.Path) -> pathlib.Path:
     time = datetime.now().strftime("%Y%m%d%H%M%S")
     output_dir = nc_file_path.parent
     new_name = f"{output_dir.name}-{time}-out.tif"
-    
+
     log.info(f"Converting {nc_file_path.name} to {new_name}")
     temp_dir = pathlib.Path("tmp/gtiff")
     # Create temporary storage folder if it does not already exist

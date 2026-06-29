@@ -178,14 +178,14 @@ class BaseFloodModelSimulationsGenerator(ABC):
             The Flood Model output ID
         """
 
-    def serve_flood_model_outputs(self, output_directory: Path) -> int:
+    def serve_flood_model_outputs(self, output_tif: Path) -> int:
         """
         Add max flood model output data to database and geoserver for serving.
 
         Parameters
         ----------
-        output_directory : Path
-            The output directory for the flood model output.
+        output_tif : Path
+            The output of the flood model output.
 
         Returns
         -------
@@ -196,21 +196,16 @@ class BaseFloodModelSimulationsGenerator(ABC):
         if not EnvVariable.IS_GEOSERVER_ACTIVE:
             return -1
 
-        # Convert the ASCII raster to GeoTIFF
-        max_asc = output_directory / "out.max"
-        time = datetime.now().strftime("%Y%m%d%H%M%S")
-        max_gtiff = output_directory / f"{output_directory.name}-{time}-out.tif"
-        serve_model.asc_to_gtiff(max_asc, max_gtiff)
         # Retrieve the AOI as a GeoDataFrame
         bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.aoi_boundary)], crs="EPSG:2193")
 
         # Store metadata related to the BG Flood model output in the database
         engine = setup_environment.get_database()
         with engine.connect() as conn:
-            model_output_id = store_model_output_metadata_to_db(conn, max_gtiff, bbox_gdf)
+            model_output_id = store_model_output_metadata_to_db(conn, output_tif, bbox_gdf)
             # Find buildings that are flooded to a depth greater than or equal to 0.1m
             log.info("Analysing flooded buildings")
-            flooded_buildings = find_flooded_buildings(conn, bbox_gdf, max_gtiff,
+            flooded_buildings = find_flooded_buildings(conn, bbox_gdf, output_tif,
                                                        flood_depth_threshold=0.03)
             log.info("Analysed flooded buildings - adding flooded buildings to database")
             store_flooded_buildings_in_database(conn, flooded_buildings, model_output_id)
@@ -221,7 +216,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         geoserver.create_workspace_if_not_exists(workspace_name)
         # Add the gtiff to geoserver
         layer_name = f"output_{model_output_id}"
-        geoserver.add_gtiff_to_geoserver(max_gtiff, workspace_name, layer_name)
+        geoserver.add_gtiff_to_geoserver(output_tif, workspace_name, layer_name)
         serve_model.create_viridis_style_if_not_exists()
 
         return model_output_id

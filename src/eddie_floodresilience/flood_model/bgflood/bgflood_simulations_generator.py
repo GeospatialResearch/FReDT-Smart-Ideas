@@ -25,18 +25,10 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import geopandas as gpd
-from shapely.geometry import box
-
-from eddie.digitaltwin import setup_environment
 from eddie.digitaltwin.utils import LogLevel, setup_logging
 
 from src.eddie_floodresilience.config import EnvVariable
-from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_output_metadata_to_db
-from src.eddie_floodresilience.flood_model.flooded_buildings import (
-    find_flooded_buildings, store_flooded_buildings_in_database
-)
-from src.eddie_floodresilience.flood_model.serve_model import add_model_output_to_geoserver
+from src.eddie_floodresilience.flood_model.serve_model import add_model_output_to_geoserver, convert_nc_to_gtiff
 from .bgflood_parameters_generator import BGFloodParametersGenerator
 from .bgflood_precipitation import BGFloodPrecipitationGenerator, BGFloodPrecipitationFloodModelGenerator
 from ..flood_model_siumulations_generator import BaseFloodModelSimulationsGenerator
@@ -130,13 +122,13 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         return output_folder_path
 
-    def flood_model_simulations_generator(self, output_dir: Path | None) -> int:
+    def flood_model_simulations_generator(self, _output_dir: Path | None) -> int:
         """
         Generate flood simulations by running flood model
 
         Parameters
         ----------
-        output_dir : Path
+        _output_dir : Path
             The path to the output directory, to allow for serving.
 
         Returns
@@ -180,43 +172,11 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                 stdout=log_file,
                 stderr=log_file
             )
-        model_output_id = self.serve_flood_model_outputs(output_folder_path)
+        output_nc = output_folder_path / "output.nc"
+        output_tif = convert_nc_to_gtiff(output_nc)
+        model_output_id = self.serve_flood_model_outputs(output_tif)
         return model_output_id
 
-    def serve_flood_model_outputs(self, output_directory: Path) -> int:
-        """
-        Add max flood model output data to database and geoserver for serving.
-
-        Parameters
-        ----------
-        output_directory : Path
-            The output directory for the flood model output.
-
-        Returns
-        -------
-        int
-            The flood model output ID.
-            Returns -1 if GeoServer is disabled for testing.
-        """
-        if not EnvVariable.IS_GEOSERVER_ACTIVE:
-            return -1
-
-        model_output = output_directory / "output.nc"
-        # Retrieve the AOI as a GeoDataFrame
-        bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.aoi_boundary)], crs="EPSG:2193")
-
-        # Store metadata related to the BG Flood model output in the database
-        engine = setup_environment.get_database()
-        with engine.connect() as conn:
-            model_output_id = store_model_output_metadata_to_db(conn, model_output, bbox_gdf)
-            # Find buildings that are flooded to a depth greater than or equal to 0.1m
-            log.info("Analysing flooded buildings")
-            flooded_buildings = find_flooded_buildings(conn, bbox_gdf, model_output, flood_depth_threshold=0.1)
-            log.info("Analysed flooded buildings - adding flooded buildings to database")
-            store_flooded_buildings_in_database(conn, flooded_buildings, model_output_id)
-        # Add the model output to GeoServer for visualization
-        add_model_output_to_geoserver(model_output, model_output_id)
-        return model_output_id
 
     def flood_model_executor(self) -> int:
         """

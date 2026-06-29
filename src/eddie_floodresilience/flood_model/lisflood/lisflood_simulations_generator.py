@@ -25,6 +25,7 @@ import subprocess
 from eddie.digitaltwin.utils import LogLevel, setup_logging
 
 from src.eddie_floodresilience.config import EnvVariable
+from src.eddie_floodresilience.flood_model import serve_model
 from .lisflood_inputs_generator import TerrainFloodModelGenerator
 from .lisflood_parameters_generator import LisfloodParametersGenerator
 from .lisflood_precipitation import LisfloodPrecipitationGenerator, LisfloodPrecipitationFloodModelGenerator
@@ -149,8 +150,13 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                 stderr=subprocess.STDOUT,  # add error into log file if appears
                 check=True
             )
+        output_asc = output_dir / "out.max"
+        # Convert the ASCII raster to GeoTIFF
+        time = datetime.now().strftime("%Y%m%d%H%M%S")
+        max_gtiff = output_dir / f"{output_dir.name}-{time}-out.tif"
+        serve_model.asc_to_gtiff(output_asc, max_gtiff)
 
-        model_output_id = self.serve_flood_model_outputs(output_dir)
+        model_output_id = self.serve_flood_model_outputs(max_gtiff)
         return model_output_id
 
     def flood_model_executor(self) -> int:

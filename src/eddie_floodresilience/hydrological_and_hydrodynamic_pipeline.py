@@ -358,10 +358,10 @@ class HydrologicalAndHydrodynamicPipeline:
         # Original scenario
         else:
             # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # self.terrain_data_pipeline()
 
             # Generate wflow data
-            self.wflow_data_pipeline()
+            # self.wflow_data_pipeline()
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline()
@@ -553,7 +553,7 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1641148, 6072404, 1642796, 6076268]
     adjust_manning = False
-    flood_model = 'lisflood-fp'
+    flood_model = 'bg-flood'
 
     polygons = landcover_scenario_gdf
     vectors = None  # r'vectors/vectors.csv'
