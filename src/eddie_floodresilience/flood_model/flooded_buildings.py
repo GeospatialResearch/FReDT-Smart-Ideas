@@ -77,8 +77,11 @@ def find_flooded_buildings(conn: Connection,
     """
     # Open flood output and read the maximum depth raster
     with xarray.open_dataset(flood_model_output_path, decode_coords="all") as ds:
-        max_band_name = "hmax_P0" if flood_model_output_path.suffix == ".nc" else "band_data"
-        max_depth_raster = ds[max_band_name]
+        if flood_model_output_path.suffix == ".nc":
+            # From more complex .nc, find the maximum flood depth
+            max_depth_raster = ds["hmax_P0"].isel(time=-1)
+        else:
+            max_depth_raster = ds["band_data"]
     # Find areas flooded in a polygon format, if they are deeper than flood_depth_threshold
     thresholded_flood_polygons = polygonize_flooded_area(max_depth_raster, flood_depth_threshold)
     # Get building outlines from database

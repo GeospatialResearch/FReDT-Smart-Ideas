@@ -150,6 +150,9 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         # Get the output folder path
         output_folder_path = self.find_output_folder_path()
 
+        # Copy flood model folder, including executable and .dlls
+        shutil.copytree(EnvVariable.FLOOD_MODEL_DIR, output_folder_path, dirs_exist_ok=True)
+
         # Identify the BG-Flood Model executable, accounting for OS differences
         operating_system = platform.system()
         match operating_system:
@@ -163,16 +166,8 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                     f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
                 log.warning(f"Attempting to run BG_Flood linux script in {operating_system}")
 
-        # Copy executable into scenario folder
-        output_executable = output_folder_path / flood_model_exe_path.name
-        # shutil.copyfile is used instead of copy2 because of some kind of mysterious linux permissions bug.
-        # https://github.com/GeospatialResearch/FReDT-Smart-Ideas/issues/83
-        shutil.copyfile(
-            flood_model_exe_path,
-            output_executable
-        )
-
         # BG flood command
+        output_executable = output_folder_path / flood_model_exe_path.name
         bg_flood_command = [
             output_executable
         ]
