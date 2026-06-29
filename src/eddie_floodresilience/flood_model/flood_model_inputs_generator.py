@@ -810,8 +810,8 @@ class InjectionPointsFloodModelGenerator:
         """
         log.info("Aligning injections points with streamlines.")
         # Get DEM
-        terrain_data = xr.open_dataset(self.flood_model_path / "8m_geofabric_clipped.nc")
-        dem = terrain_data.z.rio.write_crs("EPSG:2193")
+        with xr.open_dataset(self.flood_model_path / "8m_geofabric_clipped.nc") as terrain_data:
+            dem = terrain_data.z.rio.write_crs("EPSG:2193")
 
         # Set up aligner class
         injection_points_and_streamlines_aligner = InjectionPointsAndStreamlinesAligner(
@@ -869,8 +869,8 @@ class InjectionPointsFloodModelGenerator:
         rivers_data_path = self.catchment_model_path / wflow_test_full_folder / r"run_default/output.nc"
 
         # Read rives' data from catchment model output
-        rivers_data = xr.open_dataset(rivers_data_path)
-        rivers_flow = rivers_data['q_river']
+        with xr.open_dataset(rivers_data_path) as rivers_data:
+            rivers_flow = rivers_data['q_river']
 
         return rivers_flow
 

@@ -93,12 +93,11 @@ class BasePrecipitationGenerator(ABC):
         precipitation_given_time_path = self.precipitation_path / precipitation_name
 
         # Read the precipitation file that contains given time
-        precipitation_given_time = xr.open_dataset(precipitation_given_time_path)
-
-        # Extract precipitation within time
-        precipitation_subset = precipitation_given_time.sel(
-            time=slice(self.start_time, self.end_time)
-        )
+        with xr.open_dataset(precipitation_given_time_path) as precipitation_given_time:
+            # Extract precipitation within time
+            precipitation_subset = precipitation_given_time.sel(
+                time=slice(self.start_time, self.end_time)
+            )
 
         return precipitation_subset
 
