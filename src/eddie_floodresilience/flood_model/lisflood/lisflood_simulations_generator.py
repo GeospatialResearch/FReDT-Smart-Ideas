@@ -17,6 +17,7 @@
 
 """Runs LISFLOOD-FP flood model"""
 
+from datetime import datetime
 from pathlib import Path
 import logging
 import platform

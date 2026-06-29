@@ -28,7 +28,7 @@ from pathlib import Path
 from eddie.digitaltwin.utils import LogLevel, setup_logging
 
 from src.eddie_floodresilience.config import EnvVariable
-from src.eddie_floodresilience.flood_model.serve_model import add_model_output_to_geoserver, convert_nc_to_gtiff
+from src.eddie_floodresilience.flood_model.serve_model import convert_nc_to_gtiff
 from .bgflood_parameters_generator import BGFloodParametersGenerator
 from .bgflood_precipitation import BGFloodPrecipitationGenerator, BGFloodPrecipitationFloodModelGenerator
 from ..flood_model_siumulations_generator import BaseFloodModelSimulationsGenerator
@@ -122,6 +122,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         return output_folder_path
 
+    # pylint: disable=useless-type-doc,useless-param-doc
     def flood_model_simulations_generator(self, _output_dir: Path | None) -> int:
         """
         Generate flood simulations by running flood model
@@ -129,6 +130,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         Parameters
         ----------
         _output_dir : Path
+            WARNING: THIS IS IGNORED, awaiting reconciling how directories are handled in the application
             The path to the output directory, to allow for serving.
 
         Returns
@@ -176,7 +178,6 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         output_tif = convert_nc_to_gtiff(output_nc)
         model_output_id = self.serve_flood_model_outputs(output_tif)
         return model_output_id
-
 
     def flood_model_executor(self) -> int:
         """
