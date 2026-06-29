@@ -58,7 +58,7 @@ def convert_nc_to_gtiff(nc_file_path: pathlib.Path) -> pathlib.Path:
     gtiff_filepath = temp_dir / new_name
     # Convert the max depths to geo tiff
     with xr.open_dataset(nc_file_path, decode_coords="all") as ds:
-        ds['hmax_P0'][0].rio.to_raster(gtiff_filepath)
+        ds['hmax_P0'].isel(time=-1).rio.to_raster(gtiff_filepath)
     return pathlib.Path(os.getcwd()) / gtiff_filepath
 
 
