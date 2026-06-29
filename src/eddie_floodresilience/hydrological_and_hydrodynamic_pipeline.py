@@ -357,8 +357,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # # Generate terrain data for wflow and flood models
-            # self.terrain_data_pipeline()
+            # Generate terrain data for wflow and flood models
+            self.terrain_data_pipeline()
 
             # Generate wflow data
             self.wflow_data_pipeline()
