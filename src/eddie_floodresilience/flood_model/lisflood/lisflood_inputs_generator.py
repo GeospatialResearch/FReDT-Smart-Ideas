@@ -342,8 +342,8 @@ class TerrainFloodModelGenerator:
     def manning_generator(self) -> None:
         """Generate clipped Manning's n from 4m to 8m with adjusted river"""
         if self.adjust_manning:
-            # # Generate Strahler Order streams and roughness length at 4m
-            # self.strahler_for_manning_generator()
+            # Generate Strahler Order streams and roughness length at 4m
+            self.strahler_for_manning_generator()
 
             # Resample roughness to 8m
             roughness_8m = self.resample_roughness()
@@ -355,7 +355,7 @@ class TerrainFloodModelGenerator:
             manning = self.roughness_to_manning(
                 roughness_8m,
                 1
-            )
+            ) * 2
 
             # Adjust Manning's n
             manning_for_flood = self.manning_adjustment(

@@ -62,6 +62,7 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
     def __init__(
         self,
         flood_model_path: Path,
+        hydromt_path: Path,
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
@@ -75,6 +76,8 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
         ----------
         flood_model_path : Path
             Directory to folder storing flood model data
+        hydromt_path : Path
+            Directory to folder storing necessary data
         terrain_bounding_box : Polygon
             Bounding's box of terrain data
         start_time : datetime
@@ -89,7 +92,7 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
         """
-        super().__init__(flood_model_path, terrain_bounding_box, start_time, end_time, polygons, vectors)
+        super().__init__(flood_model_path, hydromt_path, terrain_bounding_box, start_time, end_time, polygons, vectors)
 
         # Add column that converts time to seconds
         self.injection_points_flow['time_in_second'] = np.arange(

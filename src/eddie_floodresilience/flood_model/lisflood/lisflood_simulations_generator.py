@@ -90,6 +90,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         # Call out class used to generate parameter files
         parameters_files_generator = LisfloodParametersGenerator(
             self.flood_model_path,
+            self.hydromt_path,
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
@@ -182,7 +183,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
-            # Generate precipitation data for flood model
+            # # Generate precipitation data for flood model
             # self.precipitation_data_for_flood_model_generator()
 
             # Generate parameter files for flood model

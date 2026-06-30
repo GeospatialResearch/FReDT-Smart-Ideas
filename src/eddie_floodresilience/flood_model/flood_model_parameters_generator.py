@@ -37,6 +37,7 @@ class FloodModelParametersGenerator(ABC):
     def __init__(
         self,
         flood_model_path: Path,
+        hydromt_path: Path,
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
@@ -50,6 +51,8 @@ class FloodModelParametersGenerator(ABC):
         ----------
         flood_model_path : Path
             Directory to folder storing flood model data
+        hydromt_path : Path
+            Directory to folder storing necessary data
         terrain_bounding_box : Polygon
             Bounding's box of terrain data
         start_time : datetime
@@ -65,6 +68,7 @@ class FloodModelParametersGenerator(ABC):
             and 'distance' column to specify how smooth to decrease elevation.
         """
         self.flood_model_path = flood_model_path
+        self.hydromt_path = hydromt_path
         self.terrain_bounding_box = terrain_bounding_box
         self.start_time = start_time
         self.end_time = end_time
@@ -96,10 +100,9 @@ class FloodModelParametersGenerator(ABC):
 
         Returns
         -------
-        xy_coords : tuple[float, gloat]
+        xy_coords : tuple[float]
             New coordinates of x and y. X and y of each injection point
         """
-        log.info("Moving points inside aoi")
         # Extract each x and y
         x, y = xy_coords
 

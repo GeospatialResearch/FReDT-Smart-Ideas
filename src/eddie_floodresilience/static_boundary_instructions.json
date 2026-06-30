@@ -13,27 +13,6 @@
     "coverage_area": "New Zealand",
     "url": "https://datafinder.stats.govt.nz/layer/111181-regional-council-2023-clipped-generalised/"
   },
-  "instruction_3": {
-    "data_provider": "MFE",
-    "layer_id": 99776,
-    "table_name": "sea_draining_catchments",
-    "coverage_area": "New Zealand",
-    "url": "https://data.mfe.govt.nz/layer/99776-sea-draining-catchments/"
-  },
-  "instruction_4": {
-    "data_provider": "LINZ",
-    "layer_id": 50258,
-    "table_name": "nz_coastlines",
-    "coverage_area": "New Zealand",
-    "url": "https://data.linz.govt.nz/layer/50258-nz-coastlines-topo-150k/"
-  },
-  "instruction_5": {
-    "data_provider": "LINZ",
-    "layer_id": 53382,
-    "table_name": "nz_roads",
-    "unique_column_name": "road_id",
-    "url": "https://data.linz.govt.nz/layer/53382-nz-roads-addressing/"
-  },
   "instruction_6": {
     "data_provider": "LINZ",
     "layer_id": 101292,

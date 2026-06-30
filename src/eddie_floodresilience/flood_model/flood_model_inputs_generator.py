@@ -691,7 +691,6 @@ class InjectionPointsFloodModelGenerator:
         intersections : gpd.GeoSeries
             Intersections series between rivers and DEM bounding box
         """
-        log.info("Generating intersections between rivers and DEM bounding box.")
         # Get boundary of bounding box
         boundary = self.terrain_bounding_box.boundary
 
@@ -821,9 +820,9 @@ class InjectionPointsFloodModelGenerator:
 
         # Align injection points with streamlines by snapping
         new_injection_points = injection_points_and_streamlines_aligner.snap_multiple_injection_points(
-            buffer_distance=300,
+            buffer_distance=200,  # other is 300
             elevation_weight=2,
-            distance_weight=0.001,
+            distance_weight=0.01,  # other is 0.001
             boundary_weight=0.5
         ).to_crs("EPSG:2193")
 
