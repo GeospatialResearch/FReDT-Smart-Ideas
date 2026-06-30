@@ -33,8 +33,8 @@ setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class BasePrecipitationGenerator(ABC):
-    """Abstract base class to generate precipitation"""
+class PrecipitationGenerator:
+    """Class to generate precipitation"""
 
     def __init__(
         self,
@@ -319,7 +319,6 @@ class BasePrecipitationGenerator(ABC):
 
         return precipitation_timesteps_files
 
-    @abstractmethod
     def combine_precipitation_timesteps(self) -> xr.Dataset:
         """
         Read and write out all precipitation timesteps into one precipitation data
@@ -329,6 +328,18 @@ class BasePrecipitationGenerator(ABC):
         combined_precipitation_timestep : xr.Dataset
             Precipitation that combines all timesteps
         """
+        log.info("Combining precipitation timesteps")
+
+        # Collect all files of precipitation timesteps
+        precipitation_timesteps_files = self.collect_precipitation_timesteps()
+
+        # Read/combine all files of precipitation timesteps
+        combined_precipitation_timesteps = xr.open_mfdataset(
+            precipitation_timesteps_files,
+            combine='nested',
+            concat_dim='time'
+        )
+        return combined_precipitation_timesteps
 
     def precipitation_data_generator(self) -> xr.Dataset:
         """
@@ -428,7 +439,7 @@ class BasePrecipitationFloodModelGenerator(ABC):
             # Write to precipitation variable
             precipitation_var[i, :, :] = each_precipitation_timestep.values
 
-    def precipitation_generator(self) -> None:
+    def precipitation_for_flood_model_generator(self) -> None:
         """Generate variables of outfile precipitation"""
         # Open netCDF precipitation file
         outfile_precipitation_path = self.flood_model_path / "precipitation_dynamic.nc"
@@ -490,7 +501,3 @@ class BasePrecipitationFloodModelGenerator(ABC):
         # Close writing-out file
         outfile_precipitation.close()
         log.info(f"Finished writing precipitation data {outfile_precipitation_path}")
-
-    def precipitation_for_flood_model_generator(self) -> None:
-        """Generate precipitation for flood model"""
-        self.precipitation_generator()

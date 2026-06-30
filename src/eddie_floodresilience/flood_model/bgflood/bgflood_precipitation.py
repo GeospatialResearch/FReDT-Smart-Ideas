@@ -22,13 +22,13 @@ import logging
 import xarray as xr
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
-from ..flood_model_precipitation import BasePrecipitationFloodModelGenerator, BasePrecipitationGenerator
+from ..flood_model_precipitation import BasePrecipitationFloodModelGenerator, PrecipitationGenerator
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class BGFloodPrecipitationGenerator(BasePrecipitationGenerator):
+class BGFloodPrecipitationGenerator(PrecipitationGenerator):
     """This class is to generate precipitation"""
 
     def combine_precipitation_timesteps(self) -> xr.Dataset:
@@ -39,17 +39,8 @@ class BGFloodPrecipitationGenerator(BasePrecipitationGenerator):
         -------
         combined_precipitation_timestep : xr.Dataset
             Precipitation that combines all timesteps
-        """  # pylint: disable=duplicate-code
-        log.info("Combining precipitation timesteps")
-        # Collect all files of precipitation timesteps
-        precipitation_timesteps_files = self.collect_precipitation_timesteps()
-
-        # Read/combine all files of precipitation timesteps
-        combined_precipitation_timesteps = xr.open_mfdataset(
-            precipitation_timesteps_files,
-            combine='nested',
-            concat_dim='time'
-        )
+        """
+        combined_precipitation_timesteps = super().combine_precipitation_timesteps()
 
         # Change variable name from rainfall_depth to depth
         combined_precipitation_timesteps = combined_precipitation_timesteps.rename({

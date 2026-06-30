@@ -77,6 +77,32 @@ class FloodModelParametersGenerator(ABC):
         self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
         self.seconds = int((end_time - start_time).total_seconds())
 
+    @abstractmethod
+    def parameter_files_generator(self) -> Path:
+        """
+        Generate parameter files for flood model
+
+        Returns
+        -------
+        Path
+            Directory of output files as configured in parameter files
+        """
+
+    @abstractmethod
+    def write_injection_point_files(self) -> None:
+        """Write injection point files for flood model"""
+
+    @abstractmethod
+    def write_flood_model_parameter_file(self) -> Path:
+        """
+        Write parameter files for flood model.
+
+        Returns
+        -------
+        Path
+            The directory the parameter was created in.
+        """
+
     @staticmethod
     def move_points_inside_aoi(
         aoi_coords: list[float],
@@ -184,22 +210,3 @@ class FloodModelParametersGenerator(ABC):
         output.mkdir(parents=True, exist_ok=True)
 
         return output
-
-    @abstractmethod
-    def parameter_files_generator(self) -> Path:
-        """
-        Generate parameter files for flood model
-
-        Returns
-        -------
-        Path
-            Directory of output files as configured in parameter files
-        """
-
-    @abstractmethod
-    def write_injection_point_files(self) -> None:
-        """Write injection point files for flood model"""
-
-    @abstractmethod
-    def write_flood_model_parameter_file(self) -> Path:
-        """Write parameter files for flood model."""

@@ -19,39 +19,11 @@
 
 import logging
 
-import xarray as xr
-
 from eddie.digitaltwin.utils import setup_logging, LogLevel
-from ..flood_model_precipitation import BasePrecipitationFloodModelGenerator, BasePrecipitationGenerator
+from ..flood_model_precipitation import BasePrecipitationFloodModelGenerator
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
-
-
-class LisfloodPrecipitationGenerator(BasePrecipitationGenerator):
-    """This class is to generate precipitation for LISFLOOD-FP"""
-
-    def combine_precipitation_timesteps(self) -> xr.Dataset:
-        """
-        Read and write out all precipitation timesteps into one precipitation data
-
-        Returns
-        -------
-        combined_precipitation_timestep : xr.Dataset
-            Precipitation that combines all timesteps
-        """  # pylint: disable=duplicate-code
-        log.info("Combining all precipitation timesteps")
-        # Collect all files of precipitation timesteps
-        precipitation_timesteps_files = self.collect_precipitation_timesteps()
-
-        # Read/combine all files of precipitation timesteps
-        combined_precipitation_timesteps = xr.open_mfdataset(
-            precipitation_timesteps_files,
-            combine='nested',
-            concat_dim='time'
-        )
-
-        return combined_precipitation_timesteps
 
 
 class LisfloodPrecipitationFloodModelGenerator(BasePrecipitationFloodModelGenerator):

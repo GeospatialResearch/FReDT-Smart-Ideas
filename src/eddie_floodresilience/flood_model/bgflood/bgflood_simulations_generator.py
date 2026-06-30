@@ -17,7 +17,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """This script runs BG-Flood simulations."""
-# pylint: disable=duplicate-code
 
 import logging
 import platform
@@ -41,7 +40,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
     """This class is to generate flood model simulations"""  # pylint: disable=too-many-instance-attributes
 
     def precipitation_data_for_flood_model_generator(self) -> None:
-        """Generate precipitation data for flood model"""
+        """Generate precipitation data for flood model"""  # pylint: disable=duplicate-code
         # Call out class used to generate precipitation data
         # Path to precipitation file
         precipitation_file = (
@@ -74,10 +73,11 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             precipitation_data_for_flood_model.precipitation_for_flood_model_generator()
 
     def parameter_files_for_flood_model_generator(self) -> None:
-        """Generate parameters files for flood model"""
+        """Generate parameters files for flood model"""  # pylint: disable=duplicate-code
         # Call out class used to generate parameter files
         parameters_files_generator = BGFloodParametersGenerator(
             self.flood_model_path,
+            self.hydromt_path,
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
@@ -130,8 +130,10 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         Parameters
         ----------
         _output_dir : Path
-            WARNING: THIS IS IGNORED, awaiting reconciling how directories are handled in the application
-            The path to the output directory, to allow for serving.
+            WARNING: THIS IS IGNORED, output directory is generated within function.
+            Awaiting reconciling how directories are handled in the application
+
+            _The path to the output directory, to allow for serving.
 
         Returns
         -------

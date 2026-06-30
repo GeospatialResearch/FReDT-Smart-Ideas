@@ -29,7 +29,8 @@ from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model import serve_model
 from .lisflood_inputs_generator import TerrainFloodModelGenerator
 from .lisflood_parameters_generator import LisfloodParametersGenerator
-from .lisflood_precipitation import LisfloodPrecipitationGenerator, LisfloodPrecipitationFloodModelGenerator
+from .lisflood_precipitation import LisfloodPrecipitationFloodModelGenerator
+from ..flood_model_precipitation import PrecipitationGenerator
 from ..flood_model_siumulations_generator import BaseFloodModelSimulationsGenerator
 
 setup_logging(LogLevel.DEBUG)
@@ -55,9 +56,9 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         terrain_data_for_flood_model.execute_terrain_data_generator()
 
     def precipitation_data_for_flood_model_generator(self) -> None:
-        """Generate precipitation data for flood model"""
+        """Generate precipitation data for flood model"""  # pylint: disable=duplicate-code
         # Call out class used to generate precipitation data
-        precipitation_generator = LisfloodPrecipitationGenerator(
+        precipitation_generator = PrecipitationGenerator(
             self.flood_model_path,
             self.precipitation_path,
             self.terrain_bounding_box,
@@ -86,7 +87,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         ------
         Path
             The path to the output directory generated for these parameters
-        """
+        """  # pylint: disable=duplicate-code
         # Call out class used to generate parameter files
         parameters_files_generator = LisfloodParametersGenerator(
             self.flood_model_path,
