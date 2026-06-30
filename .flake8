@@ -1,11 +1,16 @@
 [flake8]
-require-plugins = flake8-docstrings, flake8-annotations
+require-plugins = flake8-docstrings, flake8-annotations, flake8-copyright
 show-source = True
 count = True
 statistics = True
 max-line-length = 120
 ignore = ANN101, D205
 extend-ignore = W504, D400
+
+copyright-check = True
+copyright-min-file-size = 1000
+copyright-author = "Geospatial Research Institute Toi Hangarau"
+copyright-regexp = ".*Copyright\s+(.\s+)?\d{4}(-\d{4})+\s"
 
 # ANN101: Missing type annotation for self in method
 # D205: 1 blank line required between summary line and description
