@@ -23,11 +23,12 @@ or other clients.
 import logging
 import os
 import pathlib
+from datetime import datetime
 from xml.sax import saxutils
 
 import rasterio as rio
-from sqlalchemy.engine import Connection
 import xarray as xr
+from sqlalchemy.engine import Connection
 
 from eddie import geoserver
 from src.eddie_floodresilience.config import EnvVariable
@@ -50,7 +51,11 @@ def convert_nc_to_gtiff(nc_file_path: pathlib.Path) -> pathlib.Path:
     pathlib.Path
         The filepath of the new GeoTiff file.
     """
-    new_name = f"{nc_file_path.stem}.tif"
+    # Create new unique file name to avoid clobbering
+    time = datetime.now().strftime("%Y%m%d%H%M%S")
+    output_dir = nc_file_path.parent
+    new_name = f"{output_dir.name}-{time}-out.tif"
+
     log.info(f"Converting {nc_file_path.name} to {new_name}")
     temp_dir = pathlib.Path("tmp/gtiff")
     # Create temporary storage folder if it does not already exist
@@ -58,7 +63,7 @@ def convert_nc_to_gtiff(nc_file_path: pathlib.Path) -> pathlib.Path:
     gtiff_filepath = temp_dir / new_name
     # Convert the max depths to geo tiff
     with xr.open_dataset(nc_file_path, decode_coords="all") as ds:
-        ds['hmax_P0'][0].rio.to_raster(gtiff_filepath)
+        ds['hmax_P0'].isel(time=-1).rio.to_raster(gtiff_filepath)
     return pathlib.Path(os.getcwd()) / gtiff_filepath
 
 
@@ -93,7 +98,7 @@ def create_building_layers(conn: Connection, workspace_name: str, data_store_nam
                                   FROM nz_building_outlines
                                            LEFT OUTER JOIN building_flood_status USING (building_outline_id)
                                   WHERE building_outline_lifecycle ILIKE 'current'
-                                    AND flood_model_id = %scenario % \
+                                    AND flood_model_id = %scenario%
                                   """
     xml_escaped_sql = saxutils.escape(flooded_buildings_sql_query, entities={r"'": "&apos;", "\n": "&#xd;"})
 

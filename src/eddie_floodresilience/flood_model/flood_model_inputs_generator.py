@@ -15,8 +15,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Classes to transform data into forms ready for BG-Flood."""
-# pylint: disable=duplicate-code
+"""Classes to create input configuration files for Flood Models."""
 
 import logging
 from datetime import datetime
@@ -29,6 +28,7 @@ import xarray as xr
 from shapely.geometry import box, mapping, Point, Polygon, LineString, MultiLineString, MultiPoint
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -92,13 +92,12 @@ class TerrainGenerator:
         """
         # The name of terrain here is for easily building up automation
         # It will be coded in the future
-        terrain_path = self.hydromt_path / f"river_data/{self.river_name}/8m_geofabric.nc"
+        terrain_path = self.hydromt_path / "river_data" / self.river_name / "8m_geofabric.nc"
 
         # Read terrain raster
-        terrain = xr.open_dataset(terrain_path)
-
-        # Make sure terrain has crs
-        terrain_crs = terrain.rio.write_crs(self.crs)
+        with xr.open_dataset(terrain_path) as terrain:
+            # Make sure terrain has crs
+            terrain_crs = terrain.rio.write_crs(self.crs)
 
         return terrain_crs
 
@@ -196,7 +195,7 @@ class TerrainGenerator:
         return terrain_bounding_box, terrain_crs_clipped
 
 
-class InjectionPointsandStreamlinesAligner():
+class InjectionPointsAndStreamlinesAligner:
     """This class is to align injection points with streamlines"""
 
     def __init__(
@@ -536,7 +535,7 @@ class InjectionPointsandStreamlinesAligner():
         )
 
         # Best cell
-        row_idx, column_idx = self.find_best_cell(score)
+        row_idx, column_idx = self.find_best_cell(score)  # pylint: disable=unbalanced-tuple-unpacking
 
         # Snapped injection point
         snapped_injection_point = self.convert_index_to_point(
@@ -604,7 +603,7 @@ class InjectionPointsandStreamlinesAligner():
         return new_injection_points
 
 
-class InjectionPointsFloodModelGenerator():
+class InjectionPointsFloodModelGenerator:
     """This class is to generate injection points for flood model"""
 
     def __init__(
@@ -692,7 +691,6 @@ class InjectionPointsFloodModelGenerator():
         intersections : gpd.GeoSeries
             Intersections series between rivers and DEM bounding box
         """
-        log.info("Generating intersections between rivers and DEM bounding box.")
         # Get boundary of bounding box
         boundary = self.terrain_bounding_box.boundary
 
@@ -811,20 +809,20 @@ class InjectionPointsFloodModelGenerator():
         """
         log.info("Aligning injections points with streamlines.")
         # Get DEM
-        terrain_data = xr.open_dataset(self.flood_model_path / "8m_geofabric_clipped.nc")
-        dem = terrain_data.z.rio.write_crs("EPSG:2193")
+        with xr.open_dataset(self.flood_model_path / "8m_geofabric_clipped.nc") as terrain_data:
+            dem = terrain_data.z.rio.write_crs("EPSG:2193")
 
         # Set up aligner class
-        injection_points_and_streamlines_aligner = InjectionPointsandStreamlinesAligner(
+        injection_points_and_streamlines_aligner = InjectionPointsAndStreamlinesAligner(
             original_injection_points,
             dem
         )
 
         # Align injection points with streamlines by snapping
         new_injection_points = injection_points_and_streamlines_aligner.snap_multiple_injection_points(
-            buffer_distance=300,
+            buffer_distance=200,  # other is 300
             elevation_weight=2,
-            distance_weight=0.001,
+            distance_weight=0.01,  # other is 0.001
             boundary_weight=0.5
         ).to_crs("EPSG:2193")
 
@@ -870,8 +868,8 @@ class InjectionPointsFloodModelGenerator():
         rivers_data_path = self.catchment_model_path / wflow_test_full_folder / r"run_default/output.nc"
 
         # Read rives' data from catchment model output
-        rivers_data = xr.open_dataset(rivers_data_path)
-        rivers_flow = rivers_data['q_river']
+        with xr.open_dataset(rivers_data_path) as rivers_data:
+            rivers_flow = rivers_data['q_river']
 
         return rivers_flow
 
