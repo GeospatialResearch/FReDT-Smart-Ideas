@@ -152,7 +152,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         """
 
     @abstractmethod
-    def flood_model_simulations_generator(self, output_dir: Path) -> int:
+    def flood_model_simulations_generator(self, output_dir: Path) -> Path:
         """
         Generate flood simulations by running flood model
 
@@ -163,8 +163,8 @@ class BaseFloodModelSimulationsGenerator(ABC):
 
         Returns
         -------
-        int
-            The Flood Model output ID
+        Path
+            The Flood Model maximum extents raster file
         """
 
     @abstractmethod

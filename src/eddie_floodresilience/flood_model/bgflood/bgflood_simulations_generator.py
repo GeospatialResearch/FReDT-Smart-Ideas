@@ -123,7 +123,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         return output_folder_path
 
     # pylint: disable=useless-type-doc,useless-param-doc
-    def flood_model_simulations_generator(self, _output_dir: Path | None) -> int:
+    def flood_model_simulations_generator(self, _output_dir: Path | None) -> Path:
         """
         Generate flood simulations by running flood model
 
@@ -137,8 +137,8 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         Returns
         -------
-        int
-            The Flood Model output ID
+        Path
+            The Flood Model maximum extents raster file
         """
         # Set up path to log file
         log_file_path = self.flood_model_path / "simulation_log.log"
@@ -178,8 +178,8 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             )
         output_nc = output_folder_path / "output.nc"
         output_tif = convert_nc_to_gtiff(output_nc)
-        model_output_id = self.serve_flood_model_outputs(output_tif)
-        return model_output_id
+
+        return output_tif
 
     def flood_model_executor(self) -> int:
         """
@@ -207,7 +207,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.precipitation_data_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator(None)
+            max_gtiff = self.flood_model_simulations_generator(None)
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
@@ -218,7 +218,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.parameter_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator(None)
+            max_gtiff = self.flood_model_simulations_generator(None)
 
         # This 'else' includes 2
         else:
@@ -226,5 +226,8 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.parameter_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator(None)
+            max_gtiff = self.flood_model_simulations_generator(None)
+
+        # Add the results to the database and geoserver
+        model_output_id = self.serve_flood_model_outputs(max_gtiff)
         return model_output_id
