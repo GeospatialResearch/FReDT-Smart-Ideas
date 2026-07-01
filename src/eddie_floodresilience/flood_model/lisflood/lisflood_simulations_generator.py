@@ -216,4 +216,5 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         # Add the results to the database and geoserver
         model_output_id = self.serve_flood_model_outputs(max_gtiff)
+        self.serve_injection_points(model_output_id)
         return model_output_id
