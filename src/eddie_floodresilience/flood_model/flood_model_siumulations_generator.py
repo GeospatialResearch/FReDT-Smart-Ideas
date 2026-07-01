@@ -223,6 +223,14 @@ class BaseFloodModelSimulationsGenerator(ABC):
         return model_output_id
 
     def serve_injection_points(self, model_output_id: int) -> None:
+        """
+        Add injection points for flood model to database and geoserver for serving.
+
+        Parameters
+        ----------
+        model_output_id : int
+            The flood model output ID to associate the injection points with.
+        """
         # Read injection point files
         flow_df_path = self.flood_model_path / "injection_points_flow.csv"
         flow_df = pd.read_csv(flow_df_path)

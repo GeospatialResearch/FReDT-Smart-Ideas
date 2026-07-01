@@ -70,6 +70,8 @@ class PredefinedScenario(Process, ABC):
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
             ComplexOutput("floodDepth", "Maximum Flood Depth",
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
+            ComplexOutput("injectionPoints", "River Flows",
+                          supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
             ComplexOutput("floodedBuildings", "Flooded Buildings",
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
         ]
@@ -148,6 +150,9 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
         response.outputs['landcover'].data = json.dumps(landcover_catalog(scenario_id, scenario_name))
         response.outputs['catchmentBoundary'].data = json.dumps(catchment_boundary_catalog(scenario_id, scenario_name))
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id, scenario_name))
+        response.outputs['injectionPoints'].data = json.dumps(
+            hydrograph_injection_point_catalog(scenario_id, scenario_name)
+        )
         response.outputs['floodedBuildings'].data = json.dumps(
             building_flood_status_catalog(scenario_id, scenario_name)
         )
@@ -411,4 +416,55 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
         "url": gs_landcover_url,
         "layers": layer_name,
         "styles": "landcover",
+    }
+
+
+def hydrograph_injection_point_catalog(scenario_id: int, scenario_name: str) -> dict:
+    """
+    Create a dictionary in the format of a terria js catalog json for the injection points, with hydrographs.
+
+    Parameters
+    ----------
+    scenario_id : int
+        The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
+
+    Returns
+    ----------
+    dict
+        The TerriaJS catalog item JSON for the building flood status layer.
+    """
+    gs_flood_inputs_workspace = f"{EnvVar.POSTGRES_DB}-flood-model-inputs"
+    gs_flood_inputs_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_flood_inputs_workspace}/ows"
+
+    # Open and read HTML template for plot in infobox for TerriaJS
+    with open("./src/eddie_floodresilience/flood_model/templates/plot_infobox_template.html",
+              encoding="utf-8") as file:
+        plot_infobox_template = file.read()
+
+    # Fill in plot template vars. Some parts are double escaped so they can be used as moustache templates in TerriaJS.
+    plot_title = f"Hydrograph — Injection Point {{{{FID}}}} ({scenario_name})"
+    csv_src = f"{EnvVar.BACKEND_URL}/hydrographs/scenarios/{scenario_id}/features/{{{{FID}}}}"
+    plot_infobox_template = plot_infobox_template.format(
+        plot_title=plot_title,
+        csv_src=csv_src,
+        x_axis="Time",
+        y_axis="Flow",
+        y_units="Flow (m3/s)"
+    )
+
+    return {
+        "type": "wfs",
+        "name": f"Hydrographs - {scenario_name}",
+        "url": gs_flood_inputs_url,
+        "typeNames": f"{gs_flood_inputs_workspace}:injection_points",
+        "parameters": {
+            "CQL_FILTER": f"model_output_id={scenario_id}",
+        },
+        "featureInfoTemplate": {
+            # Double-escaped so that after python string formatting it is still mustache formatted.
+            "name": f"Hydrograph - {scenario_name} - {{{{FID}}}}",
+            "template": plot_infobox_template
+        }
     }

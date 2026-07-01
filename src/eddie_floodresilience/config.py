@@ -44,6 +44,11 @@ class EnvVariable(EnvVarBase):  # pylint: disable=too-few-public-methods
 
     IS_GEOSERVER_ACTIVE = EnvVarBase._get_bool_env_variable("IS_GEOSERVER_ACTIVE", True)
 
+    BACKEND_URL = EnvVarBase._get_env_variable(
+        "BACKEND_URL",
+        default=f'{EnvVarBase._get_env_variable("BACKEND_HOST")}:{EnvVarBase._get_env_variable("BACKEND_PORT")}',
+    )
+
     # NewZealidar config that we must ensure have values.
     _LIDAR_DIR = EnvVarBase._get_env_variable("LIDAR_DIR")
     _DEM_DIR = EnvVarBase._get_env_variable("DEM_DIR")

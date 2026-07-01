@@ -1,0 +1,13 @@
+<!--Template used for TerriaJS to display a plot, especially for a vector feature.-->
+<!-- Double-escaped so that after python string formatting it is still mustache formatted. -->
+<h4>
+  {plot_title}
+</h4>
+<chart
+    src="{csv_src}"
+    title="{plot_title}"
+    x-column="{x_axis}"
+    y-column="{y_axis}"
+    column-units="{y_units}"
+>
+</chart>
