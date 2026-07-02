@@ -503,7 +503,7 @@ def find_landcover_file(
         if landcover_name == 'globcover':
             landcover_file = hydromt_path / Path("original_globcover.tif")
         else:
-            landcover_file = hydromt_path / Path('lcdb_2023_50m_fixed_nodata.tif')
+            landcover_file = hydromt_path / Path('original_lcdb.tif')
     else:
         # non-baselines use new modified files
         if landcover_name.startswith('globcover'):
@@ -512,7 +512,7 @@ def find_landcover_file(
             landcover_file = (wflow_model_path / "globcover" / landcover_name).resolve()
         else:
             landcover_file = max(
-                Path(hydromt_path).glob("lcdb_*.tif"),
-                default=Path(hydromt_path) / "lcdb_001.tif"
+                Path(wflow_model_path / "lcdb").glob("lcdb_*.tif"),
+                default=Path(wflow_model_path) / "lcdb" / "lcdb_001.tif"
             )
     return landcover_file

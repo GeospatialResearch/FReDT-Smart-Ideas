@@ -4,9 +4,12 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-
+from osgeo import gdal
 import logging
 from datetime import datetime
+import uuid
+import os
+import csv
 from os import cpu_count
 from pathlib import Path
 from typing import Union
@@ -99,7 +102,8 @@ class HydrologicalAndHydrodynamicPipeline:
         vectors: str = None,
         resolution: float = 0.00045,
         threshold: int = 1000,
-        landcover: str = 'globcover'
+        landcover: str = 'globcover',
+        folder_name: str = 'origin'
     ) -> None:
         """
         Generate hydrological and hydrodynamic results
@@ -148,6 +152,8 @@ class HydrologicalAndHydrodynamicPipeline:
             Default is 1000
         landcover: str = 'globcover'
             Name of land cover dataset. Default is 'globcover'
+        folder_name: str = 'origin'
+            Name of folder scenario
         """
         # Set up necessary parameters
         self.hydro_combination_path = hydro_combination_path
@@ -165,6 +171,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.threshold = threshold
         self.crs = 2193
         self.landcover = landcover
+        self.folder_name = folder_name
 
         self.hydromt_path = EnvVariable.HYDROMT_PATH
 
@@ -176,6 +183,69 @@ class HydrologicalAndHydrodynamicPipeline:
             self.forcing_path = Path(self.hydromt_path / fr"forcing_data/{forcing_name}/forcing_*.nc")
         else:
             self.forcing_path = forcing_name
+
+    def generate_folder_name(self) -> tuple[str, str]:
+        """
+        Generate folder name and type based on solution type
+
+        Returns
+        -------
+        tuple[str, str]
+            The folder name and type
+        """
+        if self.polygons is not None and self.vectors is not None:
+            folder_name = "output_landcover_elevation"
+            output_type = "landcover_elevation"
+        elif self.polygons is not None:
+            folder_name = "output_landcover"
+            output_type = "landcover"
+        elif self.vectors is not None:
+            folder_name = "output_elevation"
+            output_type = "elevation"
+        else:
+            folder_name = "output"
+            output_type = "none"
+
+    def reserve_pipeline_id(self) -> tuple[str, str]:
+        """Generate ID simulation for the whole pipeline"""
+        # Set folder ids list and path
+        folder_ids = []
+        folder_ids_path = self.hydro_combination_path / r'folder_id.csv'
+
+        # Read the folder csv if it exists
+        if os.path.exists(folder_ids_path):
+            with open(folder_ids_path, 'r', newline='') as folder_text:
+                reader_csv = csv.DictReader(folder_text)
+                folder_ids = list(reader_csv)
+
+            # Return existing ID if folder_name already there
+            for folder_id in folder_ids:
+                if folder_id['folder_name'] == self.folder_name:
+                    return folder_id['model_id'], folder_id['folder_filename']
+
+        # Generate new ID and save
+        pipeline_id = str(uuid.uuid4())[:8]
+        folder_filename = f"{self.folder_name}_{pipeline_id}"
+        folder_ids.append({
+            'folder_name': self.folder_name,
+            'pipeline_id': pipeline_id,
+            'folder_filename': folder_filename,
+            'creation_time': datetime.now().isoformat()
+        })
+
+        # Write csv file
+        fields_name = [
+            'folder_name',
+            'pipeline_id',
+            'folder_filename',
+            'creation_time'
+        ]
+        with open(folder_ids_path, 'w', newline='') as folder_text:
+            writer_csv = csv.DictWriter(folder_text, fieldnames=fields_name)
+            writer_csv.writeheader()
+            writer_csv.writerows(folder_ids)
+
+        return pipeline_id, folder_filename
 
     def total_solutions(self) -> None:
         """Develop solutions for flood risk resilience"""
@@ -357,8 +427,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
 
             # Generate wflow data
             self.wflow_data_pipeline()
@@ -370,53 +440,66 @@ class HydrologicalAndHydrodynamicPipeline:
         return flood_model_output_id
 
 
-# # OTAUTAU
-# def main():
-#     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_otautau_path_013")
-#     forcing_name = 'otautau' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
-#     river_name = 'otautau'
-#     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
-#     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
-#     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
-#
-#     # Gore
-#     num_threads = 8
-#     flood_aoi_boundary = [1211523.632, 4876273.859, 1215360.720, 4880693.039]
-#     adjust_manning = False
-#     flood_model = 'bg-flood'
-#
-#     polygons = r'polygons/polygons.shp' # r'polygons/polygons.shp'
-#     vectors = None # r'vectors/vectors.csv'
-#     resolution = 200
-#     threshold = 25000
-#     landcover = 'globcover_modified'
-#
-#     # Set up hydraulic and hydrodynamic pipeline
-#     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
-#         hydro_combination_path,
-#
-#         forcing_name,
-#         river_name,
-#         precipitation_path,
-#         start_time,
-#         end_time,
-#
-#         num_threads,
-#         flood_aoi_boundary,
-#         adjust_manning,
-#         flood_model,
-#
-#         polygons,
-#         vectors,
-#         resolution,
-#         threshold,
-#         landcover
-#     )
-#
-#     hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
-#
-# if __name__ == '__main__':
-#     main()
+# OTAUTAU
+def otautau(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+    """
+    Run a hydrological and hydrodynamic simulation for Otautau.
+
+    Parameters
+    ----------
+    landcover_scenario_gdf: gpd.GeoDataFrame | None
+            Polygons that are used to change the landcover information.
+            This polygon dataframe has 'landcover_name' column with new values.
+
+    Returns
+    -------
+    int
+        Flood model output ID.
+    """
+    hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_OTAUTAU
+    forcing_name = 'otautau' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    river_name = 'otautau'
+    precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
+    start_time = datetime.fromisoformat("2020-02-03T00:00:00")
+    end_time = datetime.fromisoformat("2020-02-05T00:00:00")
+
+    # Gore
+    num_threads = max(1, cpu_count() - 1)
+    flood_aoi_boundary = [1211523.632, 4876273.859, 1215360.720, 4880693.039]
+    adjust_manning = False
+    flood_model = 'lisflood-fp'
+
+    polygons = landcover_scenario_gdf # r'polygons/polygons.shp'
+    vectors = None # r'vectors/vectors.csv'
+    resolution = 200
+    threshold = 25000
+    landcover = 'lcdb_mapping'
+
+    # Set up hydraulic and hydrodynamic pipeline
+    hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
+        hydro_combination_path,
+
+        forcing_name,
+        river_name,
+        precipitation_path,
+        start_time,
+        end_time,
+
+        num_threads,
+        flood_aoi_boundary,
+        adjust_manning,
+        flood_model,
+
+        polygons,
+        vectors,
+        resolution,
+        threshold,
+        landcover
+    )
+
+    flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
+    return flood_model_output_id
+
 
 
 # # WAIMEA
@@ -500,7 +583,7 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     vectors = None  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'globcover'
+    landcover = 'lcdb_mapping'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -551,7 +634,7 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     end_time = datetime.fromisoformat("1999-01-22T12:00:00")
 
     num_threads = max(1, cpu_count() - 1)
-    flood_aoi_boundary = [1641148, 6072404, 1642796, 6076268]
+    flood_aoi_boundary = [1641148, 6072532, 1642796, 6076268]
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
@@ -559,7 +642,8 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     vectors = None  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
-    landcover = 'globcover'
+    landcover = 'lcdb_mapping'
+    folder_name = 'changing_forest_001'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -580,7 +664,8 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
         vectors,
         resolution,
         threshold,
-        landcover
+        landcover,
+        folder_name
     )
 
     flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
@@ -653,8 +738,19 @@ if __name__ == '__main__':
     #     r"\\file\Research\DigitalTwins\smartideas\forLuke\automation_example"
     #     r"\polygons_vectors\whirinaki\polygons\polygons.shp"
     # )
-    # whirinaki(None)
+    whirinaki(None)
     # whirinaki(gdf)
 
-    # Riverton
-    riverton(None)
+    # # Riverton
+    # riverton(None)
+
+    # # Mataura
+    # gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura\polygons_upstream_thick\polygons.shp"
+    # )
+    # mataura(gdf)
+
+    # gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
+    # )
+    # otautau(gdf)
