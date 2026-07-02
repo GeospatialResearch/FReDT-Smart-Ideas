@@ -256,7 +256,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         static_cols = ["geometry", "FID"]
         time_cols = [col for col in flow_points.columns if col not in static_cols]
         narrow_df = flow_points[static_cols]
-        # Correctly set the geomery, since it may not be missing
+        # Correctly set the geomery, since it may be missing
         narrow_df = narrow_df.set_geometry("geometry")
         # Add the full list of datetimes to each row
         narrow_df["datetimes"] = [time_cols] * len(narrow_df)
