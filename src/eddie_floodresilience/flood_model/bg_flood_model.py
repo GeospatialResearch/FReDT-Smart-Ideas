@@ -43,7 +43,7 @@ from src.eddie_floodresilience import config
 from src.eddie_floodresilience.flood_model.flooded_buildings import find_flooded_buildings, \
     store_flooded_buildings_in_database
 from src.eddie_floodresilience.flood_model.serve_model import add_model_output_to_geoserver
-from src.eddie_floodresilience.tables import BGFloodModelOutput
+from src.eddie_floodresilience.tables import FloodModelOutput
 
 log = logging.getLogger(__name__)
 
@@ -145,12 +145,12 @@ def store_model_output_metadata_to_db(
     int
         Returns the model id of the new flood_model produced
     """
-    # Create the 'bg_flood_model_output' table in the database if it doesn't exist
-    create_table(conn, BGFloodModelOutput)
+    # Create the 'flood_model_output' table in the database if it doesn't exist
+    create_table(conn, FloodModelOutput)
     # Get the metadata related to the BG Flood model output
     output_name, output_path, geometry = get_model_output_metadata(model_output_path, catchment_area)
     # Create a new query object representing the BG-Flood model output metadata
-    query = insert(BGFloodModelOutput).values(file_name=output_name, file_path=output_path, geometry=geometry)
+    query = insert(FloodModelOutput).values(file_name=output_name, file_path=output_path, geometry=geometry)
     # Execute the query to store the BG Flood model output metadata in the database while retrieving id
     result = conn.execute(query)
     model_id = result.inserted_primary_key[0]
@@ -181,16 +181,16 @@ def model_output_from_db_by_id(conn: Connection, model_id: int) -> pathlib.Path:
         Error raised if `bg_flood` table is not found or does not contain the `model_id`.
     """
     # Execute a query to get the model output record based on the 'flood_model_id' column
-    query = text("SELECT * FROM bg_flood_model_output WHERE unique_id=:flood_model_id").bindparams(
+    query = text("SELECT * FROM flood_model_output WHERE unique_id=:flood_model_id").bindparams(
         flood_model_id=model_id)
     # Check table exists before querying
-    bg_flood_table = "bg_flood_model_output"
+    bg_flood_table = "flood_model_output"
     if not check_table_exists(conn, bg_flood_table):
         raise FileNotFoundError(f"{bg_flood_table} table does not exist")
     row = conn.execute(query).mappings().fetchone()
     # If the row is empty then we could not find the model output
     if row is None:
-        raise FileNotFoundError(f"bg_flood_model_output table does not contain row with unique_id: {model_id}")
+        raise FileNotFoundError(f"flood_model_output table does not contain row with unique_id: {model_id}")
     # Extract the file path from the retrieved record
     latest_output_path = pathlib.Path(row["file_path"])
     # Extract the file path from the retrieved record
@@ -219,10 +219,10 @@ def model_extents_from_db_by_id(conn: Connection, model_id: int) -> gpd.GeoDataF
         Error raised if `bg_flood` table is not found or does not contain the `model_id`.
     """
     # Execute a query to get the model output record based on the 'flood_model_id' column
-    bg_flood_table = "bg_flood_model_output"
+    bg_flood_table = "flood_model_output"
     if not check_table_exists(conn, bg_flood_table):
         raise FileNotFoundError(f"{bg_flood_table} table does not exist")
-    query = text("SELECT geometry FROM bg_flood_model_output WHERE unique_id=:flood_model_id").bindparams(
+    query = text("SELECT geometry FROM flood_model_output WHERE unique_id=:flood_model_id").bindparams(
         flood_model_id=model_id)
     geometry = gpd.read_postgis(query, conn, geom_col='geometry')
     if len(geometry) == 0:

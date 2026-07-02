@@ -270,9 +270,9 @@ class ElevationSolution():
                 self.dem = dem.squeeze().load()
 
         else:
-            terrain_data = xr.open_dataset(self.hydro_combination_path / "8m_geofabric_clipped.nc")
-            self.dem = terrain_data.z.squeeze()
-            self.roughness_length = terrain_data.zo.squeeze()
+            with xr.open_dataset(self.hydro_combination_path / "8m_geofabric_clipped.nc") as terrain_data:
+                self.dem = terrain_data.z.squeeze()
+                self.roughness_length = terrain_data.zo.squeeze()
 
     def rasterize_vector(self, vector_path: str) -> None:
         """
