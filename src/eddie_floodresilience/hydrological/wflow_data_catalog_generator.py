@@ -509,7 +509,7 @@ def find_landcover_file(
         if landcover_name.startswith('globcover'):
             # globcover must be written to wflow_model_path not hydromt_path in docker due to permissions.
             # We find the correct version based on the landcover file name
-            landcover_file = (wflow_model_path / "globcover" / landcover_name).resolve()
+            landcover_file = (wflow_model_path / landcover_name).resolve()
         else:
             landcover_file = max(
                 Path(wflow_model_path / "lcdb").glob("lcdb_*.tif"),
