@@ -194,21 +194,8 @@ class FloodModelParametersGenerator(ABC):
         output_directory : Path
             Directory of flood model outputs
         """
-        # Both landcover and elevation solutions
-        if self.polygons is not None and self.vectors is not None:
-            output = self.flood_model_path / f"output_landcover_elevation_{self.scenario_and_id_folder}"
-
-        # Only landcover solution
-        elif self.polygons is not None:
-            output = self.flood_model_path / f"output_landcover_{self.scenario_and_id_folder}"
-
-        # Only elevation solution
-        elif self.vectors is not None:
-            output = self.flood_model_path / f"output_elevation_{self.scenario_and_id_folder}"
-
-        # Original scenario
-        else:
-            output = self.flood_model_path / "output"
+        # Set up flood model output path
+        output = self.flood_model_path / "output"
 
         # Create output (if not available)
         output.mkdir(parents=True, exist_ok=True)

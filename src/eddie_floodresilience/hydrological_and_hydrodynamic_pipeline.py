@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-
+from osgeo import gdal
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -197,7 +197,7 @@ class HydrologicalAndHydrodynamicPipeline:
             create_table(conn, PipelineOutput)
 
             # Create a query to reserve scenario ID
-            query = insert(PipelineOutput).values(geometry=[box(*self.flood_aoi_boundary)])
+            query = insert(PipelineOutput).values(geometry=box(*self.flood_aoi_boundary).wkt)
 
             # Execute the query
             result = conn.execute(query)
@@ -228,18 +228,15 @@ class HydrologicalAndHydrodynamicPipeline:
         # Set up scenario id
         scenario_id = self.reserve_scenario_id()
 
-        # Choose scenario folder name
+        # Choose scenario folder name with ID
         if self.polygons is not None and self.vectors is not None:
-            scenario = "scenario_landcover_elevation"
+            scenario_and_id_folder = f"scenario_landcover_elevation_{scenario_id}"
         elif self.polygons is not None:
-            scenario = "scenario_landcover"
+            scenario_and_id_folder = f"scenario_landcover_{scenario_id}"
         elif self.vectors is not None:
-            scenario = "scenario_elevation"
+            scenario_and_id_folder = f"scenario_elevation_{scenario_id}"
         else:
-            scenario = "original_scenario"
-
-        # Set up scenario folder name with ID
-        scenario_and_id_folder = f"{scenario}_{scenario_id}"
+            scenario_and_id_folder = "original_scenario"
 
         return scenario_and_id_folder
 
@@ -258,10 +255,14 @@ class HydrologicalAndHydrodynamicPipeline:
         # Set up log message
         log.info("Starting total solutions")
 
+        # Set up hydrological folder
+        hydrological_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrological_process'
+        hydrological_process_folder.mkdir(parents=True, exist_ok=True)
+
         if self.polygons is not None and self.vectors is not None:
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
-                self.hydro_combination_path,
+                hydrological_process_folder,
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
@@ -271,7 +272,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
             # Elevation solution
             elevation_solution = ElevationSolution(
-                self.hydro_combination_path,
+                hydrological_process_folder,
                 self.flood_model,
                 self.vectors
             )
@@ -280,7 +281,7 @@ class HydrologicalAndHydrodynamicPipeline:
         elif self.polygons is not None:
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
-                self.hydro_combination_path,
+                hydrological_process_folder,
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
@@ -291,7 +292,7 @@ class HydrologicalAndHydrodynamicPipeline:
         elif self.vectors is not None:
             # Elevation solution
             elevation_solution = ElevationSolution(
-                self.hydro_combination_path,
+                hydrological_process_folder,
                 self.flood_model,
                 self.vectors
             )
@@ -300,9 +301,14 @@ class HydrologicalAndHydrodynamicPipeline:
     def terrain_data_pipeline(self) -> None:
         """Generate terrain data for wflow and flood models"""
         log.info("Starting terrain data")
+
+        # Set up terrain folder
+        terrain_folder = self.hydro_combination_path / 'terrain'
+        terrain_folder.mkdir(parents=True, exist_ok=True)
+
         # Set up terrain data generation system
         terrain_data = TerrainDataWflowGenerator(
-            self.hydro_combination_path,
+            terrain_folder,
             self.hydromt_path,
             self.flood_aoi_boundary,
             self.river_name,
@@ -327,10 +333,14 @@ class HydrologicalAndHydrodynamicPipeline:
         """
         log.info("Starting wflow data pipeline")
 
+        # Set up hydrological folder
+        hydrological_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrological_process'
+        hydrological_process_folder.mkdir(parents=True, exist_ok=True)
+
         # Set up wflow model data generation system
         wflow_data = WflowSimulationsGenerator(
             self.hydromt_path,
-            self.hydro_combination_path,
+            hydrological_process_folder,
             self.river_name,
             self.forcing_path,
             self.start_time,
@@ -382,11 +392,17 @@ class HydrologicalAndHydrodynamicPipeline:
             The resultant flood model output ID.
         """
         log.info("Starting flood model pipeline")
+
+        # Set up hydrodynamic folder
+        hydrological_process_folder = fr'{scenario_and_id_folder}/hydrological_process'
+        hydrodynamic_process_folder = self.hydro_combination_path / fr'{scenario_and_id_folder}/hydrodynamic_process'
+        hydrodynamic_process_folder.mkdir(parents=True, exist_ok=True)
+
         # Set up flood model data generation system
         if self.flood_model == 'lisflood-fp':
             flood_data = LisFloodModelSimulationsGenerator(
-                self.hydro_combination_path,
-                self.hydro_combination_path,
+                hydrodynamic_process_folder,
+                hydrological_process_folder,
                 self.hydromt_path,
                 self.river_name,
                 self.precipitation_path,
@@ -463,8 +479,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
 
             # Generate wflow data
             self.wflow_data_pipeline(scenario_and_id_folder)

@@ -46,7 +46,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
     def __init__(
         self,
         flood_model_path: Path,
-        catchment_model_path: Path,
+        catchment_model_folder: str,
         hydromt_path: Path,
         river_name: str,
         precipitation_path: Path,
@@ -66,8 +66,8 @@ class BaseFloodModelSimulationsGenerator(ABC):
         ----------
         flood_model_path : Path
             Directory to folder storing terrain data
-        catchment_model_path : Path
-            Directory to folder storing catchment model results
+        catchment_model_folder : str
+            Name of folder storing catchment model results
         hydromt_path : Path
             A directory to where all necessary files are stored to run wflow model
         river_name: str
@@ -97,7 +97,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
             and 'distance' column to specify how smooth to decrease elevation.
         """
         self.flood_model_path = flood_model_path
-        self.catchment_model_path = catchment_model_path
+        self.catchment_model_folder = catchment_model_folder
         self.hydromt_path = hydromt_path
         self.river_name = river_name
         self.precipitation_path = precipitation_path
@@ -129,7 +129,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         # Call out class used to generate injection points for flood model
         injection_points_for_flood_model = InjectionPointsFloodModelGenerator(
             self.flood_model_path,
-            self.catchment_model_path,
+            self.catchment_model_folder,
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,

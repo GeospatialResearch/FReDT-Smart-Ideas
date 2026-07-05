@@ -365,7 +365,7 @@ class TerrainFloodModelGenerator:
 
         else:
             # Roughness path
-            roughness_path = self.flood_model_path / "8m_geofabric_roughness_split.tif"
+            roughness_path = self.flood_model_path.parents[1] / "terrain/8m_geofabric_roughness_split.tif"
 
             # Read roughness raster
             roughness = rxr.open_rasterio(roughness_path)

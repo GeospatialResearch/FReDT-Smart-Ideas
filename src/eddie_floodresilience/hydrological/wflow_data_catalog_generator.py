@@ -253,7 +253,7 @@ class DataCatalogGenerator():
                     "paper_ref": "Yamazaki et al. (2019)"
                 },
                 "version": 1.0,
-                "path": f"{self.wflow_model_path / 'merit_hydro/{variable}.tif'}"
+                "path": f"{self.wflow_model_path.parents[1] / 'terrain/merit_hydro/{variable}.tif'}"
             }
         }
 
@@ -283,7 +283,7 @@ class DataCatalogGenerator():
                     "paper_ref": "Eilander et al. (in review)",
                     "source_license": "CC-BY-NC 4.0"
                 },
-                "path": f"{self.wflow_model_path / 'merit_hydro_index.gpkg'}"
+                "path": f"{self.wflow_model_path.parents[1] / 'terrain/merit_hydro_index.gpkg'}"
             }
         }
 
@@ -314,7 +314,7 @@ class DataCatalogGenerator():
                     "processing_notes": "hydrography/rivers_lin2019/README"
                 },
                 "version": 1,
-                "path": f"{self.wflow_model_path / 'rivers_lin2019_v1.gpkg'}"
+                "path": f"{self.wflow_model_path.parents[1] / 'terrain/rivers_lin2019_v1.gpkg'}"
             }
         }
 
@@ -454,13 +454,7 @@ class DataCatalogGenerator():
             A dictionary contains information of all sections
         """
         # Set up output filename
-        if self.polygons is not None:
-            # If landcover is changed
-            output_filename = self.wflow_model_path / f"data_catalog_{self.scenario_and_id_folder}.yml"
-
-        else:
-            # If landcover is not changed
-            output_filename = self.wflow_model_path / "data_catalog.yml"
+        output_filename = self.wflow_model_path / "data_catalog.yml"
 
         # Write out data_catalog.yml
         with open(output_filename, "w", encoding="utf-8") as output_file:

@@ -510,13 +510,7 @@ class WflowBuildGenerator:
             A dictionary contains information of all sections
         """
         # Set up output filename
-        if self.polygons is not None:
-            # If landcover is changed
-            output_filename = self.wflow_model_path / f"wflow_build_{self.scenario_and_id_folder}.yml"
-
-        else:
-            # If landcover is not changed
-            output_filename = self.wflow_model_path / "wflow_build.yml"
+        output_filename = self.wflow_model_path / "wflow_build.yml"
 
         log.info(f"Writing out {output_filename}")
         # Generate content for wflow_build.yml

@@ -174,10 +174,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
     def bdy_generator(self) -> None:
         """Generate bdy files - where the flow data of injection points are stored"""
         # Path of flow data (bdy) for flood model
-        if self.polygons is not None:
-            bdy_name = self.flood_model_path / f"bdy_{self.scenario_and_id_folder}.bdy"
-        else:
-            bdy_name = self.flood_model_path / "bdy.bdy"
+        bdy_name = self.flood_model_path / "bdy.bdy"
 
         log.info(f"Generating BDY file {bdy_name}")
         # Copy injection flow dataframe
@@ -241,10 +238,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         output_directory = self.optional_output_generator()
 
         # Path to bdy file
-        if self.polygons is not None:
-            bdy = str(self.flood_model_path / f"bdy_{self.scenario_and_id_folder}.bdy")
-        else:
-            bdy = str(self.flood_model_path / "bdy.bdy")
+        bdy = str(self.flood_model_path / "bdy.bdy")
 
         # Path to bci file
         bci = str(self.flood_model_path / "bci.bci")

@@ -196,6 +196,12 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
+            # # Copy z and manning.asc
+            # from_path = self.flood_model_path.parents[1] / r"original_scenario/hydrodynamic_process"
+            # to_path = self.flood_model_path / "hydrodynamic_process"
+            # Generate terrain data for flood model
+            self.terrain_data_for_flood_model_generator()
+
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
