@@ -95,6 +95,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
+            self.scenario_and_id_folder,
             self.polygons,
             self.vectors
         )

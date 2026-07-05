@@ -61,6 +61,7 @@ class LandCoverSolution:
         self,
         hydro_combination_path: Path,
         hydromt_path: Path,
+        scenario_and_id_folder: str,
         landcover: str = 'globcover',
         polygons: gpd.GeoDataFrame | None = None
     ) -> None:
@@ -77,13 +78,16 @@ class LandCoverSolution:
             Directory to folder storing all necessary data
         hydromt_path : Path
             A directory to where all necessary files are stored to run wflow model
-        landcover: str = 'globcover'
+        landcover : str = 'globcover'
             Name of land cover dataset. Default is 'globcover'
+        scenario_and_id_folder : str
+            The scenario folder name with ID
         polygons : gpd.GeoDataFrame = None
             Polygons that are used to change the landcover information
         """
         self.hydro_combination_path = hydro_combination_path
         self.hydromt_path = hydromt_path
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.landcover = landcover
         self.polygons = polygons
 
@@ -148,11 +152,11 @@ class LandCoverSolution:
         """
         # Set up land cover features based on chosen land cover
         if self.landcover.startswith('globcover'):
-            original_landcover = 'original_lcdb.tif'
+            original_landcover = 'original_globcover.tif'
             crs = 4326
             folder_landcover = 'globcover'
         else:
-            original_landcover = 'original_globcover.tif'
+            original_landcover = 'original_lcdb.tif'
             crs = 2193
             folder_landcover = 'lcdb'
 
@@ -174,18 +178,9 @@ class LandCoverSolution:
         globcover_dir = self.hydro_combination_path / folder_landcover
         globcover_dir.mkdir(parents=True, exist_ok=True)
 
-        # Find existing elevation files
-        existing_landcover_files = list(
-            globcover_dir.glob(f"{folder_landcover}_*.tif")
-        )
+        # Set up the path for new land cover with scenario and ID
+        output_path = globcover_dir / f"{folder_landcover}_{self.scenario_and_id_folder}.tif"
 
-        # Decide the number of output file
-        # based on the number of running the model
-        number = len(existing_landcover_files) + 1
-
-        # Create filename
-
-        output_path = globcover_dir / f"{folder_landcover}_{number:03d}.tif"
         # Write out new land cover
         modified_landcover.rio.to_raster(
             output_path,

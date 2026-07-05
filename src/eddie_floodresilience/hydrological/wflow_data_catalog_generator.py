@@ -25,6 +25,7 @@ class DataCatalogGenerator():
         wflow_model_path: Path,
         forcing_path: Path,
         river_name: str,
+        scenario_and_id_folder: str,
         polygons: str = None,
         landcover: str = 'globcover'
     ) -> None:
@@ -43,6 +44,8 @@ class DataCatalogGenerator():
             A directory to where the forcing files are stored
         river_name: str
             Name of directory to where the river information files are stored
+        scenario_and_id_folder: str
+            The scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -53,6 +56,7 @@ class DataCatalogGenerator():
         self.wflow_model_path = wflow_model_path
         self.forcing_path = forcing_path
         self.river_name = river_name
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.polygons = polygons
         self.landcover = landcover
 
@@ -158,9 +162,20 @@ class DataCatalogGenerator():
         landcover : dict
             A dictionary contains information of landcover
         """
-        # Polygons for land cover solutions
-        is_baseline = self.polygons is None
-        landcover_file = find_landcover_file(self.wflow_model_path, self.hydromt_path, self.landcover, is_baseline)
+        # # Polygons for land cover solutions
+        # is_baseline = self.polygons is None
+        # landcover_file = find_landcover_file(self.wflow_model_path, self.hydromt_path, self.landcover, is_baseline)
+
+        if self.landcover.startswith('globcover'):
+            initial_file_name = 'globcover'
+        else:
+            initial_file_name = 'lcdb'
+
+        if self.polygons is None:
+            landcover_file = self.hydromt_path / f'original_{initial_file_name}.tif'
+        else:
+            landcover_filename = f"{initial_file_name}_{self.scenario_and_id_folder}.tif"
+            landcover_file = self.wflow_model_path / initial_file_name / landcover_filename
 
         # At the moment the name globcover and other information is kept fixed for basic automation,
         # it might be changed in the future.
@@ -438,20 +453,13 @@ class DataCatalogGenerator():
         data_catalog : dict
             A dictionary contains information of all sections
         """
+        # Set up output filename
         if self.polygons is not None:
-            # Find existing file
-            existing_file = sorted(
-                self.wflow_model_path.glob("data_catalog_landcover_*.yml")
-            )
-
-            # Set ID for file
-            number = len(existing_file) + 1
-
-            # Create file name
-            output_filename = self.wflow_model_path / f"data_catalog_landcover_{number:03d}.yml"
+            # If landcover is changed
+            output_filename = self.wflow_model_path / f"data_catalog_{self.scenario_and_id_folder}.yml"
 
         else:
-            # Set up output filename
+            # If landcover is not changed
             output_filename = self.wflow_model_path / "data_catalog.yml"
 
         # Write out data_catalog.yml

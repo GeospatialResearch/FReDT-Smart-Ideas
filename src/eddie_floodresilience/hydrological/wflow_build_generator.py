@@ -44,6 +44,8 @@ class WflowBuildGenerator:
         Name of directory to where the river information files are stored
     forcing_path: Path
         A directory to where the forcing files are stored
+    scenario_and_id_folder : str
+            The scenario folder name with ID
     polygons : str = None
         Name of polygon file that is used to change the landcover information.
         This polygon dataframe has 'landcover' column with new values
@@ -60,6 +62,7 @@ class WflowBuildGenerator:
         hydromt_path: Path,
         river_name: str,
         forcing_path: Path,
+        scenario_and_id_folder: str,
         polygons: str = None,
         landcover: str = 'globcover'
     ) -> None:
@@ -89,6 +92,8 @@ class WflowBuildGenerator:
             Name of directory to where the river information files are stored
         forcing_path: Path
             A directory to where the forcing files are stored
+        scenario_and_id_folder : str
+            The scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -102,6 +107,7 @@ class WflowBuildGenerator:
         self.hydromt_path = hydromt_path
         self.river_name = river_name
         self.forcing_path = forcing_path
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.polygons = polygons
         self.landcover = landcover
 
@@ -254,8 +260,6 @@ class WflowBuildGenerator:
             A dictionary that contains landcover's section
         """
         if self.landcover.startswith("globcover"):
-            landcover_mapping = "globcover_mapping_default"
-        elif self.landcover == 'globcover_modified':
             landcover_mapping = str(self.hydromt_path / "globcover_mapping_modified.csv")
         else:
             landcover_mapping = str(self.hydromt_path / "lcdb_mapping.csv")
@@ -505,20 +509,13 @@ class WflowBuildGenerator:
         wflow_build : dict
             A dictionary contains information of all sections
         """
+        # Set up output filename
         if self.polygons is not None:
-            # Find existing file
-            existing_file = sorted(
-                self.wflow_model_path.glob("wflow_build_landcover_*.yml")
-            )
-
-            # Set ID for file
-            number = len(existing_file) + 1
-
-            # Create file name
-            output_filename = self.wflow_model_path / f"wflow_build_landcover_{number:03d}.yml"
+            # If landcover is changed
+            output_filename = self.wflow_model_path / f"wflow_build_{self.scenario_and_id_folder}.yml"
 
         else:
-            # Set up output filename
+            # If landcover is not changed
             output_filename = self.wflow_model_path / "wflow_build.yml"
 
         log.info(f"Writing out {output_filename}")

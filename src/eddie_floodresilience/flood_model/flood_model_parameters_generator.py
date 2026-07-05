@@ -41,6 +41,7 @@ class FloodModelParametersGenerator(ABC):
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
+        scenario_and_id_folder: str,
         polygons: str = None,
         vectors: str = None
     ) -> None:
@@ -59,6 +60,8 @@ class FloodModelParametersGenerator(ABC):
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details.
+        scenario_and_id_folder : str
+            The scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -72,6 +75,7 @@ class FloodModelParametersGenerator(ABC):
         self.terrain_bounding_box = terrain_bounding_box
         self.start_time = start_time
         self.end_time = end_time
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.polygons = polygons
         self.vectors = vectors
         self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
@@ -109,7 +113,7 @@ class FloodModelParametersGenerator(ABC):
         xy_coords: list[float],
         buffer_distance: float,
         tolerance: float
-    ) -> tuple[float]:
+    ) -> tuple[float, float]:
         """
         Move points inside aoi
 
@@ -150,35 +154,35 @@ class FloodModelParametersGenerator(ABC):
 
         return x, y
 
-    def file_increment_generator(
-        self,
-        filename: str
-    ) -> Path:
-        """
-        Generate increasing files
-
-        Parameters
-        ----------
-        filename : str
-            Filename accords to scenario and order of that scenario
-
-        Returns
-        -------
-        file_directory : Path
-            A directory to the file which has just been named
-        """
-        number_ids = [
-            int(f.stem.split("_")[-1])
-            for f in Path(self.flood_model_path).glob(f"{filename}_*")
-        ]
-
-        # Get next output
-        file_number = max(number_ids, default=0) + 1
-
-        # Output path
-        file_directory = Path(self.flood_model_path) / f"{filename}_{file_number:03d}"
-
-        return file_directory
+    # def file_increment_generator(
+    #     self,
+    #     filename: str
+    # ) -> Path:
+    #     """
+    #     Generate increasing files
+    #
+    #     Parameters
+    #     ----------
+    #     filename : str
+    #         Filename accords to scenario and order of that scenario
+    #
+    #     Returns
+    #     -------
+    #     file_directory : Path
+    #         A directory to the file which has just been named
+    #     """
+    #     number_ids = [
+    #         int(f.stem.split("_")[-1])
+    #         for f in Path(self.flood_model_path).glob(f"{filename}_*")
+    #     ]
+    #
+    #     # Get next output
+    #     file_number = max(number_ids, default=0) + 1
+    #
+    #     # Output path
+    #     file_directory = Path(self.flood_model_path) / f"{filename}_{file_number:03d}"
+    #
+    #     return file_directory
 
     def optional_output_generator(self) -> Path:
         """
@@ -192,15 +196,15 @@ class FloodModelParametersGenerator(ABC):
         """
         # Both landcover and elevation solutions
         if self.polygons is not None and self.vectors is not None:
-            output = self.file_increment_generator("output_landcover_elevation")
+            output = self.flood_model_path / f"output_landcover_elevation_{self.scenario_and_id_folder}"
 
         # Only landcover solution
         elif self.polygons is not None:
-            output = self.file_increment_generator("output_landcover")
+            output = self.flood_model_path / f"output_landcover_{self.scenario_and_id_folder}"
 
         # Only elevation solution
         elif self.vectors is not None:
-            output = self.file_increment_generator("output_elevation")
+            output = self.flood_model_path / f"output_elevation_{self.scenario_and_id_folder}"
 
         # Original scenario
         else:

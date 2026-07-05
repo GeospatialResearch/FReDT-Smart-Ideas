@@ -79,6 +79,7 @@ class WflowSimulationsGenerator:
         end_time: datetime,
         flood_aoi_boundary: list,
         num_threads: int,
+        scenario_and_id_folder: str,
         polygons: str = None,
         resolution: float = 0.00045,
         landcover: str = 'globcover'
@@ -109,6 +110,8 @@ class WflowSimulationsGenerator:
             Format is [xmin, ymin, xmax, ymax]
         num_threads : int
             Number of threads that controls how fast the wflow model can run
+        scenario_and_id_folder : str
+            The new scenario ID for scenario
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -128,6 +131,7 @@ class WflowSimulationsGenerator:
         self.flood_aoi_boundary = flood_aoi_boundary
 
         self.num_threads = num_threads
+        self.scenario_and_id_folder = scenario_and_id_folder
 
         self.polygons = polygons
         self.resolution = resolution
@@ -141,6 +145,7 @@ class WflowSimulationsGenerator:
             self.wflow_model_path,
             self.forcing_path,
             self.river_name,
+            self.scenario_and_id_folder,
             self.polygons,
             self.landcover
         )
@@ -155,6 +160,7 @@ class WflowSimulationsGenerator:
             self.hydromt_path,
             self.river_name,
             self.forcing_path,
+            self.scenario_and_id_folder,
             self.polygons,
             self.landcover
         )
@@ -164,28 +170,14 @@ class WflowSimulationsGenerator:
         """Set up preprocessing command and preprocess data for wflow model"""
         log.info("Preprocessing data for wflow model")
         if self.polygons is not None:
-            # Find existing file
-            existing_file = sorted(
-                self.wflow_model_path.glob("wflow_test_full_landcover_*")
-            )
-
-            # Set ID for file
-            number = len(existing_file) + 1
-
             # Create folder name
-            output_foldername = f"wflow_test_full_landcover_{number:03d}"
+            output_foldername = f"wflow_test_full_{self.scenario_and_id_folder}"
 
             # Find wflow build file
-            wflow_build_file = str(max(
-                Path(self.wflow_model_path).glob("wflow_build_landcover_*.yml"),
-                default=Path(self.wflow_model_path) / "wflow_build_landcover_001.yml"
-            ))
+            wflow_build_file = self.wflow_model_path / f"wflow_build_{self.scenario_and_id_folder}.yml"
 
             # Find data catalog file
-            data_catalog_file = str(max(
-                Path(self.wflow_model_path).glob("data_catalog_landcover_*.yml"),
-                default=Path(self.wflow_model_path) / "data_catalog_landcover_001.yml"
-            ))
+            data_catalog_file = self.wflow_model_path / f"data_catalog_{self.scenario_and_id_folder}.yml"
 
             preprocessing_command_list = [
                 "hydromt", "update", "wflow",
@@ -240,23 +232,13 @@ class WflowSimulationsGenerator:
         # Set up path to wflow simulation folder
         if self.polygons is not None:
             # Set up folder
-            output_foldername = str(max(
-                Path(self.wflow_model_path).glob("wflow_test_full_landcover_*"),
-                default=Path(self.wflow_model_path) / "wflow_test_full_landcover_001"
-            ))
+            output_foldername = self.wflow_model_path / f"wflow_test_full_{self.scenario_and_id_folder}"
 
+            # Set up wflow simulation path
             wflow_simulation_path = self.wflow_model_path / output_foldername
 
-            # Set up log
-            existing_log = sorted(
-                self.wflow_model_path.glob("wflow_run_landcover_*.log")
-            )
-
-            # Set ID for file
-            number = len(existing_log) + 1
-
             # Create folder name
-            output_log = f"wflow_run_landcover_{number:03d}.log"
+            output_log = f"wflow_run_{self.scenario_and_id_folder}.log"
 
         else:
             wflow_simulation_path = self.wflow_model_path / "wflow_test_full"

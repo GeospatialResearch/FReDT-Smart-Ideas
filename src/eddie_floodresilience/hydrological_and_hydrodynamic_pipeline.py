@@ -13,8 +13,11 @@ from typing import Union
 
 import geopandas as gpd
 from shapely.geometry import box
+from sqlalchemy import insert
 
 from eddie.digitaltwin import retrieve_from_instructions
+from eddie.digitaltwin.setup_environment import get_database
+from eddie.digitaltwin.tables import create_table
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 from src.eddie_floodresilience.config import EnvVariable
@@ -25,6 +28,8 @@ from src.eddie_floodresilience.hydrological.wflow_simulations_generator import W
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
+
+from src.eddie_floodresilience.tables import PipelineOutput
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -99,7 +104,7 @@ class HydrologicalAndHydrodynamicPipeline:
         vectors: str = None,
         resolution: float = 0.00045,
         threshold: int = 1000,
-        landcover_mapping: str = 'globcover'
+        landcover: str = 'globcover'
     ) -> None:
         """
         Generate hydrological and hydrodynamic results
@@ -146,7 +151,7 @@ class HydrologicalAndHydrodynamicPipeline:
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
-        landcover_mapping: str = 'globcover'
+        landcover: str = 'globcover'
             Name of land cover dataset. Default is 'globcover'
         """
         # Set up necessary parameters
@@ -164,7 +169,7 @@ class HydrologicalAndHydrodynamicPipeline:
         self.resolution = resolution
         self.threshold = threshold
         self.crs = 2193
-        self.landcover_mapping = landcover_mapping
+        self.landcover = landcover
 
         self.hydromt_path = EnvVariable.HYDROMT_PATH
 
@@ -177,15 +182,89 @@ class HydrologicalAndHydrodynamicPipeline:
         else:
             self.forcing_path = forcing_name
 
-    def total_solutions(self) -> None:
-        """Develop solutions for flood risk resilience"""
+    def reserve_scenario_id(self) -> int:
+        """
+        Find the ID scenario
+
+        Returns
+        -------
+        int
+            The new scenario ID
+        """
+        engine = get_database()
+        with engine.connect() as conn:
+            # Create the scenario table if not exist
+            create_table(conn, PipelineOutput)
+
+            # Create a query to reserve scenario ID
+            query = insert(PipelineOutput).values(geometry=[box(*self.flood_aoi_boundary)])
+
+            # Execute the query
+            result = conn.execute(query)
+
+        # Set up scenario ID
+        scenario_id = result.inserted_primary_key[0]
+
+        # Log a message
+        log.info(f"Scenario ID {scenario_id} reserved.")
+
+        return scenario_id
+
+    def scenario_folder_generator(self) -> str:
+        """
+        Generate scenario folder based on solutions
+
+        Returns
+        -------
+        str
+            The scenario folder name with ID
+        """
+        # Set up log message
+        if self.polygons is None and self.vectors is None:
+            log.info("Generating origin folder")
+        else:
+            log.info("Generating scenario folder")
+
+        # Set up scenario id
+        scenario_id = self.reserve_scenario_id()
+
+        # Choose scenario folder name
+        if self.polygons is not None and self.vectors is not None:
+            scenario = "scenario_landcover_elevation"
+        elif self.polygons is not None:
+            scenario = "scenario_landcover"
+        elif self.vectors is not None:
+            scenario = "scenario_elevation"
+        else:
+            scenario = "original_scenario"
+
+        # Set up scenario folder name with ID
+        scenario_and_id_folder = f"{scenario}_{scenario_id}"
+
+        return scenario_and_id_folder
+
+    def total_solutions(
+            self,
+            scenario_and_id_folder: str
+    ) -> None:
+        """
+        Develop solutions for flood risk resilience
+
+        Parameters
+        ----------
+        scenario_and_id_folder : str
+            The scenario folder name with ID
+        """
+        # Set up log message
         log.info("Starting total solutions")
+
         if self.polygons is not None and self.vectors is not None:
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
                 self.hydro_combination_path,
                 self.hydromt_path,
-                self.landcover_mapping,
+                scenario_and_id_folder,
+                self.landcover,
                 self.polygons
             )
             self.landcover = landcover_solution.apply_landcover_solution().name
@@ -203,7 +282,8 @@ class HydrologicalAndHydrodynamicPipeline:
             landcover_solution = LandCoverSolution(
                 self.hydro_combination_path,
                 self.hydromt_path,
-                self.landcover_mapping,
+                scenario_and_id_folder,
+                self.landcover,
                 self.polygons
             )
             self.landcover = landcover_solution.apply_landcover_solution().name
@@ -233,9 +313,20 @@ class HydrologicalAndHydrodynamicPipeline:
         # Generate terrain data
         terrain_data.terrain_for_wflow_generator()
 
-    def wflow_data_pipeline(self) -> None:
-        """Generate wflow model data for flood model"""
+    def wflow_data_pipeline(
+            self,
+            scenario_and_id_folder: str
+    ) -> None:
+        """
+        Generate wflow model data for flood model
+
+        Parameters
+        ----------
+        scenario_and_id_folder : str
+            The scenario folder name with ID
+        """
         log.info("Starting wflow data pipeline")
+
         # Set up wflow model data generation system
         wflow_data = WflowSimulationsGenerator(
             self.hydromt_path,
@@ -246,9 +337,10 @@ class HydrologicalAndHydrodynamicPipeline:
             self.end_time,
             self.flood_aoi_boundary,
             self.num_threads,
+            scenario_and_id_folder,
             self.polygons,
             self.resolution,
-            self.landcover_mapping
+            self.landcover
         )
 
         # Generate wflow model data
@@ -266,15 +358,23 @@ class HydrologicalAndHydrodynamicPipeline:
         wflow_serve_data = WflowServeDataGenerator(
             self.hydromt_path,
             self.hydro_combination_path,
-            self.landcover_mapping,
+            self.landcover,
             flood_model_output_id
         )
 
         wflow_serve_data.serve_data()
 
-    def flood_data_pipeline(self) -> int:
+    def flood_data_pipeline(
+            self,
+            scenario_and_id_folder: str
+    ) -> int:
         """
         Generate flood model data.
+
+        Parameters
+        ----------
+        scenario_and_id_folder : str
+            The scenario folder name with ID
 
         Returns
         -------
@@ -294,6 +394,7 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.adjust_manning,
                 self.start_time,
                 self.end_time,
+                scenario_and_id_folder,
                 self.crs,
                 self.polygons,
                 self.vectors
@@ -310,6 +411,7 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.adjust_manning,
                 self.start_time,
                 self.end_time,
+                scenario_and_id_folder,
                 self.crs,
                 self.polygons,
                 self.vectors
@@ -335,26 +437,29 @@ class HydrologicalAndHydrodynamicPipeline:
         bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.flood_aoi_boundary)], crs="EPSG:2193")
         retrieve_from_instructions.main(bbox_gdf, Path("src/eddie_floodresilience/static_boundary_instructions.json"))
 
+        # Set scenario
+        scenario_and_id_folder = self.scenario_folder_generator()
+
         # The if function here will be modified later
         # Apply land cover solution
         # (this would be for both landcover and elevation solutions)
         if self.polygons is not None:
             # Apply solutions
-            self.total_solutions()
+            self.total_solutions(scenario_and_id_folder)
 
             # Generate wflow data
-            self.wflow_data_pipeline()
+            self.wflow_data_pipeline(scenario_and_id_folder)
 
             # Generate flood data
-            flood_model_output_id = self.flood_data_pipeline()
+            flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
 
         # Apply elevation solution
         elif self.vectors is not None:
             # Apply solutions
-            self.total_solutions()
+            self.total_solutions(scenario_and_id_folder)
 
             # Generate flood data
-            flood_model_output_id = self.flood_data_pipeline()
+            flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
 
         # Original scenario
         else:
@@ -362,10 +467,10 @@ class HydrologicalAndHydrodynamicPipeline:
             self.terrain_data_pipeline()
 
             # Generate wflow data
-            self.wflow_data_pipeline()
+            self.wflow_data_pipeline(scenario_and_id_folder)
 
             # Generate flood data
-            flood_model_output_id = self.flood_data_pipeline()
+            flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
 
         self.serve_wflow_data(flood_model_output_id)
         return flood_model_output_id
@@ -404,7 +509,7 @@ def otautau(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     vectors = None  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover_mapping = 'lcdb_mapping'
+    landcover = 'lcdb_mapping'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -425,7 +530,7 @@ def otautau(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
         vectors,
         resolution,
         threshold,
-        landcover_mapping
+        landcover
     )
 
     flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
@@ -512,7 +617,7 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     vectors = None  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover_mapping = 'lcdb_mapping'
+    landcover = 'lcdb_mapping'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -533,7 +638,7 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
         vectors,
         resolution,
         threshold,
-        landcover_mapping
+        landcover
     )
 
     flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
@@ -571,7 +676,7 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     vectors = None  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
-    landcover_mapping = 'globcover'
+    landcover = 'lcdb'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -592,7 +697,7 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
         vectors,
         resolution,
         threshold,
-        landcover_mapping
+        landcover
     )
 
     flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
@@ -631,7 +736,7 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     vectors = None  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover_mapping = 'globcover'
+    landcover = 'globcover'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -652,7 +757,7 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
         vectors,
         resolution,
         threshold,
-        landcover_mapping
+        landcover
     )
 
     flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()

@@ -54,6 +54,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         adjust_manning: bool,
         start_time: datetime,
         end_time: datetime,
+        scenario_and_id_folder: str,
         crs: int = 2193,
         polygons: str = None,
         vectors: str = None
@@ -83,6 +84,8 @@ class BaseFloodModelSimulationsGenerator(ABC):
             Starting time of the flood event
         end_time: datetime
             Ending time of the flood event
+        scenario_and_id_folder: str
+            The scenario folder name with ID
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         polygons : str = None
@@ -102,6 +105,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         self.adjust_manning = adjust_manning
         self.start_time = start_time
         self.end_time = end_time
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.crs = crs
         self.polygons = polygons
         self.vectors = vectors
@@ -129,6 +133,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
+            self.scenario_and_id_folder,
             self.polygons,
             self.crs
         )

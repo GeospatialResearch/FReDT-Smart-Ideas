@@ -44,6 +44,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
+        scenario_and_id_folder: str,
         polygons: str = None,
         vectors: str = None
     ) -> None:
@@ -62,6 +63,8 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details.
+        scenario_and_id_folder: str
+            The scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -70,7 +73,15 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
         """
-        super().__init__(flood_model_path, hydromt_path, terrain_bounding_box, start_time, end_time, polygons, vectors)
+        super().__init__(
+            flood_model_path,
+            hydromt_path,
+            terrain_bounding_box,
+            start_time, end_time,
+            scenario_and_id_folder,
+            polygons,
+            vectors
+        )
 
         # Set up tide generator
         tide_df_generator = TidalDataGenerator(
@@ -164,7 +175,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         """Generate bdy files - where the flow data of injection points are stored"""
         # Path of flow data (bdy) for flood model
         if self.polygons is not None:
-            bdy_name = self.file_increment_generator("bdy_landcover").with_suffix(".bdy")
+            bdy_name = self.flood_model_path / f"bdy_{self.scenario_and_id_folder}.bdy"
         else:
             bdy_name = self.flood_model_path / "bdy.bdy"
 
@@ -231,12 +242,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
 
         # Path to bdy file
         if self.polygons is not None:
-            bdy = str(
-                max(
-                    Path(self.flood_model_path).glob("bdy_landcover_*.bdy"),
-                    default=Path(self.flood_model_path) / "bdy_landcover_001.bdy"
-                )
-            )
+            bdy = str(self.flood_model_path / f"bdy_{self.scenario_and_id_folder}.bdy")
         else:
             bdy = str(self.flood_model_path / "bdy.bdy")
 
@@ -244,13 +250,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         bci = str(self.flood_model_path / "bci.bci")
 
         if self.vectors is not None:
-            # Path to DEM
-            z = str(
-                max(
-                    Path(self.flood_model_path).glob("z_elevation_*.asc"),
-                    default=Path(self.flood_model_path) / "z_elevation_001.asc"
-                )
-            )
+            z = str(self.flood_model_path / f"z_elevation_{self.scenario_and_id_folder}.asc")
         else:
             # Path to DEM
             z = str(self.flood_model_path / "z.asc")
