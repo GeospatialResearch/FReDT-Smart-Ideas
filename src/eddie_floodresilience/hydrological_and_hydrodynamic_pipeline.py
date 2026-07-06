@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-from osgeo import gdal
+
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -255,11 +255,15 @@ class HydrologicalAndHydrodynamicPipeline:
         # Set up log message
         log.info("Starting total solutions")
 
-        # Set up hydrological folder
-        hydrological_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrological_process'
-        hydrological_process_folder.mkdir(parents=True, exist_ok=True)
-
         if self.polygons is not None and self.vectors is not None:
+            # Set up hydrological folder
+            hydrological_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrological_process'
+            hydrological_process_folder.mkdir(parents=True, exist_ok=True)
+
+            # Set up hydrodynamic folder
+            hydrodynamic_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrodynamic_process'
+            hydrodynamic_process_folder.mkdir(parents=True, exist_ok=True)
+
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
                 hydrological_process_folder,
@@ -272,13 +276,18 @@ class HydrologicalAndHydrodynamicPipeline:
 
             # Elevation solution
             elevation_solution = ElevationSolution(
-                hydrological_process_folder,
+                hydrodynamic_process_folder,
                 self.flood_model,
+                scenario_and_id_folder,
                 self.vectors
             )
             elevation_solution.apply_elevation_solution()
 
         elif self.polygons is not None:
+            # Set up hydrological folder
+            hydrological_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrological_process'
+            hydrological_process_folder.mkdir(parents=True, exist_ok=True)
+
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
                 hydrological_process_folder,
@@ -290,10 +299,15 @@ class HydrologicalAndHydrodynamicPipeline:
             self.landcover = landcover_solution.apply_landcover_solution().name
 
         elif self.vectors is not None:
+            # Set up hydrodynamic folder
+            hydrodynamic_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrodynamic_process'
+            hydrodynamic_process_folder.mkdir(parents=True, exist_ok=True)
+
             # Elevation solution
             elevation_solution = ElevationSolution(
-                hydrological_process_folder,
+                hydrodynamic_process_folder,
                 self.flood_model,
+                scenario_and_id_folder,
                 self.vectors
             )
             elevation_solution.apply_elevation_solution()
@@ -479,8 +493,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # # Generate terrain data for wflow and flood models
-            # self.terrain_data_pipeline()
+            # Generate terrain data for wflow and flood models
+            self.terrain_data_pipeline()
 
             # Generate wflow data
             self.wflow_data_pipeline(scenario_and_id_folder)
@@ -689,7 +703,7 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     flood_model = 'lisflood-fp'
 
     polygons = landcover_scenario_gdf
-    vectors = None  # r'vectors/vectors.csv'
+    vectors = r'vectors/vectors.csv'  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
     landcover = 'lcdb'
@@ -785,8 +799,8 @@ if __name__ == '__main__':
     gdf = gpd.read_file(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
     )
-    # whirinaki(None)
     whirinaki(gdf)
+    # whirinaki(None)
 
     # # Riverton
     # riverton(None)

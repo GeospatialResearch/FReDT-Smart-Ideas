@@ -192,13 +192,14 @@ class LandCoverSolution:
         return output_path
 
 
-class ElevationSolution():
+class ElevationSolution:
     """This class is to change the elevation"""
 
     def __init__(
         self,
         hydro_combination_path: Path,
         flood_model: str,
+        scenario_and_id_folder: str,
         vectors: str = None
     ) -> None:
         """
@@ -214,6 +215,8 @@ class ElevationSolution():
             Directory to folder storing all necessary data
         flood_model : str
             Either "lisflood-fp" or "bg-flood"
+        scenario_and_id_folder : str
+            The scenario folder name with ID
         vectors : str = None
             Name of dataframe that contains 'vector_path', 'value', 'distance' columns:
             - 'vector_path': Column that stores directories to specific vectors
@@ -221,11 +224,14 @@ class ElevationSolution():
             - 'distance': Column that stores value to smooth the decreased elevation
         """
         self.hydro_combination_path = hydro_combination_path
-        self.vectors = pd.read_csv(self.hydro_combination_path / vectors)
+        self.vectors = pd.read_csv(self.hydro_combination_path.parents[1] / vectors)
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.flood_model = flood_model
 
+        # Read terrain data
         if flood_model == "lisflood-fp":
-            with rxr.open_rasterio(self.hydro_combination_path / "z.asc") as dem:
+            z_file = r"original_scenario/hydrodynamic_process/z.asc"
+            with rxr.open_rasterio(self.hydro_combination_path.parents[1] / z_file) as dem:
                 self.dem = dem.squeeze().load()
 
         else:
@@ -233,7 +239,7 @@ class ElevationSolution():
                 self.dem = terrain_data.z.squeeze()
                 self.roughness_length = terrain_data.zo.squeeze()
 
-    def rasterize_vector(self, vector_path: str) -> None:
+    def rasterize_vector(self, vector_path: str) -> xr.DataArray:
         """
         Rasterize vector
 
@@ -340,8 +346,15 @@ class ElevationSolution():
 
         return decreased_dem
 
-    def change_elevation(self) -> None:
-        """Change the elevation"""
+    def change_elevation(self) -> xr.DataArray:
+        """
+        Change the elevation
+
+        Returns
+        -------
+        modified_dem : xr.DataArray
+            The DEM that has its elevation changed
+        """
         # Copy DEM to work separately
         modified_dem = self.dem
 
@@ -381,21 +394,9 @@ class ElevationSolution():
         modified_dem = self.change_elevation()
 
         if self.flood_model == "lisflood-fp":
-            # Find existing elevation files
-            existing_z_files = sorted(
-                self.hydro_combination_path.glob("z_elevation_*.asc")
-            )
-
-            # Decide the number of output file
-            # based on the number of running the model
-            number = len(existing_z_files) + 1
-
-            # Create filename
-            output_name = f"z_elevation_{number:03d}.asc"
-
             # Write out
             modified_dem.rio.to_raster(
-                self.hydro_combination_path / output_name,
+                self.hydro_combination_path / "z.asc",
                 compress="LZW",
                 tiled=True
             )

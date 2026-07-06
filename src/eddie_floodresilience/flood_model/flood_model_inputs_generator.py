@@ -188,9 +188,9 @@ class TerrainGenerator:
         # Extract terrain bounding box
         terrain_bounding_box = self.extract_terrain_bounding_box(terrain_crs_clipped)
 
-        if self.polygons is None or self.vectors is None:
-            # Write out clipped terrain data
-            self.write_out_terrain_data(terrain_crs_clipped)
+        # Write out clipped terrain data
+        # Generate this data at this moment no matter polygon and vector are available or not
+        self.write_out_terrain_data(terrain_crs_clipped)
 
         return terrain_bounding_box, terrain_crs_clipped
 
@@ -661,7 +661,8 @@ class InjectionPointsFloodModelGenerator:
         log.info("Reprojecting rivers dataframe.")
 
         # Get river path from wflow model folder
-        river_path = self.flood_model_path.parents[1] / self.catchment_model_folder / r"wflow_test_full/staticgeoms/rivers.geojson"
+        river_folder = r"wflow_test_full/staticgeoms/rivers.geojson"
+        river_path = self.flood_model_path.parents[1] / self.catchment_model_folder / river_folder
 
         # Read river file
         rivers = gpd.read_file(river_path)
@@ -854,7 +855,8 @@ class InjectionPointsFloodModelGenerator:
         """
         log.info("Extracting rivers' flow from catchment model outputs.")
         # Set path to rivers' data
-        rivers_data_path = self.flood_model_path.parents[1] / self.catchment_model_folder / r"wflow_test_full/run_default/output.nc"
+        rivers_data_folder = r"wflow_test_full/run_default/output.nc"
+        rivers_data_path = self.flood_model_path.parents[1] / self.catchment_model_folder / rivers_data_folder
 
         # Read rives' data from catchment model output
         with xr.open_dataset(rivers_data_path) as rivers_data:

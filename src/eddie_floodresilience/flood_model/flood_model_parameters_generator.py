@@ -154,36 +154,6 @@ class FloodModelParametersGenerator(ABC):
 
         return x, y
 
-    # def file_increment_generator(
-    #     self,
-    #     filename: str
-    # ) -> Path:
-    #     """
-    #     Generate increasing files
-    #
-    #     Parameters
-    #     ----------
-    #     filename : str
-    #         Filename accords to scenario and order of that scenario
-    #
-    #     Returns
-    #     -------
-    #     file_directory : Path
-    #         A directory to the file which has just been named
-    #     """
-    #     number_ids = [
-    #         int(f.stem.split("_")[-1])
-    #         for f in Path(self.flood_model_path).glob(f"{filename}_*")
-    #     ]
-    #
-    #     # Get next output
-    #     file_number = max(number_ids, default=0) + 1
-    #
-    #     # Output path
-    #     file_directory = Path(self.flood_model_path) / f"{filename}_{file_number:03d}"
-    #
-    #     return file_directory
-
     def optional_output_generator(self) -> Path:
         """
         Set up options for outputs according to sceanrios

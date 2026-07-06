@@ -16,7 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Runs LISFLOOD-FP flood model"""
-
+import shutil
 from datetime import datetime
 from pathlib import Path
 import logging
@@ -49,6 +49,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.river_name,
             self.terrain_crs_clipped,
             self.adjust_manning,
+            self.vectors,
             self.crs
         )
 
@@ -196,9 +197,6 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
-            # # Copy z and manning.asc
-            # from_path = self.flood_model_path.parents[1] / r"original_scenario/hydrodynamic_process"
-            # to_path = self.flood_model_path / "hydrodynamic_process"
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
 
@@ -215,6 +213,26 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         else:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
+
+            # Set up path to copy data from original scenario to the current scenario
+            # This will be adjusted in the future to copy not only from the original scenario
+            # Set up folders
+            original_hydrological_folder = "original_scenario/hydrodynamic_process"
+            scenario_hydrological_folder = f"{self.scenario_and_id_folder}/hydrodynamic_process"
+            # Set up directories
+            original_dir = self.flood_model_path.parents[1] / original_hydrological_folder
+            scenario_dir = self.flood_model_path.parents[1] / scenario_hydrological_folder
+
+            # Copy injection points
+            shutil.copy2(
+                original_dir / "injection_points_flow.csv",
+                scenario_dir / "injection_points_flow.csv"
+            )
+            for original_file_dir in original_dir.glob("injection_points.*"):
+                shutil.copy2(
+                    original_file_dir,
+                    scenario_dir / original_file_dir.name
+                )
 
             # Generate parameter files for flood model
             output_dir = self.parameter_files_for_flood_model_generator()

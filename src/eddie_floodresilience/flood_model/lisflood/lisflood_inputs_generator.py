@@ -40,6 +40,7 @@ class TerrainFloodModelGenerator:
         river_name: str,
         terrain_crs_clipped: xr.Dataset,
         adjust_manning: bool,
+        vectors: str = None,
         crs: int = 2193
     ) -> None:
         """
@@ -58,6 +59,10 @@ class TerrainFloodModelGenerator:
         adjust_manning : bool
             True means adjusting Manning's n by resampling 4m Manning's n
             False means no Mannning's n adjustment
+        vectors : str = None
+            Name of vector file that is used to change the elevation information.
+            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
+            and 'distance' column to specify how smooth to decrease elevation.
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         """
@@ -66,6 +71,7 @@ class TerrainFloodModelGenerator:
         self.river_name = river_name
         self.terrain_crs_clipped = terrain_crs_clipped
         self.adjust_manning = adjust_manning
+        self.vectors = vectors
         self.crs = crs
 
     def fill_nan_and_write_nodata(
@@ -435,8 +441,9 @@ class TerrainFloodModelGenerator:
 
     def execute_terrain_data_generator(self) -> None:
         """Generate specific terrain data"""
-        # Generate DEM
-        self.terrain_data_generator('z')
+        if self.vectors is None:
+            # Generate DEM
+            self.terrain_data_generator('z')
 
         # Generate manning
         self.manning_generator()

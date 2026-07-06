@@ -243,11 +243,8 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         # Path to bci file
         bci = str(self.flood_model_path / "bci.bci")
 
-        if self.vectors is not None:
-            z = str(self.flood_model_path / f"z_elevation_{self.scenario_and_id_folder}.asc")
-        else:
-            # Path to DEM
-            z = str(self.flood_model_path / "z.asc")
+        # Path to z file
+        z = str(self.flood_model_path / "z.asc")
 
         # Path to Manning's n
         n = str(self.flood_model_path / "manning.asc")
