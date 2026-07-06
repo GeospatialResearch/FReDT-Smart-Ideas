@@ -43,7 +43,7 @@ class FloodModelParametersGenerator(ABC):
         end_time: datetime,
         scenario_and_id_folder: str,
         polygons: str = None,
-        vectors: str = None
+        vectors: pd.DataFrame = None
     ) -> None:
         """
         Generate parameter files for flood model
@@ -65,7 +65,7 @@ class FloodModelParametersGenerator(ABC):
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.

@@ -23,6 +23,7 @@ from datetime import datetime
 import logging
 
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import box
 
 from eddie import geoserver
@@ -57,7 +58,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         scenario_and_id_folder: str,
         crs: int = 2193,
         polygons: str = None,
-        vectors: str = None
+        vectors: pd.DataFrame = None
     ) -> None:
         """
         Generate flood model simulations
@@ -91,7 +92,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.

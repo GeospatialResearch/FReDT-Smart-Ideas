@@ -200,7 +200,7 @@ class ElevationSolution:
         hydro_combination_path: Path,
         flood_model: str,
         scenario_and_id_folder: str,
-        vectors: str = None
+        vectors: pd.DataFrame = None
     ) -> None:
         """
         Change the elevation based on the vector.
@@ -217,14 +217,14 @@ class ElevationSolution:
             Either "lisflood-fp" or "bg-flood"
         scenario_and_id_folder : str
             The scenario folder name with ID
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of dataframe that contains 'vector_path', 'value', 'distance' columns:
             - 'vector_path': Column that stores directories to specific vectors
             - 'value: Column that stores value of the vectors used to increase/decrease elevation
             - 'distance': Column that stores value to smooth the decreased elevation
         """
         self.hydro_combination_path = hydro_combination_path
-        self.vectors = pd.read_csv(self.hydro_combination_path.parents[1] / vectors)
+        self.vectors = vectors
         self.scenario_and_id_folder = scenario_and_id_folder
         self.flood_model = flood_model
 

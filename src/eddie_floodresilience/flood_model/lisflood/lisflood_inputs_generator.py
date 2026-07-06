@@ -20,6 +20,7 @@
 from pathlib import Path
 
 import numpy as np
+import pandas as pd
 import rasterio as rio
 import rioxarray as rxr
 import xarray as xr
@@ -40,7 +41,7 @@ class TerrainFloodModelGenerator:
         river_name: str,
         terrain_crs_clipped: xr.Dataset,
         adjust_manning: bool,
-        vectors: str = None,
+        vectors: pd.DataFrame = None,
         crs: int = 2193
     ) -> None:
         """
@@ -59,7 +60,7 @@ class TerrainFloodModelGenerator:
         adjust_manning : bool
             True means adjusting Manning's n by resampling 4m Manning's n
             False means no Mannning's n adjustment
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.

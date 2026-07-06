@@ -44,7 +44,7 @@ class TerrainGenerator:
         river_name: str,
         aoi_boundary: list,
         polygons: str = None,
-        vectors: str = None,
+        vectors: pd.DataFrame = None,
         crs: int = 2193
     ) -> None:
         """
@@ -64,7 +64,7 @@ class TerrainGenerator:
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.

@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Union
 
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import box
 from sqlalchemy import insert
 
@@ -71,7 +72,7 @@ class HydrologicalAndHydrodynamicPipeline:
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
@@ -101,7 +102,7 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_model: str,
 
         polygons: gpd.GeoDataFrame | None = None,
-        vectors: str = None,
+        vectors: pd.DataFrame = None,
         resolution: float = 0.00045,
         threshold: int = 1000,
         landcover: str = 'globcover'
@@ -141,7 +142,7 @@ class HydrologicalAndHydrodynamicPipeline:
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
@@ -675,15 +676,23 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     return flood_model_output_id
 
 
-def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+def whirinaki(
+        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
+        elevation_scenario_df: pd.DataFrame | None = None
+) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Whirinaki.
 
     Parameters
     ----------
     landcover_scenario_gdf: gpd.GeoDataFrame | None
-            Polygons that are used to change the landcover information.
-            This polygon dataframe has 'landcover_name' column with new values.
+        Polygons that are used to change the landcover information.
+        This polygon dataframe has 'landcover_name' column with new values.
+    elevation_scenario_df: pd.DataFrame | None
+        Dataframe that contains 'vector_path', 'value', 'distance' columns:
+        - 'vector_path': Column that stores directories to specific vectors
+        - 'value: Column that stores value of the vectors used to increase/decrease elevation
+        - 'distance': Column that stores value to smooth the decreased elevation
 
     Returns
     -------
@@ -703,7 +712,7 @@ def whirinaki(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     flood_model = 'lisflood-fp'
 
     polygons = landcover_scenario_gdf
-    vectors = r'vectors/vectors.csv'  # r'vectors/vectors.csv'
+    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
     landcover = 'lcdb'
@@ -795,12 +804,14 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 
 
 if __name__ == '__main__':
-    # Whirinaki
+    # # Whirinaki
     gdf = gpd.read_file(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
     )
-    whirinaki(gdf)
-    # whirinaki(None)
+    df = pd.read_csv(
+        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
+    )
+    whirinaki(gdf, df)
 
     # # Riverton
     # riverton(None)
