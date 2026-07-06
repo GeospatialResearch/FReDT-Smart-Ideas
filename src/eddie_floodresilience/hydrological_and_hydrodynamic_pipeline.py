@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-from osgeo import gdal
+
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -45,7 +45,7 @@ class HydrologicalAndHydrodynamicPipeline:
     hydro_combination_path : Path
             Directory to folder storing all necessary data
         forcing_name: Union[str, Path]
-            Name of forcing data. Should be the site name. Ex: 'whirin
+            Name of forcing data. Should be the site name. Ex: 'whirinaki'
             Or a directory to forcing data
         river_name: Union[str, Path]
             Name of river data. Should be the site name. Ex: 'whirinaki'
@@ -616,15 +616,23 @@ def otautau(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 #     main()
 
 
-def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+def mataura(
+        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
+        elevation_scenario_df: pd.DataFrame | None = None
+) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Mataura.
 
     Parameters
     ----------
     landcover_scenario_gdf: gpd.GeoDataFrame | None
-            Polygons that are used to change the landcover information.
-            This polygon dataframe has 'landcover_name' column with new values.
+        Polygons that are used to change the landcover information.
+        This polygon dataframe has 'landcover_name' column with new values.
+    elevation_scenario_df: pd.DataFrame | None
+        Dataframe that contains 'vector_path', 'value', 'distance' columns:
+        - 'vector_path': Column that stores directories to specific vectors
+        - 'value: Column that stores value of the vectors used to increase/decrease elevation
+        - 'distance': Column that stores value to smooth the decreased elevation
 
     Returns
     -------
@@ -645,7 +653,7 @@ def mataura(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     flood_model = 'lisflood-fp'
 
     polygons = landcover_scenario_gdf
-    vectors = None  # r'vectors/vectors.csv'
+    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
     landcover = 'lcdb_mapping'
@@ -744,15 +752,23 @@ def whirinaki(
 
 
 # RIVERTON
-def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+def riverton(
+        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
+        elevation_scenario_df: pd.DataFrame | None = None
+) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Riverton.
 
     Parameters
     ----------
     landcover_scenario_gdf: gpd.GeoDataFrame | None
-            Polygons that are used to change the landcover information.
-            This polygon dataframe has 'landcover_name' column with new values.
+        Polygons that are used to change the landcover information.
+        This polygon dataframe has 'landcover_name' column with new values.
+    elevation_scenario_df: pd.DataFrame | None
+        Dataframe that contains 'vector_path', 'value', 'distance' columns:
+        - 'vector_path': Column that stores directories to specific vectors
+        - 'value: Column that stores value of the vectors used to increase/decrease elevation
+        - 'distance': Column that stores value to smooth the decreased elevation
 
     Returns
     -------
@@ -772,7 +788,7 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     flood_model = 'lisflood-fp'
 
     polygons = landcover_scenario_gdf
-    vectors = None  # r'vectors/vectors.csv'
+    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
     landcover = 'globcover'
@@ -814,15 +830,15 @@ if __name__ == '__main__':
     whirinaki(None, None)
 
     # # Riverton
-    # riverton(None)
+    # riverton(None, None)
 
     # # Mataura
     # gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura\polygons_upstream_thick\polygons.shp"
     # )
-    # mataura(gdf)
+    # mataura(gdf, None)
 
     # gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
     # )
-    # otautau(gdf)
+    # otautau(gdf, None)

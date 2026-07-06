@@ -162,16 +162,12 @@ class DataCatalogGenerator:
         landcover : dict
             A dictionary contains information of landcover
         """
-        # # Polygons for land cover solutions
-        # is_baseline = self.polygons is None
-        # landcover_file = find_landcover_file(self.wflow_model_path, self.hydromt_path, self.landcover, is_baseline)
-
         if self.landcover.startswith('globcover'):
             landcover_mapping_type = 'globcover'
         else:
             landcover_mapping_type = 'lcdb'
 
-        # Check landcover path if it is
+        # Check landcover path
         is_baseline = self.polygons is None
         landcover_file = find_landcover_file(
             self.wflow_model_path,
