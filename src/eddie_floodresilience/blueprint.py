@@ -1,12 +1,12 @@
 """Endpoints and flask configuration for the Flood Resilience Digital Twin"""
 import os
 import pathlib
+from http.client import OK
 
-from flask import Blueprint
+from flask import Blueprint, Response, make_response
 
 from eddie.check_celery_alive import check_celery_alive
-
-from src.eddie_floodresilience import hydrological_and_hydrodynamic_service as hh_service
+from src.eddie_floodresilience import hydrological_and_hydrodynamic_service as hh_service, tasks
 
 os.environ.pop("Path", None)
 # See issue https://github.com/GeospatialResearch/eddie_floodresilience/issues/1 for reason behind disabled QA
@@ -39,3 +39,29 @@ def wps() -> Service:
         The PyWPS WebProcessing Service instance
     """
     return service
+
+
+@blueprint.route('/hydrographs/scenarios/<int:scenario_id>/features/<string:feature_id>')
+@check_celery_alive
+def retrieve_hydrograph(scenario_id: int, feature_id: str) -> Response:
+    """
+    Find hydrograph data for the given scenario and feature as CSV format.
+
+    Parameters
+    ----------
+    scenario_id: str
+        The flood model output ID to find query hydrograph data for.
+    feature_id: str
+        The FID of the specific injection point to query hydrograph data for.
+
+    Returns
+    -------
+    Response
+        Response with body containing hydrograph data in CSV format.
+    """
+    get_hydrograph_task = tasks.read_hydrograph_data.delay(scenario_id, feature_id)
+    hydrograph_data = get_hydrograph_task.get()
+
+    response = make_response(hydrograph_data, OK)
+    response.content_type = "text/csv"
+    return response

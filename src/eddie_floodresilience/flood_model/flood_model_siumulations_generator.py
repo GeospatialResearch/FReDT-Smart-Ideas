@@ -23,6 +23,7 @@ from datetime import datetime
 import logging
 
 import geopandas as gpd
+import pandas as pd
 from shapely.geometry import box
 
 from eddie import geoserver
@@ -152,7 +153,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         """
 
     @abstractmethod
-    def flood_model_simulations_generator(self, output_dir: Path) -> int:
+    def flood_model_simulations_generator(self, output_dir: Path) -> Path:
         """
         Generate flood simulations by running flood model
 
@@ -163,8 +164,8 @@ class BaseFloodModelSimulationsGenerator(ABC):
 
         Returns
         -------
-        int
-            The Flood Model output ID
+        Path
+            The Flood Model maximum extents raster file
         """
 
     @abstractmethod
@@ -220,3 +221,62 @@ class BaseFloodModelSimulationsGenerator(ABC):
         serve_model.create_viridis_style_if_not_exists()
 
         return model_output_id
+
+    def serve_injection_points(self, model_output_id: int) -> None:
+        """
+        Add injection points for flood model to database and geoserver for serving.
+
+        Parameters
+        ----------
+        model_output_id : int
+            The flood model output ID to associate the injection points with.
+        """
+        # Read injection point files
+        flow_df_path = self.flood_model_path / "injection_points_flow.csv"
+        flow_df = pd.read_csv(flow_df_path)
+        points_path = self.flood_model_path / "injection_points.shp"
+        injection_points = gpd.read_file(points_path)
+
+        # Transform flow_df into one-row-per-point structure, matching `injection_points`.
+        flow_transformed = flow_df.T
+        # Name columns based on timestamp
+        flow_transformed.columns = flow_transformed.iloc[0]
+        # Drop timestamp row
+        flow_transformed = flow_transformed.iloc[1:]
+        # Match the index name to its true representation
+        flow_transformed = flow_transformed.rename_axis("FID")
+
+        # Merge the two datasets, so geometry and flow data are in one
+        flow_points = injection_points.merge(flow_transformed, on="FID").copy(deep=True)
+
+        # Further transform into narrow form, with one column listing timestamps and one column listing flows,
+        # while still retaining one-row-per-point.
+        # This is the form expected for visualization in the front-end.
+
+        static_cols = ["geometry", "FID"]
+        time_cols = [col for col in flow_points.columns if col not in static_cols]
+        narrow_df = flow_points[static_cols]
+        # Correctly set the geomery, since it may be missing
+        narrow_df = narrow_df.set_geometry("geometry")
+        # Add the full list of datetimes to each row
+        narrow_df["datetimes"] = [time_cols] * len(narrow_df)
+        # Add a list of flows to each row, parallel to the datetimes.
+        narrow_df["flows"] = flow_points[time_cols].values.tolist()
+
+        # Add flood_model_id so we can select by it in database queries.
+        narrow_df["model_output_id"] = model_output_id
+
+        # Set up geoserver workspace and store
+        db_name = EnvVariable.POSTGRES_DB
+        workspace_name = f"{db_name}-flood-model-inputs"
+        geoserver.create_workspace_if_not_exists(workspace_name)
+        store_name = geoserver.create_main_db_store(workspace_name)
+
+        # Append the hydrograph data to the database and serve it
+        engine = setup_environment.get_database()
+        with engine.connect() as conn:
+            # Append the data to the database
+            table_name = "injection_points"
+            narrow_df.to_postgis(table_name, conn, if_exists="append", index=False)
+            # Serve the data
+            geoserver.create_datastore_layer(conn, workspace_name, store_name, table_name)

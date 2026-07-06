@@ -18,9 +18,12 @@
 """Serves data for WFlow scenarios, such as landcover and catchment boundaries."""
 
 import logging
+from ast import literal_eval
+from io import StringIO
 from pathlib import Path
 
 import geopandas as gpd
+import pandas as pd
 import rioxarray as rxr
 
 from eddie import geoserver as gs
@@ -153,3 +156,54 @@ class WflowServeDataGenerator:
             table_name = "wflow_catchment_boundary"
             catchment_poly.to_postgis(table_name, conn, if_exists="append", index=False)
             gs.create_datastore_layer(conn, workspace_name, data_store, table_name)
+
+
+def get_hydrograph_csv(flood_model_id: int, injection_point_feature_id: str) -> str:
+    """
+    Query the database for hydrograph data for an injection point and format it as CSV.
+
+    Parameters
+    ----------
+    flood_model_id: str
+        The flood model output ID to find query hydrograph data for.
+    injection_point_feature_id: str
+        The FID of the specific injection point to query hydrograph data for.
+
+    Returns
+    -------
+    str
+        CSV formatted hydrograph data for an injection point.
+    """
+    query = """
+            SELECT datetimes, flows
+            FROM injection_points
+            WHERE model_output_id = %(model_output_id)s
+              AND "FID" = %(FID)s
+            """
+    params = {
+        "model_output_id": flood_model_id,
+        "FID": injection_point_feature_id,
+    }
+    # Read the data with datetimes and flows each in a list within one row.
+    engine = setup_environment.get_database()
+    with engine.connect() as conn:
+        wide_form_df = pd.read_sql(query, conn, params=params)
+
+    # Correct types, columns as lists
+    wide_form_df.datetimes = wide_form_df.datetimes.apply(literal_eval)
+    wide_form_df.flows = wide_form_df.flows.apply(literal_eval)
+
+    # Expand the lists into long form df
+    long_df = wide_form_df.explode(["datetimes", "flows"]).drop_duplicates()
+    # Correct datetimes type object -> pd.datetime
+    db_date_format = "%Y-%m-%d %H:%M:%S"
+    long_df.datetimes = pd.to_datetime(long_df.datetimes, format=db_date_format)
+
+    # Format the column names ready for display
+    long_df = long_df.rename(columns={"datetimes": "Time", "flows": "Flow"})
+
+    # Format data frame into a Comma Separated Values (CSV) string
+    buffer = StringIO()
+    long_df.to_csv(buffer, index=False, date_format="%Y-%m-%dT%H:%M:%SZ")
+    csv_string = buffer.getvalue()
+    return csv_string

@@ -18,6 +18,7 @@
 """Runs Wflow model simulations"""
 
 import logging
+import shutil
 import subprocess
 from pathlib import Path
 from datetime import datetime
@@ -219,10 +220,16 @@ class WflowSimulationsGenerator:
                 "bbox": self.flood_aoi_boundary
             })
 
+            wflow_test_full_dir = self.wflow_model_path / "wflow_test_full"
+            # Force override is turned off for performance, so we must manually remove the run_default dir if required.
+            run_default_dir = wflow_test_full_dir / "run_default"
+            if run_default_dir.exists():
+                shutil.rmtree(run_default_dir)
+
             # Set up command for preprocessing
             preprocessing_command_list = [
                 "hydromt", "build", "wflow",
-                str(self.wflow_model_path / "wflow_test_full"),
+                str(wflow_test_full_dir),
                 "-r", region_information,
                 "-i", str(self.wflow_model_path / "wflow_build.yml"),
                 "-d", str(self.wflow_model_path / "data_catalog.yml"),
