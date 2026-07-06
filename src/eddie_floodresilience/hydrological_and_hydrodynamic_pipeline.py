@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-
+from osgeo import gdal
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -494,8 +494,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
 
             # Generate wflow data
             self.wflow_data_pipeline(scenario_and_id_folder)
@@ -715,7 +715,7 @@ def whirinaki(
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
-    landcover = 'globcover'
+    landcover = 'lcdb'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(

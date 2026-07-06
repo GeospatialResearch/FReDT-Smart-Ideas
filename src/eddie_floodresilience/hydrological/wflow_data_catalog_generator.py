@@ -16,7 +16,7 @@ setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class DataCatalogGenerator():
+class DataCatalogGenerator:
     """This class is to generate data_catalog.yml for preprocessing data for wflow"""
 
     def __init__(
@@ -170,12 +170,6 @@ class DataCatalogGenerator():
             landcover_mapping_type = 'globcover'
         else:
             landcover_mapping_type = 'lcdb'
-
-        if self.polygons is None:
-            landcover_file = self.hydromt_path / f'original_{landcover_mapping_type}.tif'
-        else:
-            landcover_filename = f"{landcover_mapping_type}_{self.scenario_and_id_folder}.tif"
-            landcover_file = self.wflow_model_path / landcover_mapping_type / landcover_filename
 
         # Check landcover path if it is
         is_baseline = self.polygons is None
