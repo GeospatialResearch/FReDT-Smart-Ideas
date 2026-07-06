@@ -171,17 +171,17 @@ class WflowSimulationsGenerator:
         log.info("Preprocessing data for wflow model")
         if self.polygons is not None:
             # Create folder name
-            output_foldername = f"wflow_test_full"
+            output_foldername = "wflow_test_full"
 
             # Find wflow build file
-            wflow_build_file = self.wflow_model_path / f"wflow_build.yml"
+            wflow_build_file = self.wflow_model_path / "wflow_build.yml"
 
             # Find data catalog file
-            data_catalog_file = self.wflow_model_path / f"data_catalog.yml"
+            data_catalog_file = self.wflow_model_path / "data_catalog.yml"
 
             preprocessing_command_list = [
                 "hydromt", "update", "wflow",
-                str(self.wflow_model_path.parents[1] / "original_scenario/hydrological_process/wflow_test_full"),
+                str(self.wflow_model_path.parents[1] / r"original_scenario/hydrological_process/wflow_test_full"),
                 "-o", str(self.wflow_model_path / output_foldername),
                 "-i", str(self.wflow_model_path / wflow_build_file),
                 "-d", str(self.wflow_model_path / data_catalog_file),
@@ -232,13 +232,13 @@ class WflowSimulationsGenerator:
         # Set up path to wflow simulation folder
         if self.polygons is not None:
             # Set up folder
-            output_foldername = self.wflow_model_path / f"wflow_test_full"
+            output_foldername = self.wflow_model_path / "wflow_test_full"
 
             # Set up wflow simulation path
             wflow_simulation_path = self.wflow_model_path / output_foldername
 
             # Create folder name
-            output_log = f"wflow_run.log"
+            output_log = "wflow_run.log"
 
         else:
             wflow_simulation_path = self.wflow_model_path / "wflow_test_full"
