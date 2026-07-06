@@ -167,15 +167,25 @@ class DataCatalogGenerator():
         # landcover_file = find_landcover_file(self.wflow_model_path, self.hydromt_path, self.landcover, is_baseline)
 
         if self.landcover.startswith('globcover'):
-            initial_file_name = 'globcover'
+            landcover_mapping_type = 'globcover'
         else:
-            initial_file_name = 'lcdb'
+            landcover_mapping_type = 'lcdb'
 
         if self.polygons is None:
-            landcover_file = self.hydromt_path / f'original_{initial_file_name}.tif'
+            landcover_file = self.hydromt_path / f'original_{landcover_mapping_type}.tif'
         else:
-            landcover_filename = f"{initial_file_name}_{self.scenario_and_id_folder}.tif"
-            landcover_file = self.wflow_model_path / initial_file_name / landcover_filename
+            landcover_filename = f"{landcover_mapping_type}_{self.scenario_and_id_folder}.tif"
+            landcover_file = self.wflow_model_path / landcover_mapping_type / landcover_filename
+
+        # Check landcover path if it is
+        is_baseline = self.polygons is None
+        landcover_file = find_landcover_file(
+            self.wflow_model_path,
+            self.hydromt_path,
+            landcover_mapping_type,
+            self.scenario_and_id_folder,
+            is_baseline
+        )
 
         # At the moment the name globcover and other information is kept fixed for basic automation,
         # it might be changed in the future.
@@ -477,7 +487,8 @@ class DataCatalogGenerator():
 def find_landcover_file(
     wflow_model_path: Path,
     hydromt_path: Path,
-    landcover_name: str,
+    landcover_mapping_type: str,
+    scenario_and_id_folder: str,
     is_baseline: bool = True
 ) -> Path:
     r"""
@@ -489,8 +500,10 @@ def find_landcover_file(
         A directory to where the data_catalog.yml is stored for WFlow
     hydromt_path : Path
         A directory to where all necessary files are stored to run wflow model
-    landcover_name : str
-        A string to identify the landcover. Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
+    landcover_mapping_type : str
+        Name of landcover dataset - globcover or lcdb
+    scenario_and_id_folder : str
+        The scenario folder name with ID
     is_baseline : bool
         Whether this scenario is a baseline scenario (True) or has modified landcover (False)
 
@@ -502,19 +515,9 @@ def find_landcover_file(
     """
     # Baselines use original files
     if is_baseline:
-        if landcover_name == 'globcover':
-            landcover_file = hydromt_path / Path("original_globcover.tif")
-        else:
-            landcover_file = hydromt_path / Path('original_lcdb.tif')
+        landcover_file = hydromt_path / f'original_{landcover_mapping_type}.tif'
     else:
-        # non-baselines use new modified files
-        if landcover_name.startswith('globcover'):
-            # globcover must be written to wflow_model_path not hydromt_path in docker due to permissions.
-            # We find the correct version based on the landcover file name
-            landcover_file = (wflow_model_path / landcover_name).resolve()
-        else:
-            landcover_file = max(
-                Path(wflow_model_path / "lcdb").glob("lcdb_*.tif"),
-                default=Path(wflow_model_path) / "lcdb" / "lcdb_001.tif"
-            )
+        landcover_filename = f"{landcover_mapping_type}_{scenario_and_id_folder}.tif"
+        landcover_file = wflow_model_path / landcover_mapping_type / landcover_filename
+
     return landcover_file

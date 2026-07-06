@@ -715,7 +715,7 @@ def whirinaki(
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
-    landcover = 'lcdb'
+    landcover = 'globcover'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -804,14 +804,14 @@ def riverton(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
 
 
 if __name__ == '__main__':
-    # # Whirinaki
-    gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
-    )
-    df = pd.read_csv(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
-    )
-    whirinaki(gdf, df)
+    # # # Whirinaki
+    # gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
+    # )
+    # df = pd.read_csv(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
+    # )
+    whirinaki(None, None)
 
     # # Riverton
     # riverton(None)
