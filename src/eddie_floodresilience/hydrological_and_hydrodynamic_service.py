@@ -76,6 +76,12 @@ class PredefinedScenario(Process, ABC):
             ComplexOutput("floodedBuildings", "Flooded Buildings",
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
         ]
+        # Add outputs that only make sense for non-baseline scenarios.
+        if not isBaseline:
+            outputs.append(
+                ComplexOutput("depthDifference", "Difference in Flood Depth to Baseline",
+                              supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
+            )
 
         handler = handler_for_task(task, isBaseline)
         # Initialise the process
@@ -157,6 +163,8 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
         response.outputs['floodedBuildings'].data = json.dumps(
             building_flood_status_catalog(scenario_id, scenario_name)
         )
+        if not is_baseline:
+            response.outputs['depthDifference'].data = json.dumps(depth_difference_catalog(scenario_id, scenario_name))
 
     return _handler
 
@@ -308,17 +316,42 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
     return _wms_depth_catalog(
         scenario_id,
         workspace_name=gs_flood_model_workspace,
-        fully_qualified_layer=layer_name,
+        layer_name=layer_name,
         display_name=display_name,
         style_name=style_name
     )
 
 
+def depth_difference_catalog(scenario_id: int, scenario_name: str) -> dict:
+    """
+    Create a dict in the format of a terria js catalog json for the difference between scenario and baseline depth.
+
+    Parameters
+    ----------
+    scenario_id : int
+        The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
+
+    Returns
+    ----------
+    dict
+        The TerriaJS catalog item JSON for the difference layer.
+    """
+    return _wms_depth_catalog(
+        scenario_id,
+        workspace_name=f"{EnvVar.POSTGRES_DB}-dt-model-outputs",
+        layer_name=f"diff_{scenario_id}",
+        display_name=f"Difference from baseline to {scenario_name}",
+        style_name="difference_r_b_0_2"
+    )
+
+
 def _wms_depth_catalog(
-    scenario_id: int, workspace_name: str, fully_qualified_layer: str, display_name: str, style_name: str
+    scenario_id: int, workspace_name: str, layer_name: str, display_name: str, style_name: str
 ) -> dict:
     """
-    Helper function to build a WMS catalog item JSON based on the given parameters, for a raster about water depth.
+    Build a WMS catalog item JSON based on the given parameters, for a raster about water depth.
 
     Parameters
     ----------
@@ -326,7 +359,7 @@ def _wms_depth_catalog(
         The ID of the scenario to create the catalog item for.
     workspace_name : str
         The name of the GeoServer workspace the layer lives in.
-    fully_qualified_layer : str
+    layer_name : str
         The name of the WMS layer within GeoServer.
     display_name : str
         The label to add to the catalog item in the front-end.
@@ -339,7 +372,7 @@ def _wms_depth_catalog(
         The TerriaJS catalog item JSON for the WMS Rster layer.
     """
     gs_service_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{workspace_name}/ows"
-    fully_qualified_layer = f"{workspace_name}:{fully_qualified_layer}"
+    fully_qualified_layer = f"{workspace_name}:{layer_name}"
     # Open and read HTML/mustache template file for infobox
     with open("./src/eddie_floodresilience/flood_model/templates/flood_depth_infobox.mustache",
               encoding="utf-8") as file:
@@ -371,7 +404,7 @@ def _wms_depth_catalog(
         "styles": style_name,
         "featureInfoTemplate": {
             "name": display_name,
-            "template": flood_depth_infobox_template.format(flood_scenario_id=scenario_id)
+            "template": flood_depth_infobox_template.format(flood_scenario_id=scenario_id, layer_name=layer_name),
         },
         "legends": [{
             "title": display_name,
