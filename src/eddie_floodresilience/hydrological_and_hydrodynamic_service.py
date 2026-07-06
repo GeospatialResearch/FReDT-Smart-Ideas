@@ -38,7 +38,8 @@ class PredefinedScenario(Process, ABC):
         """Define inputs and outputs of the WPS process, and assign process handler."""
         # Create bounding box WPS inputs
         if isBaseline:
-            # A very simple placeholder configuration for baseline
+            # A very simple placeholder configuration for baseline, ideally this would be removed.
+            # Inputs are required for TerriaJS though, so the front-end code would have to be fixed to allow this.
             inputs = [LiteralInput(
                 "options",
                 "Options",
@@ -301,9 +302,44 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
         The TerriaJS catalog item JSON for the flood depth layer.
     """
     gs_flood_model_workspace = f"{EnvVar.POSTGRES_DB}-dt-model-outputs"
-    gs_flood_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_flood_model_workspace}/ows"
-    layer_name = f"{gs_flood_model_workspace}:output_{scenario_id}"
+    layer_name = f"output_{scenario_id}"
     style_name = "plasma_0_3m"
+    display_name = f"Flood Depth - {scenario_name}"
+    return _wms_depth_catalog(
+        scenario_id,
+        workspace_name=gs_flood_model_workspace,
+        fully_qualified_layer=layer_name,
+        display_name=display_name,
+        style_name=style_name
+    )
+
+
+def _wms_depth_catalog(
+    scenario_id: int, workspace_name: str, fully_qualified_layer: str, display_name: str, style_name: str
+) -> dict:
+    """
+    Helper function to build a WMS catalog item JSON based on the given parameters, for a raster about water depth.
+
+    Parameters
+    ----------
+    scenario_id : int
+        The ID of the scenario to create the catalog item for.
+    workspace_name : str
+        The name of the GeoServer workspace the layer lives in.
+    fully_qualified_layer : str
+        The name of the WMS layer within GeoServer.
+    display_name : str
+        The label to add to the catalog item in the front-end.
+    style_name : str
+        The name of the GeoServer style to display the layer with.
+
+    Returns
+    -------
+    dict
+        The TerriaJS catalog item JSON for the WMS Rster layer.
+    """
+    gs_service_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{workspace_name}/ows"
+    fully_qualified_layer = f"{workspace_name}:{fully_qualified_layer}"
     # Open and read HTML/mustache template file for infobox
     with open("./src/eddie_floodresilience/flood_model/templates/flood_depth_infobox.mustache",
               encoding="utf-8") as file:
@@ -315,7 +351,7 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
         "request": "GetLegendGraphic",
         "format": "image/png",
         "sld_version": "1.1.0",
-        "layer": layer_name,
+        "layer": fully_qualified_layer,
         "style": style_name,
         "transparent": "true",
         "LEGEND_OPTIONS": "hideEmptyRules:true;"
@@ -325,20 +361,20 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
                           "fontStyle:bold;"
                           "fontAntiAliasing:true;"
     }
-    legend_url = f"{gs_flood_url}?{urlencode(legend_url_params)}"
+    legend_url = f"{gs_service_url}?{urlencode(legend_url_params)}"
 
     return {
         "type": "wms",
-        "name": f"Flood Depth - {scenario_name}",
-        "url": gs_flood_url,
-        "layers": layer_name,
+        "name": display_name,
+        "url": gs_service_url,
+        "layers": fully_qualified_layer,
         "styles": style_name,
         "featureInfoTemplate": {
-            "name": f"Flood depth - {scenario_id}",
+            "name": display_name,
             "template": flood_depth_infobox_template.format(flood_scenario_id=scenario_id)
         },
         "legends": [{
-            "title": "Flood Depth",
+            "title": display_name,
             "url": legend_url,
             "urlMimeType": "image/png"
         }],
