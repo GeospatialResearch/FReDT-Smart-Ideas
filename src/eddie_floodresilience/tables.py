@@ -112,6 +112,31 @@ class FloodModelOutput(Base):
     geometry = Column(Geometry("POLYGON", srid=2193))
 
 
+class FloodModelOutputDifference(Base):
+    """
+    Class representing the 'flood_model_output_difference' table.
+
+    Attributes
+    ----------
+    __tablename__ : str
+        Name of the database table.
+    baseline_id : int
+        Foreign key for the matching baseline flood_model_output (primary key).
+    scenario_id : int
+        Foreign key for the matching scenario flood_model_output (primary key).
+    file_name : str
+        Name of the flood model output file.
+    file_path : str
+        Path to the flood model output file.
+    """  # pylint: disable=too-few-public-methods
+
+    __tablename__ = "flood_model_output_difference"
+    baseline_id = Column(Integer, primary_key=True)
+    scenario_id = Column(Integer, primary_key=True)
+    file_name = Column(String, comment="name of the flood model output file", nullable=True)
+    file_path = Column(String, comment="path to the flood model output file", nullable=True)
+
+
 class BuildingFloodStatus(Base):
     """
     Class representing the 'building_flood_status' table.

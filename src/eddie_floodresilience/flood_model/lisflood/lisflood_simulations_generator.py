@@ -105,7 +105,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         output_dir = parameters_files_generator.parameter_files_generator()
         return output_dir
 
-    def flood_model_simulations_generator(self, output_dir: Path) -> int:
+    def flood_model_simulations_generator(self, output_dir: Path) -> Path:
         """
         Generate flood simulations by running flood model
 
@@ -116,8 +116,8 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         Returns
         -------
-        int
-            The Flood Model output ID
+        Path
+            The Flood Model maximum extents raster file
         """
         # Set up path to log file
         log_file_path = self.flood_model_path / "simulation_log.log"
@@ -161,8 +161,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         max_gtiff = output_dir / f"{output_dir.name}-{time}-out.tif"
         serve_model.asc_to_gtiff(output_asc, max_gtiff)
 
-        model_output_id = self.serve_flood_model_outputs(max_gtiff)
-        return model_output_id
+        return max_gtiff
 
     def flood_model_executor(self) -> int:
         """
@@ -193,7 +192,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             output_dir = self.parameter_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator(output_dir)
+            max_gtiff = self.flood_model_simulations_generator(output_dir)
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
@@ -207,7 +206,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             output_dir = self.parameter_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator(output_dir)
+            max_gtiff = self.flood_model_simulations_generator(output_dir)
 
         # This 'else' includes 2
         else:
@@ -238,5 +237,9 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             output_dir = self.parameter_files_for_flood_model_generator()
 
             # Generate simulations by running flood model
-            model_output_id = self.flood_model_simulations_generator(output_dir)
+            max_gtiff = self.flood_model_simulations_generator(output_dir)
+
+        # Add the results to the database and geoserver
+        model_output_id = self.serve_flood_model_outputs(max_gtiff)
+        self.serve_injection_points(model_output_id)
         return model_output_id

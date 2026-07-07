@@ -38,7 +38,8 @@ class PredefinedScenario(Process, ABC):
         """Define inputs and outputs of the WPS process, and assign process handler."""
         # Create bounding box WPS inputs
         if isBaseline:
-            # A very simple placeholder configuration for baseline
+            # A very simple placeholder configuration for baseline, ideally this would be removed.
+            # Inputs are required for TerriaJS though, so the front-end code would have to be fixed to allow this.
             inputs = [LiteralInput(
                 "options",
                 "Options",
@@ -70,9 +71,17 @@ class PredefinedScenario(Process, ABC):
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
             ComplexOutput("floodDepth", "Maximum Flood Depth",
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
+            ComplexOutput("injectionPoints", "River Flows",
+                          supported_formats=[Format("application/vnd.terriajs.catalog-member+json")]),
             ComplexOutput("floodedBuildings", "Flooded Buildings",
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
         ]
+        # Add outputs that only make sense for non-baseline scenarios.
+        if not isBaseline:
+            outputs.append(
+                ComplexOutput("depthDifference", "Difference in Flood Depth to Baseline",
+                              supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
+            )
 
         handler = handler_for_task(task, isBaseline)
         # Initialise the process
@@ -148,9 +157,14 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
         response.outputs['landcover'].data = json.dumps(landcover_catalog(scenario_id, scenario_name))
         response.outputs['catchmentBoundary'].data = json.dumps(catchment_boundary_catalog(scenario_id, scenario_name))
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id, scenario_name))
+        response.outputs['injectionPoints'].data = json.dumps(
+            hydrograph_injection_point_catalog(scenario_id, scenario_name)
+        )
         response.outputs['floodedBuildings'].data = json.dumps(
             building_flood_status_catalog(scenario_id, scenario_name)
         )
+        if not is_baseline:
+            response.outputs['depthDifference'].data = json.dumps(depth_difference_catalog(scenario_id, scenario_name))
 
     return _handler
 
@@ -296,9 +310,69 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
         The TerriaJS catalog item JSON for the flood depth layer.
     """
     gs_flood_model_workspace = f"{EnvVar.POSTGRES_DB}-dt-model-outputs"
-    gs_flood_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_flood_model_workspace}/ows"
-    layer_name = f"{gs_flood_model_workspace}:output_{scenario_id}"
+    layer_name = f"output_{scenario_id}"
     style_name = "plasma_0_3m"
+    display_name = f"Flood Depth - {scenario_name}"
+    return _wms_depth_catalog(
+        scenario_id,
+        workspace_name=gs_flood_model_workspace,
+        layer_name=layer_name,
+        display_name=display_name,
+        style_name=style_name
+    )
+
+
+def depth_difference_catalog(scenario_id: int, scenario_name: str) -> dict:
+    """
+    Create a dict in the format of a terria js catalog json for the difference between scenario and baseline depth.
+
+    Parameters
+    ----------
+    scenario_id : int
+        The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
+
+    Returns
+    ----------
+    dict
+        The TerriaJS catalog item JSON for the difference layer.
+    """
+    return _wms_depth_catalog(
+        scenario_id,
+        workspace_name=f"{EnvVar.POSTGRES_DB}-dt-model-outputs",
+        layer_name=f"diff_{scenario_id}",
+        display_name=f"Difference from baseline to {scenario_name}",
+        style_name="difference_r_b_0_2"
+    )
+
+
+def _wms_depth_catalog(
+    scenario_id: int, workspace_name: str, layer_name: str, display_name: str, style_name: str
+) -> dict:
+    """
+    Build a WMS catalog item JSON based on the given parameters, for a raster about water depth.
+
+    Parameters
+    ----------
+    scenario_id : int
+        The ID of the scenario to create the catalog item for.
+    workspace_name : str
+        The name of the GeoServer workspace the layer lives in.
+    layer_name : str
+        The name of the WMS layer within GeoServer.
+    display_name : str
+        The label to add to the catalog item in the front-end.
+    style_name : str
+        The name of the GeoServer style to display the layer with.
+
+    Returns
+    -------
+    dict
+        The TerriaJS catalog item JSON for the WMS Rster layer.
+    """
+    gs_service_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{workspace_name}/ows"
+    fully_qualified_layer = f"{workspace_name}:{layer_name}"
     # Open and read HTML/mustache template file for infobox
     with open("./src/eddie_floodresilience/flood_model/templates/flood_depth_infobox.mustache",
               encoding="utf-8") as file:
@@ -310,7 +384,7 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
         "request": "GetLegendGraphic",
         "format": "image/png",
         "sld_version": "1.1.0",
-        "layer": layer_name,
+        "layer": fully_qualified_layer,
         "style": style_name,
         "transparent": "true",
         "LEGEND_OPTIONS": "hideEmptyRules:true;"
@@ -320,20 +394,20 @@ def flood_depth_catalog(scenario_id: int, scenario_name: str) -> dict:
                           "fontStyle:bold;"
                           "fontAntiAliasing:true;"
     }
-    legend_url = f"{gs_flood_url}?{urlencode(legend_url_params)}"
+    legend_url = f"{gs_service_url}?{urlencode(legend_url_params)}"
 
     return {
         "type": "wms",
-        "name": f"Flood Depth - {scenario_name}",
-        "url": gs_flood_url,
-        "layers": layer_name,
+        "name": display_name,
+        "url": gs_service_url,
+        "layers": fully_qualified_layer,
         "styles": style_name,
         "featureInfoTemplate": {
-            "name": f"Flood depth - {scenario_id}",
-            "template": flood_depth_infobox_template.format(flood_scenario_id=scenario_id)
+            "name": display_name,
+            "template": flood_depth_infobox_template.format(flood_scenario_id=scenario_id, layer_name=layer_name),
         },
         "legends": [{
-            "title": "Flood Depth",
+            "title": display_name,
             "url": legend_url,
             "urlMimeType": "image/png"
         }],
@@ -411,4 +485,55 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
         "url": gs_landcover_url,
         "layers": layer_name,
         "styles": "landcover",
+    }
+
+
+def hydrograph_injection_point_catalog(scenario_id: int, scenario_name: str) -> dict:
+    """
+    Create a dictionary in the format of a terria js catalog json for the injection points, with hydrographs.
+
+    Parameters
+    ----------
+    scenario_id : int
+        The ID of the scenario to create the catalog item for.
+    scenario_name : str
+        The name of the scenario to create the catalog item for.
+
+    Returns
+    ----------
+    dict
+        The TerriaJS catalog item JSON for the building flood status layer.
+    """
+    gs_flood_inputs_workspace = f"{EnvVar.POSTGRES_DB}-flood-model-inputs"
+    gs_flood_inputs_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_flood_inputs_workspace}/ows"
+
+    # Open and read HTML template for plot in infobox for TerriaJS
+    with open("./src/eddie_floodresilience/flood_model/templates/plot_infobox_template.html",
+              encoding="utf-8") as file:
+        plot_infobox_template = file.read()
+
+    # Fill in plot template vars. Some parts are double escaped so they can be used as moustache templates in TerriaJS.
+    plot_title = f"Hydrograph — Injection Point {{{{FID}}}} ({scenario_name})"
+    csv_src = f"{EnvVar.BACKEND_URL}/hydrographs/scenarios/{scenario_id}/features/{{{{FID}}}}"
+    plot_infobox_template = plot_infobox_template.format(
+        plot_title=plot_title,
+        csv_src=csv_src,
+        x_axis="Time",
+        y_axis="Flow",
+        y_units="Flow (m3/s)"
+    )
+
+    return {
+        "type": "wfs",
+        "name": f"Hydrographs - {scenario_name}",
+        "url": gs_flood_inputs_url,
+        "typeNames": f"{gs_flood_inputs_workspace}:injection_points",
+        "parameters": {
+            "CQL_FILTER": f"model_output_id={scenario_id}",
+        },
+        "featureInfoTemplate": {
+            # Double-escaped so that after python string formatting it is still mustache formatted.
+            "name": f"Hydrograph - {scenario_name} - {{{{FID}}}}",
+            "template": plot_infobox_template
+        }
     }

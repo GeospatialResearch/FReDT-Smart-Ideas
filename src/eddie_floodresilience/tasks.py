@@ -28,6 +28,7 @@ from eddie.digitaltwin import cache_new_results, check_cache_results
 from eddie.digitaltwin.utils import setup_logging
 from eddie.tasks import OnFailureStateTask, app  # pylint: disable=cyclic-import
 from src.eddie_floodresilience import hydrological_and_hydrodynamic_pipeline
+from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import get_hydrograph_csv
 
 setup_logging()
 log = logging.getLogger(__name__)
@@ -136,6 +137,26 @@ def create_hydrological_and_hydrodynamic_model_mataura_2020(location_geojson: st
     landcover_scenario_gdf = read_location_geojson(location_geojson, landcover_name)
     flood_model_output_id = hydrological_and_hydrodynamic_pipeline.mataura(landcover_scenario_gdf)
     return flood_model_output_id
+
+
+@app.task(base=OnFailureStateTask)
+def read_hydrograph_data(flood_model_id: int, injection_point_feature_id: str) -> str:
+    """
+    Task to run read hydrograph data for an injection point.
+
+    Parameters
+    ----------
+    flood_model_id: str
+        The flood model output ID to find query hydrograph data for.
+    injection_point_feature_id: str
+        The FID of the specific injection point to query hydrograph data for.
+
+    Returns
+    -------
+    str
+        CSV formatted hydrograph data for an injection point.
+    """
+    return get_hydrograph_csv(flood_model_id, injection_point_feature_id)
 
 
 def read_location_geojson(location_geojson: str | None, landcover_name: str | None) -> gpd.GeoDataFrame | None:
