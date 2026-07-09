@@ -184,8 +184,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
     def reserve_scenario_id(self) -> int:
         """
-        Find the ID scenario
-
+        Generates and reserves scenario ID in the database.
         Returns
         -------
         int
