@@ -29,7 +29,6 @@ from src.eddie_floodresilience.hydrological.wflow_simulations_generator import W
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
-
 from src.eddie_floodresilience.tables import PipelineOutput
 
 setup_logging(LogLevel.DEBUG)
