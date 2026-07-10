@@ -280,13 +280,19 @@ class WflowBuildGenerator:
         lai : dict
             A dictionary that contains lai's section
         """
+        # Set up lulc_zero_classes
+        if self.landcover.startswith("globcover"):
+            lulc_zero_classes = [200, 210, 220]
+        else:
+            lulc_zero_classes = [14, 20, 21, 22]
+
         # Generate lai section
         lai = {
             "setup_laimaps": {
                 "lai_fn": "modis_lai",
                 "lulc_fn": "landcover",
                 "lulc_sampling_method": "any",
-                "lulc_zero_classes": [200, 210, 220],
+                "lulc_zero_classes": lulc_zero_classes,
                 "buffer": 2
             }
         }

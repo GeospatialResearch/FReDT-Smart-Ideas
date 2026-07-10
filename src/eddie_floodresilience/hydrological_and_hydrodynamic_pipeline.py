@@ -495,15 +495,23 @@ class HydrologicalAndHydrodynamicPipeline:
 
 
 # OTAUTAU
-def otautau(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
+def otautau(
+        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
+        elevation_scenario_df: pd.DataFrame | None = None
+) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Otautau.
 
     Parameters
     ----------
     landcover_scenario_gdf: gpd.GeoDataFrame | None
-            Polygons that are used to change the landcover information.
-            This polygon dataframe has 'landcover_name' column with new values.
+        Polygons that are used to change the landcover information.
+        This polygon dataframe has 'landcover_name' column with new values.
+    elevation_scenario_df: pd.DataFrame | None
+        Dataframe that contains 'vector_path', 'value', 'distance' columns:
+        - 'vector_path': Column that stores directories to specific vectors
+        - 'value: Column that stores value of the vectors used to increase/decrease elevation
+        - 'distance': Column that stores value to smooth the decreased elevation
 
     Returns
     -------
@@ -524,7 +532,7 @@ def otautau(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     flood_model = 'lisflood-fp'
 
     polygons = landcover_scenario_gdf  # r'polygons/polygons.shp'
-    vectors = None  # r'vectors/vectors.csv'
+    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
     landcover = 'lcdb'
@@ -825,6 +833,7 @@ if __name__ == '__main__':
     # )
     # mataura(gdf, None)
 
+    # # Otautau
     # gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
     # )

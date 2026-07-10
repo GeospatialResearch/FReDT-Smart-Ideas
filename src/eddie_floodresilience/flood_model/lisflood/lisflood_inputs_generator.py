@@ -19,6 +19,7 @@
 
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
 import pandas as pd
 import rasterio as rio
@@ -100,6 +101,36 @@ class TerrainFloodModelGenerator:
 
         return terrain_variable
 
+    def remove_sea(
+            self,
+            terrain_variable: xr.Dataset
+    ) -> xr.Dataset:
+        """
+        Remove sea from terrain data
+
+        Parameters
+        ----------
+        terrain_variable : xr.Dataset
+            Variable name could be 'z' (DEM) and 'zo' (roughness length)
+
+        Returns
+        -------
+        terrain_vavriable : xr.Dataset
+            Variable name could be 'z' (DEM) and 'zo' (roughness length).
+            These terrains have the sea removed
+        """
+        # Get nz land polygon
+        land = gpd.read_file(self.hydromt_path / 'nz_coastline.shp')
+
+        # Remove sea using nz land polygon
+        terrain_variable_no_sea = terrain_variable.rio.clip(
+            land.geometry,
+            crs=2193,
+            drop=False
+        )
+
+        return terrain_variable_no_sea
+
     def format_terrain_data_pipeline(
         self,
         variable_name: str
@@ -127,14 +158,14 @@ class TerrainFloodModelGenerator:
         # Drop spatial ref
         terrain_variable = terrain_variable.drop_vars("spatial_ref")
 
-        # Make sure terrain that has crs
+        # Make sure terrain has crs
         terrain_variable = terrain_variable.rio.write_crs(self.crs)
+
+        # Remove sea
+        terrain_variable = self.remove_sea(terrain_variable)
 
         # Fill NaN with -9999 and write it as nodata value
         terrain_variable = self.fill_nan_and_write_nodata(terrain_variable)
-
-        # Round up to easily process
-        terrain_variable = terrain_variable.round(9)
 
         return terrain_variable
 
@@ -380,7 +411,7 @@ class TerrainFloodModelGenerator:
             # Convert -9999 to 0.004
             roughness = roughness.where(roughness != -9999, 0.004)
 
-            # Write nodata
+            # Write nodata before converting
             roughness = roughness.rio.write_nodata(-9999)
 
             # Convert roughness length to Manning's n
@@ -393,6 +424,9 @@ class TerrainFloodModelGenerator:
         clipped_manning_for_flood = manning_for_flood.rio.clip_box(
             *self.terrain_crs_clipped.rio.bounds()
         )
+
+        # Remove sea
+        clipped_manning_for_flood = self.remove_sea(clipped_manning_for_flood)
 
         # Write out
         manning_outpath = self.flood_model_path / "manning.asc"
@@ -417,7 +451,10 @@ class TerrainFloodModelGenerator:
         terrain_variable_path = self.flood_model_path / f"{variable_name}.asc"
 
         # Write out as ASCII file
-        terrain_variable.rio.to_raster(terrain_variable_path)
+        terrain_variable.rio.to_raster(
+            terrain_variable_path,
+            dtype="float32"
+        )
 
     def terrain_data_generator(
         self,
