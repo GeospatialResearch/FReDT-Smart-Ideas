@@ -22,10 +22,9 @@ class DataCatalogGenerator:
     def __init__(
         self,
         hydromt_path: Path,
-        wflow_model_path: Path,
         forcing_path: Path,
         river_name: str,
-        scenario_and_id_folder: str,
+        scenario_and_id_folder: Path,
         polygons: str = None,
         landcover: str = 'globcover'
     ) -> None:
@@ -38,14 +37,12 @@ class DataCatalogGenerator:
         ----------
         hydromt_path: Path
             A directory to where all necessary files are stored to run wflow model
-        wflow_model_path: Path
-            A directory to where the data_catalog.yml is stored and to run wflow model
         forcing_path: Path
             A directory to where the forcing files are stored
         river_name: str
             Name of directory to where the river information files are stored
-        scenario_and_id_folder: str
-            The scenario folder name with ID
+        scenario_and_id_folder: Path
+            Directory to the scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -53,7 +50,6 @@ class DataCatalogGenerator:
             Name of land cover. Default is 'globcover'
         """
         self.hydromt_path = hydromt_path
-        self.wflow_model_path = wflow_model_path
         self.forcing_path = forcing_path
         self.river_name = river_name
         self.scenario_and_id_folder = scenario_and_id_folder
@@ -170,7 +166,6 @@ class DataCatalogGenerator:
         # Check landcover path
         is_baseline = self.polygons is None
         landcover_file = find_landcover_file(
-            self.wflow_model_path,
             self.hydromt_path,
             landcover_mapping_type,
             self.scenario_and_id_folder,
@@ -253,7 +248,7 @@ class DataCatalogGenerator:
                     "paper_ref": "Yamazaki et al. (2019)"
                 },
                 "version": 1.0,
-                "path": f"{self.wflow_model_path.parents[1] / 'terrain/merit_hydro/{variable}.tif'}"
+                "path": f"{self.scenario_and_id_folder.parent / 'terrain/merit_hydro/{variable}.tif'}"
             }
         }
 
@@ -283,7 +278,7 @@ class DataCatalogGenerator:
                     "paper_ref": "Eilander et al. (in review)",
                     "source_license": "CC-BY-NC 4.0"
                 },
-                "path": f"{self.wflow_model_path.parents[1] / 'terrain/merit_hydro_index.gpkg'}"
+                "path": f"{self.scenario_and_id_folder.parent / 'terrain/merit_hydro_index.gpkg'}"
             }
         }
 
@@ -314,7 +309,7 @@ class DataCatalogGenerator:
                     "processing_notes": "hydrography/rivers_lin2019/README"
                 },
                 "version": 1,
-                "path": f"{self.wflow_model_path.parents[1] / 'terrain/rivers_lin2019_v1.gpkg'}"
+                "path": f"{self.scenario_and_id_folder.parent / 'terrain/rivers_lin2019_v1.gpkg'}"
             }
         }
 
@@ -454,7 +449,7 @@ class DataCatalogGenerator:
             A dictionary contains information of all sections
         """
         # Set up output filename
-        output_filename = self.wflow_model_path / "data_catalog.yml"
+        output_filename = self.scenario_and_id_folder / "hydrological_process/data_catalog.yml"
 
         # Write out data_catalog.yml
         with open(output_filename, "w", encoding="utf-8") as output_file:
@@ -475,10 +470,9 @@ class DataCatalogGenerator:
 
 
 def find_landcover_file(
-    wflow_model_path: Path,
     hydromt_path: Path,
     landcover_mapping_type: str,
-    scenario_and_id_folder: str,
+    scenario_and_id_folder: Path,
     is_baseline: bool = True
 ) -> Path:
     r"""
@@ -486,14 +480,12 @@ def find_landcover_file(
 
     Parameters
     ----------
-    wflow_model_path : Path
-        A directory to where the data_catalog.yml is stored for WFlow
     hydromt_path : Path
         A directory to where all necessary files are stored to run wflow model
     landcover_mapping_type : str
         Name of landcover dataset - globcover or lcdb
-    scenario_and_id_folder : str
-        The scenario folder name with ID
+    scenario_and_id_folder : Path
+        Directory to the scenario folder name with ID
     is_baseline : bool
         Whether this scenario is a baseline scenario (True) or has modified landcover (False)
 
@@ -507,7 +499,7 @@ def find_landcover_file(
     if is_baseline:
         landcover_file = hydromt_path / f'original_{landcover_mapping_type}.tif'
     else:
-        landcover_filename = f"{landcover_mapping_type}_{scenario_and_id_folder}.tif"
-        landcover_file = wflow_model_path / landcover_mapping_type / landcover_filename
+        landcover_filename = f"{landcover_mapping_type}_{scenario_and_id_folder.name}.tif"
+        landcover_file = scenario_and_id_folder / 'hydrological_process' / landcover_mapping_type / landcover_filename
 
     return landcover_file

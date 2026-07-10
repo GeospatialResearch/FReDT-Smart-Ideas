@@ -41,8 +41,6 @@ class WflowSimulationsGenerator:
     ----------
     hydromt_path: Path
         A directory to where all necessary files are stored to run wflow model
-    wflow_model_path: Path
-        A directory to where the data_catalog.yml is stored and to run wflow model
     river_name: str
         Name of directory to where the river information files are stored
     forcing_path: Path
@@ -60,6 +58,8 @@ class WflowSimulationsGenerator:
         Format is [xmin, ymin, xmax, ymax]
     num_threads : int
         Number of threads that controls how fast the wflow model can run
+    scenario_and_id_folder : Path
+        Directory to the scenario folder name with ID
     polygons : str = None
         Name of polygon file that is used to change the landcover information.
         This polygon dataframe has 'landcover' column with new values
@@ -73,14 +73,13 @@ class WflowSimulationsGenerator:
     def __init__(
         self,
         hydromt_path: Path,
-        wflow_model_path: Path,
         river_name: str,
         forcing_path: Path,
         start_time: datetime,
         end_time: datetime,
         flood_aoi_boundary: list,
         num_threads: int,
-        scenario_and_id_folder: str,
+        scenario_and_id_folder: Path,
         polygons: str = None,
         resolution: float = 0.00045,
         landcover: str = 'globcover'
@@ -92,8 +91,6 @@ class WflowSimulationsGenerator:
         ----------
         hydromt_path: Path
             A directory to where all necessary files are stored to run wflow model
-        wflow_model_path: Path
-            A directory to where the data_catalog.yml is stored and to run wflow model
         river_name: str
             Name of directory to where the river information files are stored
         forcing_path: Path
@@ -111,8 +108,8 @@ class WflowSimulationsGenerator:
             Format is [xmin, ymin, xmax, ymax]
         num_threads : int
             Number of threads that controls how fast the wflow model can run
-        scenario_and_id_folder : str
-            The new scenario ID for scenario
+        scenario_and_id_folder : Path
+            Directory to the new scenario ID for scenario
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -123,7 +120,6 @@ class WflowSimulationsGenerator:
             Name of land cover dataset. Default is 'globcover'
         """
         self.hydromt_path = hydromt_path
-        self.wflow_model_path = wflow_model_path
         self.river_name = river_name
         self.forcing_path = forcing_path
         self.start_time = start_time
@@ -133,6 +129,8 @@ class WflowSimulationsGenerator:
 
         self.num_threads = num_threads
         self.scenario_and_id_folder = scenario_and_id_folder
+        # Set up hydrological process path
+        self.hydrological_process_path = self.scenario_and_id_folder / "hydrological_process"
 
         self.polygons = polygons
         self.resolution = resolution
@@ -143,7 +141,6 @@ class WflowSimulationsGenerator:
         # Generate data_catalog.yml
         data_catalog = DataCatalogGenerator(
             self.hydromt_path,
-            self.wflow_model_path,
             self.forcing_path,
             self.river_name,
             self.scenario_and_id_folder,
@@ -157,7 +154,6 @@ class WflowSimulationsGenerator:
             self.start_time,
             self.end_time,
             self.resolution,
-            self.wflow_model_path,
             self.hydromt_path,
             self.river_name,
             self.forcing_path,
@@ -170,29 +166,31 @@ class WflowSimulationsGenerator:
     def preprocessing_command(self) -> None:
         """Set up preprocessing command and preprocess data for wflow model"""
         log.info("Preprocessing data for wflow model")
+
+        # Wflow result folder
+        output_folder_name = self.hydrological_process_path / "wflow_test_full"
+
+        # Find wflow build file
+        wflow_build_file = self.hydrological_process_path / "wflow_build.yml"
+
+        # Find data catalog file
+        data_catalog_file = self.hydrological_process_path / "data_catalog.yml"
+
         if self.polygons is not None:
-            # Create folder name
-            output_foldername = "wflow_test_full"
-
-            # Find wflow build file
-            wflow_build_file = self.wflow_model_path / "wflow_build.yml"
-
-            # Find data catalog file
-            data_catalog_file = self.wflow_model_path / "data_catalog.yml"
-
+            # Set up command
             preprocessing_command_list = [
                 "hydromt", "update", "wflow",
-                str(self.wflow_model_path.parents[1] / r"original_scenario/hydrological_process/wflow_test_full"),
-                "-o", str(self.wflow_model_path / output_foldername),
-                "-i", str(self.wflow_model_path / wflow_build_file),
-                "-d", str(self.wflow_model_path / data_catalog_file),
+                str(self.scenario_and_id_folder.parent / r"original_scenario/hydrological_process/wflow_test_full"),
+                "-o", str(output_folder_name),
+                "-i", str(wflow_build_file),
+                "-d", str(data_catalog_file),
                 "-vv"
             ]
 
         else:
             # Get subbasin river outlet
             subbasin_river_outlet = gpd.read_file(
-                self.wflow_model_path.parents[1] / 'terrain/river_outlet.shp'
+                self.scenario_and_id_folder.parent / 'terrain/river_outlet.shp'
             )
 
             # Get subbasin river outlet coordinates
@@ -212,19 +210,18 @@ class WflowSimulationsGenerator:
                 "bbox": self.flood_aoi_boundary
             })
 
-            wflow_test_full_dir = self.wflow_model_path / "wflow_test_full"
             # Force override is turned off for performance, so we must manually remove the run_default dir if required.
-            run_default_dir = wflow_test_full_dir / "run_default"
+            run_default_dir = output_folder_name / "run_default"
             if run_default_dir.exists():
                 shutil.rmtree(run_default_dir)
 
             # Set up command for preprocessing
             preprocessing_command_list = [
                 "hydromt", "build", "wflow",
-                str(wflow_test_full_dir),
+                str(output_folder_name),
                 "-r", region_information,
-                "-i", str(self.wflow_model_path / "wflow_build.yml"),
-                "-d", str(self.wflow_model_path / "data_catalog.yml"),
+                "-i", str(wflow_build_file),
+                "-d", str(data_catalog_file),
                 "-vv"
             ]
 
@@ -236,20 +233,11 @@ class WflowSimulationsGenerator:
 
     def simulation_command(self) -> None:
         """Set up simulation command and generate simulation"""
-        # Set up path to wflow simulation folder
-        if self.polygons is not None:
-            # Set up folder
-            output_foldername = self.wflow_model_path / "wflow_test_full"
+        # Set up output folder name
+        output_folder_name = self.hydrological_process_path / "wflow_test_full"
 
-            # Set up wflow simulation path
-            wflow_simulation_path = self.wflow_model_path / output_foldername
-
-            # Create folder name
-            output_log = "wflow_run.log"
-
-        else:
-            wflow_simulation_path = self.wflow_model_path / "wflow_test_full"
-            output_log = "wflow_run.log"
+        # Create folder name
+        output_log = "wflow_run.log"
 
         log.info("Running wflow simulation.")
         # Set up simulation command
@@ -257,11 +245,11 @@ class WflowSimulationsGenerator:
             "julia",
             "-t", str(self.num_threads),
             "-e",
-            f'cd("{wflow_simulation_path.as_posix()}"); using Wflow; Wflow.run("wflow_sbm.toml")'
+            f'cd("{output_folder_name.as_posix()}"); using Wflow; Wflow.run("wflow_sbm.toml")'
         ]
 
         # Run the command and write output to log
-        with open(wflow_simulation_path / output_log, "w", encoding="utf-8") as f:
+        with open(output_folder_name / output_log, "w", encoding="utf-8") as f:
             subprocess.check_call(
                 simulation_command,
                 stdout=f,

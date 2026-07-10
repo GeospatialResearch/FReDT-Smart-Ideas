@@ -44,7 +44,6 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
-        scenario_and_id_folder: str,
         polygons: str = None,
         vectors: pd.DataFrame = None
     ) -> None:
@@ -63,8 +62,6 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details.
-        scenario_and_id_folder: str
-            The scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -78,7 +75,6 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
             hydromt_path,
             terrain_bounding_box,
             start_time, end_time,
-            scenario_and_id_folder,
             polygons,
             vectors
         )

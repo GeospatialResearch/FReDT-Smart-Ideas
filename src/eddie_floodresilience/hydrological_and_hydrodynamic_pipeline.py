@@ -184,7 +184,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
     def reserve_scenario_id(self) -> int:
         """
-        Generates and reserves scenario ID in the database.
+        Generate and reserve scenario ID in the database.
+
         Returns
         -------
         int
@@ -209,14 +210,14 @@ class HydrologicalAndHydrodynamicPipeline:
 
         return scenario_id
 
-    def scenario_folder_generator(self) -> str:
+    def scenario_folder_generator(self) -> Path:
         """
         Generate scenario folder based on solutions
 
         Returns
         -------
-        str
-            The scenario folder name with ID
+        Path
+            Directory to the scenario folder name with ID
         """
         # Set up log message
         if self.polygons is None and self.vectors is None:
@@ -229,43 +230,53 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Choose scenario folder name with ID
         if self.polygons is not None and self.vectors is not None:
-            scenario_and_id_folder = f"scenario_landcover_elevation_{scenario_id}"
+            scenario_and_id_name = f"scenario_landcover_elevation_{scenario_id}"
+
+            # Create hydrological process path
+            hydrological_process_path = self.hydro_combination_path / scenario_and_id_name / 'hydrological_process'
+            hydrological_process_path.mkdir(parents=True, exist_ok=True)
+
         elif self.polygons is not None:
-            scenario_and_id_folder = f"scenario_landcover_{scenario_id}"
+            scenario_and_id_name = f"scenario_landcover_{scenario_id}"
+
         elif self.vectors is not None:
-            scenario_and_id_folder = f"scenario_elevation_{scenario_id}"
+            scenario_and_id_name = f"scenario_elevation_{scenario_id}"
+
         else:
-            scenario_and_id_folder = "original_scenario"
+            scenario_and_id_name = "original_scenario"
+
+            # Create hydrological process path
+            hydrological_process_path = self.hydro_combination_path / scenario_and_id_name / 'hydrological_process'
+            hydrological_process_path.mkdir(parents=True, exist_ok=True)
+
+        # Create hydrological process path
+        hydrodynamic_process_path = self.hydro_combination_path / scenario_and_id_name / 'hydrodynamic_process'
+        hydrodynamic_process_path.mkdir(parents=True, exist_ok=True)
+
+        # Set up scenario
+        scenario_and_id_folder = self.hydro_combination_path / scenario_and_id_name
 
         return scenario_and_id_folder
 
     def total_solutions(
             self,
-            scenario_and_id_folder: str
+            scenario_and_id_folder: Path
     ) -> None:
         """
         Develop solutions for flood risk resilience
 
         Parameters
         ----------
-        scenario_and_id_folder : str
-            The scenario folder name with ID
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
         """
         # Set up log message
         log.info("Starting total solutions")
 
         if self.polygons is not None and self.vectors is not None:
-            # Set up hydrological folder
-            hydrological_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrological_process'
-            hydrological_process_folder.mkdir(parents=True, exist_ok=True)
-
-            # Set up hydrodynamic folder
-            hydrodynamic_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrodynamic_process'
-            hydrodynamic_process_folder.mkdir(parents=True, exist_ok=True)
 
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
-                hydrological_process_folder,
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
@@ -275,7 +286,6 @@ class HydrologicalAndHydrodynamicPipeline:
 
             # Elevation solution
             elevation_solution = ElevationSolution(
-                hydrodynamic_process_folder,
                 self.flood_model,
                 scenario_and_id_folder,
                 self.vectors
@@ -283,13 +293,9 @@ class HydrologicalAndHydrodynamicPipeline:
             elevation_solution.apply_elevation_solution()
 
         elif self.polygons is not None:
-            # Set up hydrological folder
-            hydrological_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrological_process'
-            hydrological_process_folder.mkdir(parents=True, exist_ok=True)
 
             # Land cover/natural solution
             landcover_solution = LandCoverSolution(
-                hydrological_process_folder,
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
@@ -298,13 +304,9 @@ class HydrologicalAndHydrodynamicPipeline:
             self.landcover = landcover_solution.apply_landcover_solution().name
 
         elif self.vectors is not None:
-            # Set up hydrodynamic folder
-            hydrodynamic_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrodynamic_process'
-            hydrodynamic_process_folder.mkdir(parents=True, exist_ok=True)
 
             # Elevation solution
             elevation_solution = ElevationSolution(
-                hydrodynamic_process_folder,
                 self.flood_model,
                 scenario_and_id_folder,
                 self.vectors
@@ -334,26 +336,21 @@ class HydrologicalAndHydrodynamicPipeline:
 
     def wflow_data_pipeline(
             self,
-            scenario_and_id_folder: str
+            scenario_and_id_folder: Path
     ) -> None:
         """
         Generate wflow model data for flood model
 
         Parameters
         ----------
-        scenario_and_id_folder : str
-            The scenario folder name with ID
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
         """
         log.info("Starting wflow data pipeline")
-
-        # Set up hydrological folder
-        hydrological_process_folder = self.hydro_combination_path / f'{scenario_and_id_folder}/hydrological_process'
-        hydrological_process_folder.mkdir(parents=True, exist_ok=True)
 
         # Set up wflow model data generation system
         wflow_data = WflowSimulationsGenerator(
             self.hydromt_path,
-            hydrological_process_folder,
             self.river_name,
             self.forcing_path,
             self.start_time,
@@ -389,15 +386,15 @@ class HydrologicalAndHydrodynamicPipeline:
 
     def flood_data_pipeline(
             self,
-            scenario_and_id_folder: str
+            scenario_and_id_folder: Path
     ) -> int:
         """
         Generate flood model data.
 
         Parameters
         ----------
-        scenario_and_id_folder : str
-            The scenario folder name with ID
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
 
         Returns
         -------
@@ -406,16 +403,9 @@ class HydrologicalAndHydrodynamicPipeline:
         """
         log.info("Starting flood model pipeline")
 
-        # Set up hydrodynamic folder
-        hydrological_process_folder = fr'{scenario_and_id_folder}/hydrological_process'
-        hydrodynamic_process_folder = self.hydro_combination_path / fr'{scenario_and_id_folder}/hydrodynamic_process'
-        hydrodynamic_process_folder.mkdir(parents=True, exist_ok=True)
-
         # Set up flood model data generation system
         if self.flood_model == 'lisflood-fp':
             flood_data = LisFloodModelSimulationsGenerator(
-                hydrodynamic_process_folder,
-                hydrological_process_folder,
                 self.hydromt_path,
                 self.river_name,
                 self.precipitation_path,
@@ -430,9 +420,8 @@ class HydrologicalAndHydrodynamicPipeline:
             )
 
         else:
+            # pylint: disable=E1121
             flood_data = BGFloodModelSimulationsGenerator(
-                self.hydro_combination_path,
-                self.hydro_combination_path,
                 self.hydromt_path,
                 self.river_name,
                 self.precipitation_path,
@@ -538,7 +527,7 @@ def otautau(landcover_scenario_gdf: gpd.GeoDataFrame | None = None) -> int:
     vectors = None  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'lcdb_mapping'
+    landcover = 'lcdb'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -654,7 +643,7 @@ def mataura(
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'lcdb_mapping'
+    landcover = 'lcdb'
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -818,14 +807,14 @@ def riverton(
 
 
 if __name__ == '__main__':
-    # # # Whirinaki
-    # gdf = gpd.read_file(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
-    # )
-    # df = pd.read_csv(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
-    # )
-    whirinaki(None, None)
+    # Whirinaki
+    gdf = gpd.read_file(
+        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
+    )
+    df = pd.read_csv(
+        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
+    )
+    whirinaki(gdf, df)
 
     # # Riverton
     # riverton(None, None)

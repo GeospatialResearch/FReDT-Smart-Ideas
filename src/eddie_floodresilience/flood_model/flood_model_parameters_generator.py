@@ -41,7 +41,6 @@ class FloodModelParametersGenerator(ABC):
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
-        scenario_and_id_folder: str,
         polygons: str = None,
         vectors: pd.DataFrame = None
     ) -> None:
@@ -60,8 +59,6 @@ class FloodModelParametersGenerator(ABC):
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details.
-        scenario_and_id_folder : str
-            The scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -75,7 +72,6 @@ class FloodModelParametersGenerator(ABC):
         self.terrain_bounding_box = terrain_bounding_box
         self.start_time = start_time
         self.end_time = end_time
-        self.scenario_and_id_folder = scenario_and_id_folder
         self.polygons = polygons
         self.vectors = vectors
         self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")

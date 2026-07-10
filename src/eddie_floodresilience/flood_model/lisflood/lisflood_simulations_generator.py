@@ -16,11 +16,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Runs LISFLOOD-FP flood model"""
-import shutil
-from datetime import datetime
-from pathlib import Path
-import logging
-import platform
+
 from datetime import datetime
 from pathlib import Path
 import logging
@@ -101,7 +97,6 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
-            self.scenario_and_id_folder,
             self.polygons,
             self.vectors
         )
@@ -182,46 +177,15 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         # 2. Polygon=None, vector!=None
         # 3. Polygon!=None, vector=None
         # 4. Polygon!=None, vector!=None
-        # This 'if' includes 1
-        if self.polygons is None and self.vectors is None:
-            # Generate terrain data for flood model
-            self.terrain_data_for_flood_model_generator()
-
-            # Generate injection points for flood model
-            self.injection_points_for_flood_model_generator()
-
-            # # Generate precipitation data for flood model
-            # self.precipitation_data_for_flood_model_generator()
-
-            # Generate parameter files for flood model
-            output_dir = self.parameter_files_for_flood_model_generator()
-
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(output_dir)
-
-        # This 'elif' includes 3 and 4
-        elif self.polygons is not None or self.vectors is None:
-            # Generate terrain data for flood model
-            self.terrain_data_for_flood_model_generator()
-
-            # Generate injection points for flood model
-            self.injection_points_for_flood_model_generator()
-
-            # Generate parameter files for flood model
-            output_dir = self.parameter_files_for_flood_model_generator()
-
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(output_dir)
-
-        # This 'else' includes 2
-        else:
+        # This includes case 2
+        if self.vectors is not None:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
 
             # Set up path to copy data from original scenario to the current scenario
             # This will be adjusted in the future to copy not only from the original scenario
             # Set up folders
-            original_hydrological_folder = "original_scenario/hydrodynamic_process"
+            original_hydrological_folder = r"original_scenario/hydrodynamic_process"
             scenario_hydrological_folder = f"{self.scenario_and_id_folder}/hydrodynamic_process"
             # Set up directories
             original_dir = self.flood_model_path.parents[1] / original_hydrological_folder
@@ -237,6 +201,23 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                     original_file_dir,
                     scenario_dir / original_file_dir.name
                 )
+
+            # Generate parameter files for flood model
+            output_dir = self.parameter_files_for_flood_model_generator()
+
+            # Generate simulations by running flood model
+            max_gtiff = self.flood_model_simulations_generator(output_dir)
+
+        # This includes the rest
+        else:
+            # Generate terrain data for flood model
+            self.terrain_data_for_flood_model_generator()
+
+            # Generate injection points for flood model
+            self.injection_points_for_flood_model_generator()
+
+            # # Generate precipitation data for flood model
+            # self.precipitation_data_for_flood_model_generator()
 
             # Generate parameter files for flood model
             output_dir = self.parameter_files_for_flood_model_generator()

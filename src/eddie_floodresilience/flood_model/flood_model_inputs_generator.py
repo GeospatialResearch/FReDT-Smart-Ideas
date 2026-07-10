@@ -608,12 +608,10 @@ class InjectionPointsFloodModelGenerator:
 
     def __init__(
         self,
-        flood_model_path: Path,
-        catchment_model_folder: str,
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
-        scenario_and_id_folder: str,
+        scenario_and_id_folder: Path,
         polygons: str = None,
         crs: int = 2193
     ) -> None:
@@ -622,30 +620,27 @@ class InjectionPointsFloodModelGenerator:
 
         Parameters
         ----------
-        flood_model_path : Path
-            Directory to folder storing flood model data
-        catchment_model_folder : str
-            Name of folder storing catchment model results
         terrain_bounding_box : Polygon
             Bounding's box of terrain data
         start_time : datetime
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details. Format is Dataframe that contains rivers' flow data at injection points
-        scenario_and_id_folder : str
-            The scenario folder name with ID
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         """  # pylint: disable=too-many-instance-attributes
-        self.flood_model_path = flood_model_path
-        self.catchment_model_folder = catchment_model_folder
         self.terrain_bounding_box = terrain_bounding_box
         self.start_time = start_time
         self.end_time = end_time
         self.scenario_and_id_folder = scenario_and_id_folder
+        # Set up
+        self.flood_model_path = self.scenario_and_id_folder / "hydrodynamic_process"
+        self.catchment_model_path = self.scenario_and_id_folder / "hydrological_process"
         self.polygons = polygons
         self.crs = crs
 
@@ -662,7 +657,7 @@ class InjectionPointsFloodModelGenerator:
 
         # Get river path from wflow model folder
         river_folder = r"wflow_test_full/staticgeoms/rivers.geojson"
-        river_path = self.flood_model_path.parents[1] / self.catchment_model_folder / river_folder
+        river_path = self.catchment_model_path / river_folder
 
         # Read river file
         rivers = gpd.read_file(river_path)
@@ -856,7 +851,7 @@ class InjectionPointsFloodModelGenerator:
         log.info("Extracting rivers' flow from catchment model outputs.")
         # Set path to rivers' data
         rivers_data_folder = r"wflow_test_full/run_default/output.nc"
-        rivers_data_path = self.flood_model_path.parents[1] / self.catchment_model_folder / rivers_data_folder
+        rivers_data_path = self.catchment_model_path / rivers_data_folder
 
         # Read rives' data from catchment model output
         with xr.open_dataset(rivers_data_path) as rivers_data:
