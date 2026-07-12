@@ -186,7 +186,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # This will be adjusted in the future to copy not only from the original scenario
             # Set up folders
             original_hydrological_folder = r"original_scenario/hydrodynamic_process"
-            scenario_hydrological_folder = f"{self.scenario_and_id_folder}/hydrodynamic_process"
+            scenario_hydrological_folder = self.scenario_and_id_folder /hydrodynamic_process
             # Set up directories
             original_dir = self.flood_model_path.parents[1] / original_hydrological_folder
             scenario_dir = self.flood_model_path.parents[1] / scenario_hydrological_folder
