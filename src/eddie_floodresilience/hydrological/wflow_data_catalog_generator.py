@@ -16,15 +16,15 @@ setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
-class DataCatalogGenerator():
+class DataCatalogGenerator:
     """This class is to generate data_catalog.yml for preprocessing data for wflow"""
 
     def __init__(
         self,
         hydromt_path: Path,
-        wflow_model_path: Path,
         forcing_path: Path,
         river_name: str,
+        scenario_and_id_folder: Path,
         polygons: str = None,
         landcover: str = 'globcover'
     ) -> None:
@@ -37,12 +37,12 @@ class DataCatalogGenerator():
         ----------
         hydromt_path: Path
             A directory to where all necessary files are stored to run wflow model
-        wflow_model_path: Path
-            A directory to where the data_catalog.yml is stored and to run wflow model
         forcing_path: Path
             A directory to where the forcing files are stored
         river_name: str
             Name of directory to where the river information files are stored
+        scenario_and_id_folder: Path
+            Directory to the scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -50,9 +50,9 @@ class DataCatalogGenerator():
             Name of land cover. Default is 'globcover'
         """
         self.hydromt_path = hydromt_path
-        self.wflow_model_path = wflow_model_path
         self.forcing_path = forcing_path
         self.river_name = river_name
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.polygons = polygons
         self.landcover = landcover
 
@@ -158,9 +158,19 @@ class DataCatalogGenerator():
         landcover : dict
             A dictionary contains information of landcover
         """
-        # Polygons for land cover solutions
+        if self.landcover.startswith('globcover'):
+            landcover_mapping_type = 'globcover'
+        else:
+            landcover_mapping_type = 'lcdb'
+
+        # Check landcover path
         is_baseline = self.polygons is None
-        landcover_file = find_landcover_file(self.wflow_model_path, self.hydromt_path, self.landcover, is_baseline)
+        landcover_file = find_landcover_file(
+            self.hydromt_path,
+            landcover_mapping_type,
+            self.scenario_and_id_folder,
+            is_baseline
+        )
 
         # At the moment the name globcover and other information is kept fixed for basic automation,
         # it might be changed in the future.
@@ -238,7 +248,7 @@ class DataCatalogGenerator():
                     "paper_ref": "Yamazaki et al. (2019)"
                 },
                 "version": 1.0,
-                "path": f"{self.wflow_model_path / 'merit_hydro/{variable}.tif'}"
+                "path": str(self.scenario_and_id_folder.parent / r'terrain/merit_hydro/{variable}.tif')
             }
         }
 
@@ -268,7 +278,7 @@ class DataCatalogGenerator():
                     "paper_ref": "Eilander et al. (in review)",
                     "source_license": "CC-BY-NC 4.0"
                 },
-                "path": f"{self.wflow_model_path / 'merit_hydro_index.gpkg'}"
+                "path": str(self.scenario_and_id_folder.parent / r'terrain/merit_hydro_index.gpkg')
             }
         }
 
@@ -299,7 +309,7 @@ class DataCatalogGenerator():
                     "processing_notes": "hydrography/rivers_lin2019/README"
                 },
                 "version": 1,
-                "path": f"{self.wflow_model_path / 'rivers_lin2019_v1.gpkg'}"
+                "path": str(self.scenario_and_id_folder.parent / r'terrain/rivers_lin2019_v1.gpkg')
             }
         }
 
@@ -438,21 +448,8 @@ class DataCatalogGenerator():
         data_catalog : dict
             A dictionary contains information of all sections
         """
-        if self.polygons is not None:
-            # Find existing file
-            existing_file = sorted(
-                self.wflow_model_path.glob("data_catalog_landcover_*.yml")
-            )
-
-            # Set ID for file
-            number = len(existing_file) + 1
-
-            # Create file name
-            output_filename = self.wflow_model_path / f"data_catalog_landcover_{number:03d}.yml"
-
-        else:
-            # Set up output filename
-            output_filename = self.wflow_model_path / "data_catalog.yml"
+        # Set up output filename
+        output_filename = self.scenario_and_id_folder / r"hydrological_process/data_catalog.yml"
 
         # Write out data_catalog.yml
         with open(output_filename, "w", encoding="utf-8") as output_file:
@@ -473,9 +470,9 @@ class DataCatalogGenerator():
 
 
 def find_landcover_file(
-    wflow_model_path: Path,
     hydromt_path: Path,
-    landcover_name: str,
+    landcover_mapping_type: str,
+    scenario_and_id_folder: Path,
     is_baseline: bool = True
 ) -> Path:
     r"""
@@ -483,12 +480,12 @@ def find_landcover_file(
 
     Parameters
     ----------
-    wflow_model_path : Path
-        A directory to where the data_catalog.yml is stored for WFlow
     hydromt_path : Path
         A directory to where all necessary files are stored to run wflow model
-    landcover_name : str
-        A string to identify the landcover. Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
+    landcover_mapping_type : str
+        Name of landcover dataset - globcover or lcdb
+    scenario_and_id_folder : Path
+        Directory to the scenario folder name with ID
     is_baseline : bool
         Whether this scenario is a baseline scenario (True) or has modified landcover (False)
 
@@ -500,19 +497,9 @@ def find_landcover_file(
     """
     # Baselines use original files
     if is_baseline:
-        if landcover_name == 'globcover':
-            landcover_file = hydromt_path / Path("original_globcover.tif")
-        else:
-            landcover_file = hydromt_path / Path('lcdb_2023_50m_fixed_nodata.tif')
+        landcover_file = hydromt_path / f'original_{landcover_mapping_type}.tif'
     else:
-        # non-baselines use new modified files
-        if landcover_name.startswith('globcover'):
-            # globcover must be written to wflow_model_path not hydromt_path in docker due to permissions.
-            # We find the correct version based on the landcover file name
-            landcover_file = (wflow_model_path / "globcover" / landcover_name).resolve()
-        else:
-            landcover_file = max(
-                Path(hydromt_path).glob("lcdb_*.tif"),
-                default=Path(hydromt_path) / "lcdb_001.tif"
-            )
+        landcover_filename = f"{landcover_mapping_type}_{scenario_and_id_folder.name}.tif"
+        landcover_file = scenario_and_id_folder / 'hydrological_process' / landcover_mapping_type / landcover_filename
+
     return landcover_file

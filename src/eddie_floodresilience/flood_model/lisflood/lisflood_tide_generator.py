@@ -70,7 +70,7 @@ class TidalDataGenerator:
 
         # River outlet
         self.river_outlet = gpd.read_file(
-            self.flood_model_path / 'river_outlet.shp'
+            self.flood_model_path.parents[1] / 'terrain/river_outlet.shp'
         )
         self.river_outlet_geom = self.river_outlet.geometry.iloc[0]
 

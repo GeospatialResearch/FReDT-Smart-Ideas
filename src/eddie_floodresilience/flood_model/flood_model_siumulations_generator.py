@@ -51,8 +51,6 @@ class BaseFloodModelSimulationsGenerator(ABC):
 
     def __init__(
         self,
-        flood_model_path: Path,
-        catchment_model_path: Path,
         hydromt_path: Path,
         river_name: str,
         precipitation_path: Path,
@@ -60,19 +58,16 @@ class BaseFloodModelSimulationsGenerator(ABC):
         adjust_manning: bool,
         start_time: datetime,
         end_time: datetime,
+        scenario_and_id_folder: Path,
         crs: int = 2193,
         polygons: str = None,
-        vectors: str = None
+        vectors: pd.DataFrame = None
     ) -> None:
         """
         Generate flood model simulations
 
         Parameters
         ----------
-        flood_model_path : Path
-            Directory to folder storing terrain data
-        catchment_model_path : Path
-            Directory to folder storing catchment model results
         hydromt_path : Path
             A directory to where all necessary files are stored to run wflow model
         river_name: str
@@ -89,18 +84,18 @@ class BaseFloodModelSimulationsGenerator(ABC):
             Starting time of the flood event
         end_time: datetime
             Ending time of the flood event
+        scenario_and_id_folder: Path
+            Directory to the scenario folder name with ID
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
         """
-        self.flood_model_path = flood_model_path
-        self.catchment_model_path = catchment_model_path
         self.hydromt_path = hydromt_path
         self.river_name = river_name
         self.precipitation_path = precipitation_path
@@ -108,6 +103,9 @@ class BaseFloodModelSimulationsGenerator(ABC):
         self.adjust_manning = adjust_manning
         self.start_time = start_time
         self.end_time = end_time
+        self.scenario_and_id_folder = scenario_and_id_folder
+        # Set up hydrodynamic process folder
+        self.flood_model_path = self.scenario_and_id_folder / "hydrodynamic_process"
         self.crs = crs
         self.polygons = polygons
         self.vectors = vectors
@@ -130,11 +128,10 @@ class BaseFloodModelSimulationsGenerator(ABC):
         """Generate injection points for flood model"""
         # Call out class used to generate injection points for flood model
         injection_points_for_flood_model = InjectionPointsFloodModelGenerator(
-            self.flood_model_path,
-            self.catchment_model_path,
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
+            self.scenario_and_id_folder,
             self.polygons,
             self.crs
         )

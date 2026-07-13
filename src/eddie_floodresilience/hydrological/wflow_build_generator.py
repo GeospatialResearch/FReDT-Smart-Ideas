@@ -36,14 +36,14 @@ class WflowBuildGenerator:
     resolution : float
         Resolution for flow data.
         Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
-    wflow_model_path: Path
-        A directory to where the data_catalog.yml is stored and to run wflow model
     hydromt_path: Path
         A directory to where all necessary files are stored to run wflow model
     river_name: str
         Name of directory to where the river information files are stored
     forcing_path: Path
         A directory to where the forcing files are stored
+    scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
     polygons : str = None
         Name of polygon file that is used to change the landcover information.
         This polygon dataframe has 'landcover' column with new values
@@ -56,10 +56,10 @@ class WflowBuildGenerator:
         start_time: datetime,
         end_time: datetime,
         resolution: float,
-        wflow_model_path: Path,
         hydromt_path: Path,
         river_name: str,
         forcing_path: Path,
+        scenario_and_id_folder: Path,
         polygons: str = None,
         landcover: str = 'globcover'
     ) -> None:
@@ -81,14 +81,14 @@ class WflowBuildGenerator:
         resolution : float
             Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
-        wflow_model_path: Path
-            A directory to where the data_catalog.yml is stored and to run wflow model
         hydromt_path: Path
             A directory to where all necessary files are stored to run wflow model
         river_name: str
             Name of directory to where the river information files are stored
         forcing_path: Path
             A directory to where the forcing files are stored
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -98,10 +98,10 @@ class WflowBuildGenerator:
         self.start_time = start_time - relativedelta(months=2)
         self.end_time = end_time
         self.resolution = resolution
-        self.wflow_model_path = wflow_model_path
         self.hydromt_path = hydromt_path
         self.river_name = river_name
         self.forcing_path = forcing_path
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.polygons = polygons
         self.landcover = landcover
 
@@ -132,13 +132,16 @@ class WflowBuildGenerator:
                     }
                 }
             else:
+                forcing_folder = r"hydrological_process/wflow_test_full/era5_hourly_new_*.nc"
+                forcing_path = self.scenario_and_id_folder / forcing_folder
+
                 # Generate configuration section
                 config = {
                     "setup_config": {
                         "starttime": self.start_time,
                         "endtime": self.end_time,
                         "timestepsecs": 3600,
-                        "input.path_forcing": str(self.wflow_model_path / "wflow_test_full" / "era5_hourly_new_*.nc")
+                        "input.path_forcing": str(forcing_path)
                     }
                 }
 
@@ -254,7 +257,7 @@ class WflowBuildGenerator:
             A dictionary that contains landcover's section
         """
         if self.landcover.startswith("globcover"):
-            landcover_mapping = "globcover_mapping_default"
+            landcover_mapping = str(self.hydromt_path / "globcover_mapping_modified.csv")
         else:
             landcover_mapping = str(self.hydromt_path / "lcdb_mapping.csv")
 
@@ -277,13 +280,19 @@ class WflowBuildGenerator:
         lai : dict
             A dictionary that contains lai's section
         """
+        # Set up lulc_zero_classes
+        if self.landcover.startswith("globcover"):
+            lulc_zero_classes = [200, 210, 220]
+        else:
+            lulc_zero_classes = [14, 20, 21, 22]
+
         # Generate lai section
         lai = {
             "setup_laimaps": {
                 "lai_fn": "modis_lai",
                 "lulc_fn": "landcover",
                 "lulc_sampling_method": "any",
-                "lulc_zero_classes": [200, 210, 220],
+                "lulc_zero_classes": lulc_zero_classes,
                 "buffer": 2
             }
         }
@@ -503,21 +512,8 @@ class WflowBuildGenerator:
         wflow_build : dict
             A dictionary contains information of all sections
         """
-        if self.polygons is not None:
-            # Find existing file
-            existing_file = sorted(
-                self.wflow_model_path.glob("wflow_build_landcover_*.yml")
-            )
-
-            # Set ID for file
-            number = len(existing_file) + 1
-
-            # Create file name
-            output_filename = self.wflow_model_path / f"wflow_build_landcover_{number:03d}.yml"
-
-        else:
-            # Set up output filename
-            output_filename = self.wflow_model_path / "wflow_build.yml"
+        # Set up output filename
+        output_filename = self.scenario_and_id_folder / "hydrological_process/wflow_build.yml"
 
         log.info(f"Writing out {output_filename}")
         # Generate content for wflow_build.yml

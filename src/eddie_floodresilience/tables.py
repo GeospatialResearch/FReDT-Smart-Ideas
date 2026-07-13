@@ -161,3 +161,27 @@ class BuildingFloodStatus(Base):
     building_outline_id = Column(Integer, comment="The building outline id matching from nz_building_outlines table")
     is_flooded = Column(Boolean, comment="If the building is flooded or not")
     flood_model_id = Column(Integer)
+
+
+class PipelineOutput(Base):
+    """
+    Class for writing details with ID for each pipeline run
+
+    Attributes
+    ----------
+    __tablename__ : str
+        Name of the database table.
+    unique_id : int
+        Unique identifier for each entry (primary key).
+    folder_name : str
+        Name of folder
+    created_at: str
+        Time the pipeline is run
+    geometry: str
+    """  # pylint: disable=too-few-public-methods
+
+    __tablename__ = "pipeline_output"
+    unique_id = Column(Integer, primary_key=True, autoincrement=True)
+    folder_name = Column(String, comment="name of the pipeline output folder", nullable=True)
+    created_at = Column(DateTime(timezone=True), default=datetime.now(timezone.utc), comment="output created datetime")
+    geometry = Column(Geometry(srid=2193))

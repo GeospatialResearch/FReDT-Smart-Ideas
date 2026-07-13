@@ -39,6 +39,9 @@ class EnvVariable(EnvVarBase):  # pylint: disable=too-few-public-methods
     HYDRO_COMBINATION_PATH_RIVERTON = (
         pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "riverton"
     ).resolve()
+    HYDRO_COMBINATION_PATH_OTAUTAU = (
+        pathlib.Path(EnvVarBase._get_env_variable("HYDRO_COMBINATION_PATH")) / "otautau"
+    ).resolve()
     HYDROMT_PATH = pathlib.Path(EnvVarBase._get_env_variable("HYDROMT_PATH")).resolve()
     PRECIPITATION_PATH = pathlib.Path(EnvVarBase._get_env_variable("PRECIPITATION_PATH")).resolve()
 

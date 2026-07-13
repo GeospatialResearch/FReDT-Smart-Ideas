@@ -44,7 +44,7 @@ class TerrainGenerator:
         river_name: str,
         aoi_boundary: list,
         polygons: str = None,
-        vectors: str = None,
+        vectors: pd.DataFrame = None,
         crs: int = 2193
     ) -> None:
         """
@@ -64,7 +64,7 @@ class TerrainGenerator:
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
@@ -168,7 +168,7 @@ class TerrainGenerator:
             self.flood_model_path / "8m_geofabric_clipped.nc"
         )
 
-    def terrain_data_generator(self) -> None:
+    def terrain_data_generator(self) -> tuple[Polygon, xr.Dataset]:
         """
         Generate and write out terrain data after formatting
 
@@ -188,9 +188,9 @@ class TerrainGenerator:
         # Extract terrain bounding box
         terrain_bounding_box = self.extract_terrain_bounding_box(terrain_crs_clipped)
 
-        if self.polygons is None and self.vectors is None:
-            # Write out clipped terrain data
-            self.write_out_terrain_data(terrain_crs_clipped)
+        # Write out clipped terrain data
+        # Generate this data at this moment no matter polygon and vector are available or not
+        self.write_out_terrain_data(terrain_crs_clipped)
 
         return terrain_bounding_box, terrain_crs_clipped
 
@@ -604,15 +604,14 @@ class InjectionPointsAndStreamlinesAligner:
 
 
 class InjectionPointsFloodModelGenerator:
-    """This class is to generate injection points for flood model"""
+    """This class is to generate injection points for flood model"""  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
-        flood_model_path: Path,
-        catchment_model_path: Path,
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
+        scenario_and_id_folder: Path,
         polygons: str = None,
         crs: int = 2193
     ) -> None:
@@ -621,27 +620,27 @@ class InjectionPointsFloodModelGenerator:
 
         Parameters
         ----------
-        flood_model_path : Path
-            Directory to folder storing flood model data
-        catchment_model_path : Path
-            Directory to folder storing catchment model data
         terrain_bounding_box : Polygon
             Bounding's box of terrain data
         start_time : datetime
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details. Format is Dataframe that contains rivers' flow data at injection points
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
-        """
-        self.flood_model_path = flood_model_path
-        self.catchment_model_path = catchment_model_path
+        """  # pylint: disable=too-many-instance-attributes
         self.terrain_bounding_box = terrain_bounding_box
         self.start_time = start_time
         self.end_time = end_time
+        self.scenario_and_id_folder = scenario_and_id_folder
+        # Set up
+        self.flood_model_path = self.scenario_and_id_folder / "hydrodynamic_process"
+        self.catchment_model_path = self.scenario_and_id_folder / "hydrological_process"
         self.polygons = polygons
         self.crs = crs
 
@@ -655,16 +654,10 @@ class InjectionPointsFloodModelGenerator:
             River geodataframe with new crs (2193 for NZTM)
         """
         log.info("Reprojecting rivers dataframe.")
-        if self.polygons is not None:
-            wflow_test_full_folder = str(max(
-                Path(self.catchment_model_path).glob("wflow_test_full_landcover_*"),
-                default=Path(self.catchment_model_path) / "wflow_test_full_landcover_001"
-            ))
-        else:
-            wflow_test_full_folder = "wflow_test_full"
 
         # Get river path from wflow model folder
-        river_path = self.catchment_model_path / wflow_test_full_folder / r"staticgeoms/rivers.geojson"
+        river_folder = r"wflow_test_full/staticgeoms/rivers.geojson"
+        river_path = self.catchment_model_path / river_folder
 
         # Read river file
         rivers = gpd.read_file(river_path)
@@ -856,16 +849,9 @@ class InjectionPointsFloodModelGenerator:
             Rivers' flow data extracted from catchment model outputs
         """
         log.info("Extracting rivers' flow from catchment model outputs.")
-        if self.polygons is not None:
-            wflow_test_full_folder = str(max(
-                Path(self.catchment_model_path).glob("wflow_test_full_landcover_*"),
-                default=Path(self.catchment_model_path) / "wflow_test_full_landcover_001"
-            ))
-        else:
-            wflow_test_full_folder = "wflow_test_full"
-
         # Set path to rivers' data
-        rivers_data_path = self.catchment_model_path / wflow_test_full_folder / r"run_default/output.nc"
+        rivers_data_folder = r"wflow_test_full/run_default/output.nc"
+        rivers_data_path = self.catchment_model_path / rivers_data_folder
 
         # Read rives' data from catchment model output
         with xr.open_dataset(rivers_data_path) as rivers_data:

@@ -45,7 +45,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         start_time: datetime,
         end_time: datetime,
         polygons: str = None,
-        vectors: str = None
+        vectors: pd.DataFrame = None
     ) -> None:
         """
         Generate parameter files for flood model
@@ -65,12 +65,19 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
         """
-        super().__init__(flood_model_path, hydromt_path, terrain_bounding_box, start_time, end_time, polygons, vectors)
+        super().__init__(
+            flood_model_path,
+            hydromt_path,
+            terrain_bounding_box,
+            start_time, end_time,
+            polygons,
+            vectors
+        )
 
         # Set up tide generator
         tide_df_generator = TidalDataGenerator(
@@ -163,10 +170,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
     def bdy_generator(self) -> None:
         """Generate bdy files - where the flow data of injection points are stored"""
         # Path of flow data (bdy) for flood model
-        if self.polygons is not None:
-            bdy_name = self.file_increment_generator("bdy_landcover").with_suffix(".bdy")
-        else:
-            bdy_name = self.flood_model_path / "bdy.bdy"
+        bdy_name = self.flood_model_path / "bdy.bdy"
 
         log.info(f"Generating BDY file {bdy_name}")
         # Copy injection flow dataframe
@@ -230,30 +234,13 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         output_directory = self.optional_output_generator()
 
         # Path to bdy file
-        if self.polygons is not None:
-            bdy = str(
-                max(
-                    Path(self.flood_model_path).glob("bdy_landcover_*.bdy"),
-                    default=Path(self.flood_model_path) / "bdy_landcover_001.bdy"
-                )
-            )
-        else:
-            bdy = str(self.flood_model_path / "bdy.bdy")
+        bdy = str(self.flood_model_path / "bdy.bdy")
 
         # Path to bci file
         bci = str(self.flood_model_path / "bci.bci")
 
-        if self.vectors is not None:
-            # Path to DEM
-            z = str(
-                max(
-                    Path(self.flood_model_path).glob("z_elevation_*.asc"),
-                    default=Path(self.flood_model_path) / "z_elevation_001.asc"
-                )
-            )
-        else:
-            # Path to DEM
-            z = str(self.flood_model_path / "z.asc")
+        # Path to z file
+        z = str(self.flood_model_path / "z.asc")
 
         # Path to Manning's n
         n = str(self.flood_model_path / "manning.asc")

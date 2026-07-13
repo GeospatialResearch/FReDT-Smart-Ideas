@@ -21,6 +21,7 @@ from datetime import datetime
 from pathlib import Path
 import logging
 import platform
+import shutil
 import subprocess
 
 from eddie.digitaltwin.utils import LogLevel, setup_logging
@@ -49,6 +50,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.river_name,
             self.terrain_crs_clipped,
             self.adjust_manning,
+            self.vectors,
             self.crs
         )
 
@@ -175,8 +177,39 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         # 2. Polygon=None, vector!=None
         # 3. Polygon!=None, vector=None
         # 4. Polygon!=None, vector!=None
-        # This 'if' includes 1
-        if self.polygons is None and self.vectors is None:
+        # This includes case 2
+        if self.vectors is not None:
+            # Generate terrain data for flood model
+            self.terrain_data_for_flood_model_generator()
+
+            # Set up path to copy data from original scenario to the current scenario
+            # This will be adjusted in the future to copy not only from the original scenario
+            # Set up folders
+            original_hydrological_folder = r"original_scenario/hydrodynamic_process"
+            scenario_hydrological_folder = self.scenario_and_id_folder / "hydrodynamic_process"
+            # Set up directories
+            original_dir = self.flood_model_path.parents[1] / original_hydrological_folder
+            scenario_dir = self.flood_model_path.parents[1] / scenario_hydrological_folder
+
+            # Copy injection points
+            shutil.copy2(
+                original_dir / "injection_points_flow.csv",
+                scenario_dir / "injection_points_flow.csv"
+            )
+            for original_file_dir in original_dir.glob("injection_points.*"):
+                shutil.copy2(
+                    original_file_dir,
+                    scenario_dir / original_file_dir.name
+                )
+
+            # Generate parameter files for flood model
+            output_dir = self.parameter_files_for_flood_model_generator()
+
+            # Generate simulations by running flood model
+            max_gtiff = self.flood_model_simulations_generator(output_dir)
+
+        # This includes the rest
+        else:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
 
@@ -185,28 +218,6 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
             # # Generate precipitation data for flood model
             # self.precipitation_data_for_flood_model_generator()
-
-            # Generate parameter files for flood model
-            output_dir = self.parameter_files_for_flood_model_generator()
-
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(output_dir)
-
-        # This 'elif' includes 3 and 4
-        elif self.polygons is not None or self.vectors is None:
-            # Generate injection points for flood model
-            self.injection_points_for_flood_model_generator()
-
-            # Generate parameter files for flood model
-            output_dir = self.parameter_files_for_flood_model_generator()
-
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(output_dir)
-
-        # This 'else' includes 2
-        else:
-            # Generate terrain data for flood model
-            self.terrain_data_for_flood_model_generator()
 
             # Generate parameter files for flood model
             output_dir = self.parameter_files_for_flood_model_generator()

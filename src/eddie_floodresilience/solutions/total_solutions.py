@@ -59,8 +59,9 @@ class LandCoverSolution:
 
     def __init__(
         self,
-        hydro_combination_path: Path,
         hydromt_path: Path,
+        scenario_and_id_folder: Path,
+        landcover: str = 'globcover',
         polygons: gpd.GeoDataFrame | None = None
     ) -> None:
         """
@@ -72,15 +73,18 @@ class LandCoverSolution:
 
         Parameters
         ----------
-        hydro_combination_path : Path
-            Directory to folder storing all necessary data
         hydromt_path : Path
             A directory to where all necessary files are stored to run wflow model
+        landcover : str = 'globcover'
+            Name of land cover dataset. Default is 'globcover'
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
         polygons : gpd.GeoDataFrame = None
             Polygons that are used to change the landcover information
         """
-        self.hydro_combination_path = hydro_combination_path
         self.hydromt_path = hydromt_path
+        self.scenario_and_id_folder = scenario_and_id_folder
+        self.landcover = landcover
         self.polygons = polygons
 
     def rasterize_polygons(
@@ -140,15 +144,25 @@ class LandCoverSolution:
         Returns
         -------
         Path
-            Path to the modified landcover.
+            Directory to the modified landcover.
         """
+        # Set up land cover features based on chosen land cover
+        if self.landcover.startswith('globcover'):
+            original_landcover = 'original_globcover.tif'
+            crs = 4326
+            folder_landcover = 'globcover'
+        else:
+            original_landcover = 'original_lcdb.tif'
+            crs = 2193
+            folder_landcover = 'lcdb'
+
         # Read current land cover data
-        with rxr.open_rasterio(self.hydromt_path / r'original_globcover.tif') as current_landcover:
+        with rxr.open_rasterio(self.hydromt_path / original_landcover) as current_landcover:
             current_landcover = current_landcover.squeeze().load()
 
         # Convert crs
         # This step will be removed in future
-        polygons_crs = self.polygons.to_crs(4326)
+        polygons_crs = self.polygons.to_crs(crs)
 
         # Rasterize and apply new values to current land cover
         modified_landcover = self.rasterize_polygons(
@@ -157,21 +171,12 @@ class LandCoverSolution:
         )
 
         # self.hydromt_path may not be writable on linux, so write to self.hydro_combination_path
-        globcover_dir = self.hydro_combination_path / "globcover"
+        globcover_dir = self.scenario_and_id_folder / 'hydrological_process' / folder_landcover
         globcover_dir.mkdir(parents=True, exist_ok=True)
 
-        # Find existing elevation files
-        existing_landcover_files = list(
-            globcover_dir.glob("globcover_*.tif")
-        )
+        # Set up the path for new land cover with scenario and ID
+        output_path = globcover_dir / f"{folder_landcover}_{self.scenario_and_id_folder.name}.tif"
 
-        # Decide the number of output file
-        # based on the number of running the model
-        number = len(existing_landcover_files) + 1
-
-        # Create filename
-
-        output_path = globcover_dir / f"globcover_{number:03d}.tif"
         # Write out new land cover
         modified_landcover.rio.to_raster(
             output_path,
@@ -183,14 +188,14 @@ class LandCoverSolution:
         return output_path
 
 
-class ElevationSolution():
+class ElevationSolution:
     """This class is to change the elevation"""
 
     def __init__(
         self,
-        hydro_combination_path: Path,
         flood_model: str,
-        vectors: str = None
+        scenario_and_id_folder: Path,
+        vectors: pd.DataFrame = None
     ) -> None:
         """
         Change the elevation based on the vector.
@@ -201,30 +206,32 @@ class ElevationSolution():
 
         Parameters
         ----------
-        hydro_combination_path : Path
-            Directory to folder storing all necessary data
         flood_model : str
             Either "lisflood-fp" or "bg-flood"
-        vectors : str = None
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
+        vectors : pd.DataFrame = None
             Name of dataframe that contains 'vector_path', 'value', 'distance' columns:
             - 'vector_path': Column that stores directories to specific vectors
             - 'value: Column that stores value of the vectors used to increase/decrease elevation
             - 'distance': Column that stores value to smooth the decreased elevation
         """
-        self.hydro_combination_path = hydro_combination_path
-        self.vectors = pd.read_csv(self.hydro_combination_path / vectors)
+        self.vectors = vectors
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.flood_model = flood_model
 
+        # Read terrain data
         if flood_model == "lisflood-fp":
-            with rxr.open_rasterio(self.hydro_combination_path / "z.asc") as dem:
+            z_file = r"original_scenario/hydrodynamic_process/z.asc"
+            with rxr.open_rasterio(self.scenario_and_id_folder.parent / z_file) as dem:
                 self.dem = dem.squeeze().load()
 
         else:
-            with xr.open_dataset(self.hydro_combination_path / "8m_geofabric_clipped.nc") as terrain_data:
+            with xr.open_dataset(self.scenario_and_id_folder.parent / "8m_geofabric_clipped.nc") as terrain_data:
                 self.dem = terrain_data.z.squeeze()
                 self.roughness_length = terrain_data.zo.squeeze()
 
-    def rasterize_vector(self, vector_path: str) -> None:
+    def rasterize_vector(self, vector_path: str) -> xr.DataArray:
         """
         Rasterize vector
 
@@ -258,9 +265,9 @@ class ElevationSolution():
     def increase_elevation(
         self,
         dem: xr.DataArray,
-        mask: np.ndarray,
+        mask: xr.DataArray,
         value: float
-    ) -> None:
+    ) -> xr.DataArray:
         """
         Increase the elevation
 
@@ -268,14 +275,14 @@ class ElevationSolution():
         ----------
         dem : xr.DataArray
             Elevation data read by whitebox tool
-        mask : np.ndarray
+        mask : xr.DataArray
             Rasterized vector
         value : float
             A value to increase the elevation
 
         Returns
         -------
-        increased_elevation : Raster
+        increased_elevation : xr.DataArray
             Modified elevation data
         """
         # Create a copy of DEM to modify
@@ -289,18 +296,18 @@ class ElevationSolution():
     def decrease_elevation(
         self,
         dem: xr.DataArray,
-        mask: np.ndarray,
+        mask: xr.DataArray,
         value: float,
         distance: float = 0
-    ) -> None:
+    ) -> xr.DataArray:
         """
         Decrease the elevation
 
         Parameters
         ----------
-        dem : Raster
+        dem : xr.DataArray
             Elevation data read by whitebox tool
-        mask : np.ndarray
+        mask : xr.DataArray
             Rasterized vector
         value : float
             Value to decrease the elevation
@@ -309,7 +316,7 @@ class ElevationSolution():
 
         Returns
         -------
-        decreased_elevation : Raster
+        decreased_elevation : xr.DataArray
             Modified elevation data
         """
         # Create a copy of DEM to modify
@@ -331,8 +338,15 @@ class ElevationSolution():
 
         return decreased_dem
 
-    def change_elevation(self) -> None:
-        """Change the elevation"""
+    def change_elevation(self) -> xr.DataArray:
+        """
+        Change the elevation
+
+        Returns
+        -------
+        modified_dem : xr.DataArray
+            The DEM that has its elevation changed
+        """
         # Copy DEM to work separately
         modified_dem = self.dem
 
@@ -371,22 +385,13 @@ class ElevationSolution():
         # Change elevation data
         modified_dem = self.change_elevation()
 
+        # Hydrodynamic process path
+        hydrodynamic_process_path = self.scenario_and_id_folder / "hydrodynamic_process"
+
         if self.flood_model == "lisflood-fp":
-            # Find existing elevation files
-            existing_z_files = sorted(
-                self.hydro_combination_path.glob("z_elevation_*.asc")
-            )
-
-            # Decide the number of output file
-            # based on the number of running the model
-            number = len(existing_z_files) + 1
-
-            # Create filename
-            output_name = f"z_elevation_{number:03d}.asc"
-
             # Write out
             modified_dem.rio.to_raster(
-                self.hydro_combination_path / output_name,
+                hydrodynamic_process_path / "z.asc",
                 compress="LZW",
                 tiled=True
             )
@@ -394,7 +399,7 @@ class ElevationSolution():
         else:
             # Find existing elevation files
             existing_z_files = sorted(
-                self.hydro_combination_path.glob("8m_geofabric_clipped_elevation_*.nc")
+                hydrodynamic_process_path.glob("8m_geofabric_clipped_elevation_*.nc")
             )
 
             # Decide the number of output file
@@ -414,4 +419,4 @@ class ElevationSolution():
             terrain_data.rio.write_crs("EPSG:2193", inplace=True)
 
             # Write out
-            terrain_data.to_netcdf(self.hydro_combination_path / output_name)
+            terrain_data.to_netcdf(hydrodynamic_process_path / output_name)

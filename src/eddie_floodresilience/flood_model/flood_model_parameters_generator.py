@@ -42,7 +42,7 @@ class FloodModelParametersGenerator(ABC):
         start_time: datetime,
         end_time: datetime,
         polygons: str = None,
-        vectors: str = None
+        vectors: pd.DataFrame = None
     ) -> None:
         """
         Generate parameter files for flood model
@@ -62,7 +62,7 @@ class FloodModelParametersGenerator(ABC):
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
+        vectors : pd.DataFrame = None
             Name of vector file that is used to change the elevation information.
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
@@ -109,7 +109,7 @@ class FloodModelParametersGenerator(ABC):
         xy_coords: list[float],
         buffer_distance: float,
         tolerance: float
-    ) -> tuple[float]:
+    ) -> tuple[float, float]:
         """
         Move points inside aoi
 
@@ -150,36 +150,6 @@ class FloodModelParametersGenerator(ABC):
 
         return x, y
 
-    def file_increment_generator(
-        self,
-        filename: str
-    ) -> Path:
-        """
-        Generate increasing files
-
-        Parameters
-        ----------
-        filename : str
-            Filename accords to scenario and order of that scenario
-
-        Returns
-        -------
-        file_directory : Path
-            A directory to the file which has just been named
-        """
-        number_ids = [
-            int(f.stem.split("_")[-1])
-            for f in Path(self.flood_model_path).glob(f"{filename}_*")
-        ]
-
-        # Get next output
-        file_number = max(number_ids, default=0) + 1
-
-        # Output path
-        file_directory = Path(self.flood_model_path) / f"{filename}_{file_number:03d}"
-
-        return file_directory
-
     def optional_output_generator(self) -> Path:
         """
         Set up options for outputs according to sceanrios
@@ -190,21 +160,8 @@ class FloodModelParametersGenerator(ABC):
         output_directory : Path
             Directory of flood model outputs
         """
-        # Both landcover and elevation solutions
-        if self.polygons is not None and self.vectors is not None:
-            output = self.file_increment_generator("output_landcover_elevation")
-
-        # Only landcover solution
-        elif self.polygons is not None:
-            output = self.file_increment_generator("output_landcover")
-
-        # Only elevation solution
-        elif self.vectors is not None:
-            output = self.file_increment_generator("output_elevation")
-
-        # Original scenario
-        else:
-            output = self.flood_model_path / "output"
+        # Set up flood model output path
+        output = self.flood_model_path / "output"
 
         # Create output (if not available)
         output.mkdir(parents=True, exist_ok=True)

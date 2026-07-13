@@ -19,7 +19,9 @@
 
 from pathlib import Path
 
+import geopandas as gpd
 import numpy as np
+import pandas as pd
 import rasterio as rio
 import rioxarray as rxr
 import xarray as xr
@@ -40,6 +42,7 @@ class TerrainFloodModelGenerator:
         river_name: str,
         terrain_crs_clipped: xr.Dataset,
         adjust_manning: bool,
+        vectors: pd.DataFrame = None,
         crs: int = 2193
     ) -> None:
         """
@@ -58,6 +61,10 @@ class TerrainFloodModelGenerator:
         adjust_manning : bool
             True means adjusting Manning's n by resampling 4m Manning's n
             False means no Mannning's n adjustment
+        vectors : pd.DataFrame = None
+            Name of vector file that is used to change the elevation information.
+            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
+            and 'distance' column to specify how smooth to decrease elevation.
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         """
@@ -66,6 +73,7 @@ class TerrainFloodModelGenerator:
         self.river_name = river_name
         self.terrain_crs_clipped = terrain_crs_clipped
         self.adjust_manning = adjust_manning
+        self.vectors = vectors
         self.crs = crs
 
     def fill_nan_and_write_nodata(
@@ -92,6 +100,36 @@ class TerrainFloodModelGenerator:
         terrain_variable = terrain_variable.rio.write_nodata(-9999)
 
         return terrain_variable
+
+    def remove_sea(
+            self,
+            terrain_variable: xr.Dataset
+    ) -> xr.Dataset:
+        """
+        Remove sea from terrain data
+
+        Parameters
+        ----------
+        terrain_variable : xr.Dataset
+            Variable name could be 'z' (DEM) and 'zo' (roughness length)
+
+        Returns
+        -------
+        terrain_vavriable : xr.Dataset
+            Variable name could be 'z' (DEM) and 'zo' (roughness length).
+            These terrains have the sea removed
+        """
+        # Get nz land polygon
+        land = gpd.read_file(self.hydromt_path / 'nz_coastline.shp')
+
+        # Remove sea using nz land polygon
+        terrain_variable_no_sea = terrain_variable.rio.clip(
+            land.geometry,
+            crs=2193,
+            drop=False
+        )
+
+        return terrain_variable_no_sea
 
     def format_terrain_data_pipeline(
         self,
@@ -120,14 +158,14 @@ class TerrainFloodModelGenerator:
         # Drop spatial ref
         terrain_variable = terrain_variable.drop_vars("spatial_ref")
 
-        # Make sure terrain that has crs
+        # Make sure terrain has crs
         terrain_variable = terrain_variable.rio.write_crs(self.crs)
+
+        # Remove sea
+        terrain_variable = self.remove_sea(terrain_variable)
 
         # Fill NaN with -9999 and write it as nodata value
         terrain_variable = self.fill_nan_and_write_nodata(terrain_variable)
-
-        # Round up to easily process
-        terrain_variable = terrain_variable.round(9)
 
         return terrain_variable
 
@@ -365,7 +403,7 @@ class TerrainFloodModelGenerator:
 
         else:
             # Roughness path
-            roughness_path = self.flood_model_path / "8m_geofabric_roughness_split.tif"
+            roughness_path = self.flood_model_path.parents[1] / "terrain/8m_geofabric_roughness_split.tif"
 
             # Read roughness raster
             roughness = rxr.open_rasterio(roughness_path)
@@ -373,7 +411,7 @@ class TerrainFloodModelGenerator:
             # Convert -9999 to 0.004
             roughness = roughness.where(roughness != -9999, 0.004)
 
-            # Write nodata
+            # Write nodata before converting
             roughness = roughness.rio.write_nodata(-9999)
 
             # Convert roughness length to Manning's n
@@ -386,6 +424,9 @@ class TerrainFloodModelGenerator:
         clipped_manning_for_flood = manning_for_flood.rio.clip_box(
             *self.terrain_crs_clipped.rio.bounds()
         )
+
+        # Remove sea
+        clipped_manning_for_flood = self.remove_sea(clipped_manning_for_flood)
 
         # Write out
         manning_outpath = self.flood_model_path / "manning.asc"
@@ -410,7 +451,10 @@ class TerrainFloodModelGenerator:
         terrain_variable_path = self.flood_model_path / f"{variable_name}.asc"
 
         # Write out as ASCII file
-        terrain_variable.rio.to_raster(terrain_variable_path)
+        terrain_variable.rio.to_raster(
+            terrain_variable_path,
+            dtype="float32"
+        )
 
     def terrain_data_generator(
         self,
@@ -435,8 +479,9 @@ class TerrainFloodModelGenerator:
 
     def execute_terrain_data_generator(self) -> None:
         """Generate specific terrain data"""
-        # Generate DEM
-        self.terrain_data_generator('z')
+        if self.vectors is None:
+            # Generate DEM
+            self.terrain_data_generator('z')
 
         # Generate manning
         self.manning_generator()
