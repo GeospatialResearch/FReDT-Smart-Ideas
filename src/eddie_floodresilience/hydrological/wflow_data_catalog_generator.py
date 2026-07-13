@@ -248,7 +248,7 @@ class DataCatalogGenerator:
                     "paper_ref": "Yamazaki et al. (2019)"
                 },
                 "version": 1.0,
-                "path": f"{self.scenario_and_id_folder.parent / 'terrain/merit_hydro/{variable}.tif'}"
+                "path": str(self.scenario_and_id_folder.parent / r'terrain/merit_hydro/{variable}.tif')
             }
         }
 
@@ -278,7 +278,7 @@ class DataCatalogGenerator:
                     "paper_ref": "Eilander et al. (in review)",
                     "source_license": "CC-BY-NC 4.0"
                 },
-                "path": f"{self.scenario_and_id_folder.parent / 'terrain/merit_hydro_index.gpkg'}"
+                "path": str(self.scenario_and_id_folder.parent / r'terrain/merit_hydro_index.gpkg')
             }
         }
 
@@ -309,7 +309,7 @@ class DataCatalogGenerator:
                     "processing_notes": "hydrography/rivers_lin2019/README"
                 },
                 "version": 1,
-                "path": f"{self.scenario_and_id_folder.parent / 'terrain/rivers_lin2019_v1.gpkg'}"
+                "path": str(self.scenario_and_id_folder.parent / r'terrain/rivers_lin2019_v1.gpkg')
             }
         }
 
@@ -449,7 +449,7 @@ class DataCatalogGenerator:
             A dictionary contains information of all sections
         """
         # Set up output filename
-        output_filename = self.scenario_and_id_folder / "hydrological_process/data_catalog.yml"
+        output_filename = self.scenario_and_id_folder / r"hydrological_process/data_catalog.yml"
 
         # Write out data_catalog.yml
         with open(output_filename, "w", encoding="utf-8") as output_file:
