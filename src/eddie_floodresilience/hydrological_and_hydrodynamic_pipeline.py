@@ -366,19 +366,23 @@ class HydrologicalAndHydrodynamicPipeline:
         # Generate wflow model data
         wflow_data.wflow_model_simulations_pipeline()
 
-    def serve_wflow_data(self, flood_model_output_id: int) -> None:
+    def serve_wflow_data(self, scenario_and_id_folder: Path, flood_model_output_id: int) -> None:
         """
         Serve data for a Wflow scenario, such as landcover and catchment boundaries.
 
         Parameters
         ----------
+        scenario_and_id_folder: Path
+            Directory to the scenario folder name with ID
         flood_model_output_id: int
             The flood model output ID to associate the WFlow data with
         """
+        landcover_mapping_type = "globcover" if self.landcover.startswith("globcover") else "lcdb"
         wflow_serve_data = WflowServeDataGenerator(
             self.hydromt_path,
-            self.hydro_combination_path,
-            self.landcover,
+            self.polygons,
+            landcover_mapping_type,
+            scenario_and_id_folder,
             flood_model_output_id
         )
 
@@ -490,7 +494,7 @@ class HydrologicalAndHydrodynamicPipeline:
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
 
-        self.serve_wflow_data(flood_model_output_id)
+        self.serve_wflow_data(scenario_and_id_folder, flood_model_output_id)
         return flood_model_output_id
 
 

@@ -60,8 +60,8 @@ class WflowSimulationsGenerator:
         Number of threads that controls how fast the wflow model can run
     scenario_and_id_folder : Path
         Directory to the scenario folder name with ID
-    polygons : str = None
-        Name of polygon file that is used to change the landcover information.
+    polygons : gpd.GeoDataFrame | None = None
+        Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover' column with new values
     resolution : float
         Resolution for flow data.
@@ -80,7 +80,7 @@ class WflowSimulationsGenerator:
         flood_aoi_boundary: list,
         num_threads: int,
         scenario_and_id_folder: Path,
-        polygons: str = None,
+        polygons: gpd.GeoDataFrame | None = None,
         resolution: float = 0.00045,
         landcover: str = 'globcover'
     ) -> None:
@@ -110,8 +110,8 @@ class WflowSimulationsGenerator:
             Number of threads that controls how fast the wflow model can run
         scenario_and_id_folder : Path
             Directory to the new scenario ID for scenario
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataFrame | None = None
+            Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
         resolution : float
             Resolution for flow data.
