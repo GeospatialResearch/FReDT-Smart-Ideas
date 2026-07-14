@@ -57,6 +57,27 @@ class DataCatalogGenerator:
         self.polygons = polygons
         self.landcover = landcover
 
+    @staticmethod
+    def landcover_mapping_type(landcover: str) -> str:
+        """
+        Identify what type of landcover data source is being used.
+
+        Parameters
+        ----------
+        landcover : str
+            Name of land cover.
+
+        Returns
+        ----------
+        str
+            Name of landcover dataset - globcover or lcdb
+        """
+        if landcover.startswith('globcover'):
+            landcover_mapping_type = 'globcover'
+        else:
+            landcover_mapping_type = 'lcdb'
+        return landcover_mapping_type
+
     def meta_section(self) -> dict:
         """
         Write out meta section
@@ -159,10 +180,7 @@ class DataCatalogGenerator:
         landcover : dict
             A dictionary contains information of landcover
         """
-        if self.landcover.startswith('globcover'):
-            landcover_mapping_type = 'globcover'
-        else:
-            landcover_mapping_type = 'lcdb'
+        landcover_mapping_type = self.landcover_mapping_type(self.landcover)
 
         # Check landcover path
         is_baseline = self.polygons is None

@@ -20,6 +20,7 @@ from eddie.digitaltwin import retrieve_from_instructions
 from eddie.digitaltwin.setup_environment import get_database
 from eddie.digitaltwin.tables import create_table
 from eddie.digitaltwin.utils import setup_logging, LogLevel
+from eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
 
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
@@ -377,7 +378,7 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_model_output_id: int
             The flood model output ID to associate the WFlow data with
         """
-        landcover_mapping_type = "globcover" if self.landcover.startswith("globcover") else "lcdb"
+        landcover_mapping_type = DataCatalogGenerator.landcover_mapping_type(self.landcover)
         wflow_serve_data = WflowServeDataGenerator(
             self.hydromt_path,
             self.polygons,
