@@ -45,15 +45,25 @@ class WflowServeDataGenerator:
     ----------
     hydromt_path : Path
         A directory to where all necessary files are stored to run wflow model
-    wflow_model_path : Path
-        A directory to where the data_catalog.yml is stored for WFlow
-    landcover : str
-        A string to identify the landcover. Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
+    polygons: gpd.GeoDataFrame | None
+        Polygons that are used to change the landcover information.
+        This polygon dataframe has 'landcover' column with new values
+    landcover_mapping_type : str
+        Name of landcover dataset - globcover or lcdb
+    scenario_and_id_folder : Path
+        Directory to the scenario folder name with ID
     flood_model_output_id : int
         The ID of the flood model scenario that has been created using this wflow model
     """  # pylint: disable=too-few-public-methods
 
-    def __init__(self, hydromt_path: Path, wflow_model_path: Path, landcover: str, flood_model_output_id: int) -> None:
+    def __init__(
+        self,
+        hydromt_path: Path,
+        polygons: gpd.GeoDataFrame | None,
+        landcover_mapping_type: str,
+        scenario_and_id_folder: Path,
+        flood_model_output_id: int
+    ) -> None:
         r"""
         Define paths and variables relating to serving a Wflow scenario.
 
@@ -61,17 +71,20 @@ class WflowServeDataGenerator:
         ----------
         hydromt_path : Path
             A directory to where all necessary files are stored to run wflow model
-        wflow_model_path : Path
-            A directory to where the data_catalog.yml is stored for WFlow
-        landcover : str
-            A string to identify the landcover.
-            Meets the approximate regex "(globcover(_\d\d\d.tif)?)|(lcdb(_\d\d\d.tif))"
+        polygons: gpd.GeoDataFrame | None
+            Polygons that are used to change the landcover information.
+            This polygon dataframe has 'landcover' column with new values
+        landcover_mapping_type : str
+            Name of landcover dataset - globcover or lcdb
+        scenario_and_id_folder : Path
+            Directory to the scenario folder name with ID
         flood_model_output_id : int
             The ID of the flood model scenario that has been created using this wflow model
         """
         self.hydromt_path = hydromt_path
-        self.wflow_model_path = wflow_model_path
-        self.landcover = landcover
+        self.polygons = polygons
+        self.landcover_mapping_type = landcover_mapping_type
+        self.scenario_and_id_folder = scenario_and_id_folder
         self.flood_model_output_id = flood_model_output_id
 
     def serve_data(self) -> None:
@@ -91,7 +104,7 @@ class WflowServeDataGenerator:
         workspace_name = f"{db_name}-intermediate-wflow"
 
         # Read catchment polygon
-        catchment_file = self.wflow_model_path / "wflow_test_full/staticgeoms/basins.geojson"
+        catchment_file = self.scenario_and_id_folder / "hydrological_process/wflow_test_full/staticgeoms/basins.geojson"
         catchment_poly = gpd.read_file(catchment_file)
         if catchment_poly.crs.to_epsg() is None:
             raise KeyError(f"CRS is not defined in EPSG# form in vector file {catchment_file}.")
@@ -114,8 +127,10 @@ class WflowServeDataGenerator:
         catchment_poly : gpd.GeoDataFrame
             The catchment polygon to clip the landcover raster to before serving to reduce space.
         """
-        is_baseline = self.landcover == "globcover"
-        landcover_file = find_landcover_file(self.wflow_model_path, self.hydromt_path, self.landcover, is_baseline)
+        is_baseline = self.polygons is None
+        landcover_file = find_landcover_file(
+            self.hydromt_path, self.landcover_mapping_type, self.scenario_and_id_folder, is_baseline
+        )
 
         tmp_dir = Path("tmp/gtiff") / self.hydromt_path.name
         tmp_dir.mkdir(parents=True, exist_ok=True)
