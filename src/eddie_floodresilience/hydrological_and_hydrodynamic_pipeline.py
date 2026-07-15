@@ -20,9 +20,9 @@ from eddie.digitaltwin import retrieve_from_instructions
 from eddie.digitaltwin.setup_environment import get_database
 from eddie.digitaltwin.tables import create_table
 from eddie.digitaltwin.utils import setup_logging, LogLevel
-from eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
 
 from src.eddie_floodresilience.config import EnvVariable
+from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
@@ -821,14 +821,14 @@ def riverton(
 
 if __name__ == '__main__':
     # Whirinaki
-    gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
-    )
-    df = pd.read_csv(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
-    )
-    whirinaki(gdf, df)
-
+    # gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
+    # )
+    # df = pd.read_csv(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
+    # )
+    # whirinaki(gdf, df)
+    whirinaki()
     # # Riverton
     # riverton(None, None)
 
