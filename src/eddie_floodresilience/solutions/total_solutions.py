@@ -47,6 +47,18 @@ GLOBCOVER_CLASSES: dict[str, int] = {
     "Bare Land": 200,
 }
 
+LCDB_CLASSES: dict[str, int] = {
+    "High producing Exotic Grassland": 40,
+    "Low Producing Grassland": 41,
+    "Herbaceous Freshwater Vegetation": 45,
+    "Manuka and/or Kanuka": 52,
+    "Broadleaved Indigenous Hardwoods": 54,
+    "Forest - Harvested": 64,
+    "Deciduous Hardwoods": 68,
+    "Indigenous Forest": 69,
+    "Exotic Forest (needleleaf forest)": 71,
+}
+
 wbe = WbEnvironment()
 wbe.verbose = True
 wbe.max_procs = -1
