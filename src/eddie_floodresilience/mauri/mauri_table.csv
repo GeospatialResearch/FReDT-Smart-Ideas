@@ -1,0 +1,60 @@
+﻿LCDB group,LCDB class,LCDB description,Atua Domain,Maturity,Mauri,Future Mauri,Future Maturity,Target LCDB ?
+Artificial surfaces,1,Built-up Area,,,,,,
+Artificial surfaces,2,Urban Parkland/ Open Space,,,,,,
+Artificial surfaces,6,Surface Mine or Dump,,,,,,
+Artificial surfaces,5,Transport Infrastructure,,,,,,
+Bare or Lightly-vegetated surfaces,10,Sand and Gravel,,,,,,
+Bare or Lightly-vegetated surfaces,16,Gravel and Rock,,,,,,
+Bare or Lightly-vegetated surfaces,12,Landslide,,,,,,
+Bare or Lightly-vegetated surfaces,14,Permanent Snow and Ice,,,,,,
+Bare or Lightly-vegetated surfaces,15,Alpine Grass/Herbfield,,,,,,
+Water bodies,20,Lake or Pond,,,,,,
+Water bodies,21,River,,,,,,
+Water bodies,22,Estuarine Open Water,,,,,,
+Cropland,30,Short-rotation Cropland,Rongomaraeroa (Cultivated food),Early,5,7,Mid,52
+Cropland,30,Short-rotation Cropland,Rongomaraeroa (Cultivated food),Early,5,8,Late,54
+Cropland,30,Short-rotation Cropland,Rongomaraeroa (Cultivated food),Early,5,10,Full restoration,69
+Cropland,33,Orchard Vineyard & Perennial Crops,Rongomaraeroa (Cultivated food),Early,5,7,Mid,52
+Cropland,33,Orchard Vineyard & Perennial Crops,Rongomaraeroa (Cultivated food),Early,5,8,Late,54
+Cropland,33,Orchard Vineyard & Perennial Crops,Rongomaraeroa (Cultivated food),Early,5,10,Full restoration,69
+"Grassland, Sedgeland, and Marshland",40,High producing Exotic Grassland,Rongomaraeroa (Cultivated food),Early,5,7,Mid,52
+"Grassland, Sedgeland, and Marshland",40,High producing Exotic Grassland,Rongomaraeroa (Cultivated food),Early,5,8,Late,54
+"Grassland, Sedgeland, and Marshland",40,High producing Exotic Grassland,Rongomaraeroa (Cultivated food),Early,5,10,Full restoration,69
+"Grassland, Sedgeland, and Marshland",41,Low Producing Grassland,Rongomaraeroa (Cultivated food),Early,5,7,Mid,52
+"Grassland, Sedgeland, and Marshland",41,Low Producing Grassland,Rongomaraeroa (Cultivated food),Early,5,8,Late,54
+"Grassland, Sedgeland, and Marshland",41,Low Producing Grassland,Rongomaraeroa (Cultivated food),Early,5,10,Full restoration,69
+"Grassland, Sedgeland, and Marshland",43,Tall Tussock Grassland,Rongomaraeroa (Cultivated food),Early,5,7,Mid,52
+"Grassland, Sedgeland, and Marshland",43,Tall Tussock Grassland,Rongomaraeroa (Cultivated food),Early,5,8,Late,54
+"Grassland, Sedgeland, and Marshland",43,Tall Tussock Grassland,Rongomaraeroa (Cultivated food),Early,5,10,Full restoration,69
+"Grassland, Sedgeland, and Marshland",44,Depleted Grassland,Rongomaraeroa (Cultivated food),Early,5,7,Mid,52
+"Grassland, Sedgeland, and Marshland",44,Depleted Grassland,Rongomaraeroa (Cultivated food),Early,5,8,Late,54
+"Grassland, Sedgeland, and Marshland",44,Depleted Grassland,Rongomaraeroa (Cultivated food),Early,5,10,Full restoration,69
+"Grassland, Sedgeland, and Marshland",45,Herbaceous Freshwater Vegetation,Moana Tu i te Repo (Wetland),Mid,7,9,Pristine,45
+"Grassland, Sedgeland, and Marshland",46,Herbaceous Saline Vegetation,Moana Tu i te Repo (Wetland),Mid,7,9,Pristine,46
+"Grassland, Sedgeland, and Marshland",47,Flaxland,Moana Tu i te Repo (Wetland),Mid,7,9,Pristine,47
+Scrub and Shrubland,50,Fernland,Tāne Mahuta (Forest),Mid,7,9,Late,54
+Scrub and Shrubland,50,Fernland,Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Scrub and Shrubland,51,Gorse and/or Broom,Tāne Mahuta (Forest),Mid,7,9,Late,54
+Scrub and Shrubland,51,Gorse and/or Broom,Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Scrub and Shrubland,52,Manuka and/or Kanuka,Tāne Mahuta (Forest),Mid,7,9,Late,54
+Scrub and Shrubland,52,Manuka and/or Kanuka,Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Scrub and Shrubland,58,Matagouri or Grey Scrub,Tāne Mahuta (Forest),Mid,7,9,Late,54
+Scrub and Shrubland,58,Matagouri or Grey Scrub,Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Scrub and Shrubland,54,Broadleaved Indigenous Hardwoods,Tāne Mahuta (Forest),Late,8,10,Full restoration,69
+Scrub and Shrubland,55,Sub-alpine Shrubland,Tāne Mahuta (Forest),Mid,7,9,Late,54
+Scrub and Shrubland,55,Sub-alpine Shrubland,Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Scrub and Shrubland,56,Mixed Exotic Shrubland,Tāne Mahuta (Forest),Mid,7,9,Late,54
+Scrub and Shrubland,56,Mixed Exotic Shrubland,Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Scrub and Shrubland,80,Peat Shrubland (Chatham Islands only),Tāne Mahuta (Forest),Mid,7,9,Late,54
+Scrub and Shrubland,80,Peat Shrubland (Chatham Islands only),Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Scrub and Shrubland,81,Dune Shrubland (Chatham Islands only),Tāne Mahuta (Forest),Mid,7,9,Late,54
+Scrub and Shrubland,81,Dune Shrubland (Chatham Islands only),Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Forest,71,Exotic Forest (needleleaf forest),Tāne Mahuta (Forest),Mid,7,8,Late,54
+Forest,71,Exotic Forest (needleleaf forest),Tāne Mahuta (Forest),Mid,7,10,Full restoration,69
+Forest,64,Forest - Harvested,Tāne Mahuta (Forest),Very early,3,5,Early,40
+Forest,64,Forest - Harvested,Tāne Mahuta (Forest),Very early,3,7,Mid,52
+Forest,64,Forest - Harvested,Tāne Mahuta (Forest),Very early,3,8,Late,54
+Forest,64,Forest - Harvested,Tāne Mahuta (Forest),Very early,3,10,Full restoration,69
+Forest,68,Deciduous Hardwoods,Tāne Mahuta (Forest),Late,8,10,Full restoration,69
+Forest,69,Indigenous Forest,Tāne Mahuta (Forest),Late,8,10,Full restoration,69
+Forest,70,Mangrove,Moana Tu i te Repo (Wetland),Mid,7,9,Pristine,70
