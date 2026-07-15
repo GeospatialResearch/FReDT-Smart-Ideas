@@ -9,6 +9,7 @@ import logging
 from pathlib import Path
 
 import yaml
+import geopandas as gpd
 
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
@@ -25,7 +26,7 @@ class DataCatalogGenerator:
         forcing_path: Path,
         river_name: str,
         scenario_and_id_folder: Path,
-        polygons: str = None,
+        polygons: gpd.GeoDataFrame | None = None,
         landcover: str = 'globcover'
     ) -> None:
         """
@@ -43,8 +44,8 @@ class DataCatalogGenerator:
             Name of directory to where the river information files are stored
         scenario_and_id_folder: Path
             Directory to the scenario folder name with ID
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataFrame | None = None
+            Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
         landcover : str = 'globcover'
             Name of land cover. Default is 'globcover'
@@ -55,6 +56,27 @@ class DataCatalogGenerator:
         self.scenario_and_id_folder = scenario_and_id_folder
         self.polygons = polygons
         self.landcover = landcover
+
+    @staticmethod
+    def landcover_mapping_type(landcover: str) -> str:
+        """
+        Identify what type of landcover data source is being used.
+
+        Parameters
+        ----------
+        landcover : str
+            Name of land cover.
+
+        Returns
+        ----------
+        str
+            Name of landcover dataset - globcover or lcdb
+        """
+        if landcover.startswith('globcover'):
+            landcover_mapping_type = 'globcover'
+        else:
+            landcover_mapping_type = 'lcdb'
+        return landcover_mapping_type
 
     def meta_section(self) -> dict:
         """
@@ -158,10 +180,7 @@ class DataCatalogGenerator:
         landcover : dict
             A dictionary contains information of landcover
         """
-        if self.landcover.startswith('globcover'):
-            landcover_mapping_type = 'globcover'
-        else:
-            landcover_mapping_type = 'lcdb'
+        landcover_mapping_type = self.landcover_mapping_type(self.landcover)
 
         # Check landcover path
         is_baseline = self.polygons is None

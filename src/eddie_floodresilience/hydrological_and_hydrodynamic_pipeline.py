@@ -22,6 +22,7 @@ from eddie.digitaltwin.tables import create_table
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 from src.eddie_floodresilience.config import EnvVariable
+from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
@@ -366,19 +367,23 @@ class HydrologicalAndHydrodynamicPipeline:
         # Generate wflow model data
         wflow_data.wflow_model_simulations_pipeline()
 
-    def serve_wflow_data(self, flood_model_output_id: int) -> None:
+    def serve_wflow_data(self, scenario_and_id_folder: Path, flood_model_output_id: int) -> None:
         """
         Serve data for a Wflow scenario, such as landcover and catchment boundaries.
 
         Parameters
         ----------
+        scenario_and_id_folder: Path
+            Directory to the scenario folder name with ID
         flood_model_output_id: int
             The flood model output ID to associate the WFlow data with
         """
+        landcover_mapping_type = DataCatalogGenerator.landcover_mapping_type(self.landcover)
         wflow_serve_data = WflowServeDataGenerator(
             self.hydromt_path,
-            self.hydro_combination_path,
-            self.landcover,
+            self.polygons,
+            landcover_mapping_type,
+            scenario_and_id_folder,
             flood_model_output_id
         )
 
@@ -490,7 +495,7 @@ class HydrologicalAndHydrodynamicPipeline:
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
 
-        self.serve_wflow_data(flood_model_output_id)
+        self.serve_wflow_data(scenario_and_id_folder, flood_model_output_id)
         return flood_model_output_id
 
 
@@ -816,14 +821,14 @@ def riverton(
 
 if __name__ == '__main__':
     # Whirinaki
-    gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
-    )
-    df = pd.read_csv(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
-    )
-    whirinaki(gdf, df)
-
+    # gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
+    # )
+    # df = pd.read_csv(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
+    # )
+    # whirinaki(gdf, df)
+    whirinaki()
     # # Riverton
     # riverton(None, None)
 
