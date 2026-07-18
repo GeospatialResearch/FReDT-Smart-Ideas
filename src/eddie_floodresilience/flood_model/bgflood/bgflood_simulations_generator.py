@@ -88,40 +88,6 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         # Generate parameter files
         parameters_files_generator.parameter_files_generator()
 
-    def find_output_folder_path(self) -> Path:
-        """
-        Find output folder path.
-
-        Returns
-        -------
-        Path
-            the output folder path.
-        """
-        # Output folder paht to store BG flood programme
-        # Polygons for land cover solutions
-        if self.polygons is not None and self.vectors is not None:
-            output_folder_path = max(
-                Path(self.flood_model_path).glob("output_landcover_elevation_*"),
-                default=Path(self.flood_model_path) / "output_landcover_elevation_001"
-            )
-        elif self.polygons is not None:
-            output_folder_path = max(
-                Path(self.flood_model_path).glob("output_landcover_*"),
-                default=Path(self.flood_model_path) / "output_landcover_001"
-            )
-        elif self.vectors is not None:
-            output_folder_path = max(
-                Path(self.flood_model_path).glob("output_elevation_*"),
-                default=Path(self.flood_model_path) / "output_elevation_001"
-            )
-        else:
-            output_folder_path = max(
-                Path(self.flood_model_path).glob("output_*"),
-                default=Path(self.flood_model_path) / "output"
-            )
-
-        return output_folder_path
-
     # pylint: disable=useless-type-doc,useless-param-doc
     def flood_model_simulations_generator(self, _output_dir: Path | None) -> Path:
         """
@@ -144,10 +110,10 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         log_file_path = self.flood_model_path / "simulation_log.log"
 
         # Get the output folder path
-        output_folder_path = self.find_output_folder_path()
+        output_folder_path = self.flood_model_path / "output"
 
-        # Copy flood model folder, including executable and .dlls
-        shutil.copytree(EnvVariable.FLOOD_MODEL_DIR, output_folder_path, dirs_exist_ok=True)
+        # # Copy flood model folder, including executable and .dlls
+        # shutil.copytree(EnvVariable.FLOOD_MODEL_DIR, output_folder_path, dirs_exist_ok=True)
 
         # Identify the BG-Flood Model executable, accounting for OS differences
         operating_system = platform.system()
@@ -162,11 +128,15 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                     f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
                 log.warning(f"Attempting to run BG_Flood linux script in {operating_system}")
 
+        # Copy BG_flood programme
+        shutil.copy2(flood_model_exe_path, output_folder_path)
+
         # BG flood command
         output_executable = output_folder_path / flood_model_exe_path.name
         bg_flood_command = [
             output_executable
         ]
+
         # Run simulation
         log.info("Running BG Flood simulation")
         with open(log_file_path, "w", encoding="utf-8") as log_file:
@@ -203,8 +173,8 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate parameter files for flood model
             self.parameter_files_for_flood_model_generator()
 
-            # Generate precipitation data for flood model
-            self.precipitation_data_for_flood_model_generator()
+            # # Generate precipitation data for flood model
+            # self.precipitation_data_for_flood_model_generator()
 
             # Generate simulations by running flood model
             max_gtiff = self.flood_model_simulations_generator(None)
@@ -222,6 +192,20 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         # This 'else' includes 2
         else:
+            # Get original path
+            original_path = self.flood_model_path.parents[1] / "original_scenario/hydrodynamic_process"
+
+            # Copy injection points
+            shutil.copy2(
+                original_path / "injection_points_flow.csv",
+                self.flood_model_path / "injection_points_flow.csv"
+            )
+            for original_file in original_path.glob("injection_points.*"):
+                shutil.copy2(
+                    original_file,
+                    self.flood_model_path / original_file.name
+                )
+
             # Generate parameter files for flood model
             self.parameter_files_for_flood_model_generator()
 

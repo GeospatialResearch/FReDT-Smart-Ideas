@@ -103,35 +103,9 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
 
         self.injection_points = gpd.read_file(self.flood_model_path / "injection_points.shp")
 
-    def output_folder_generator(self) -> None:
-        """Generate output folder"""
-        log.info("Generating output folder")
-        if self.polygons is not None and self.vectors is not None:
-            output_name = "output_landcover_elevation"
-        elif self.polygons is not None:
-            output_name = "output_landcover"
-        elif self.vectors is not None:
-            output_name = "output_elevation"
-        else:
-            output_name = "output"
-
-        prefix = output_name + "_"
-
-        next_id = (
-            # pylint: disable=consider-using-generator
-            max(
-                [
-                    int(f.name.split("_")[-1])
-                    for f in self.flood_model_path.iterdir()
-                    if f.is_dir() and f.name.startswith(prefix) and f.name.split("_")[-1].isdigit()
-                ],
-                default=0
-            ) + 1
-        )
-
-        # pylint: disable=attribute-defined-outside-init
-        self.output_folder = self.flood_model_path / f"{output_name}_{next_id:03d}"
-        self.output_folder.mkdir(exist_ok=False)
+        # Create output folder
+        self.output_folder = self.flood_model_path / "output"
+        self.output_folder.mkdir(parents=True, exist_ok=True)
 
     def write_injection_point_files(self) -> None:
         """Generate flow text data for BG-Flood"""
@@ -294,14 +268,10 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
         Path
             The directory the parameter file was created in.
         """
-        if self.vectors is not None:
-            terrain_name = str(max(
-                Path(self.flood_model_path).glob("8m_geofabric_clipped_elevation_*.nc"),
-                default=Path(self.flood_model_path) / "8m_geofabric_clipped_elevation_001.nc"
-            ))
-        else:
-            terrain_name = str(self.flood_model_path / "8m_geofabric_clipped.nc")
+        # Get terrain name path
+        terrain_name = str(self.flood_model_path / "8m_geofabric_clipped.nc")
 
+        # Create param text
         param_text = dedent(f"""\
         topo = {terrain_name}?z;
         dx = 16.0;
@@ -336,9 +306,6 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
 
     def parameter_files_generator(self) -> None:
         """Generate parameter files to run BG-Flood"""
-        # Create output folder
-        self.output_folder_generator()
-
         # Generate flow files
         self.write_injection_point_files()
 
