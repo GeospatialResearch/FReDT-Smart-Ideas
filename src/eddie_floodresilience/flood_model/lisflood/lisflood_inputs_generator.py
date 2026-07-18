@@ -33,9 +33,7 @@ from src.eddie_floodresilience.preprocessing.terrain_attributes_generator import
 
 
 class TerrainFloodModelGenerator:
-    """
-    This class is to generate terrain data (DEM and friction) for flood model
-    """  # pylint: disable=too-many-instance-attributes
+    """This class is to generate terrain data for flood model"""  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
