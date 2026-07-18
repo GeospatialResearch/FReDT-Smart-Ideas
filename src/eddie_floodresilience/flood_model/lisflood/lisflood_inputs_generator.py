@@ -33,7 +33,9 @@ from src.eddie_floodresilience.preprocessing.terrain_attributes_generator import
 
 
 class TerrainFloodModelGenerator:
-    """This class is to generate terrain data (DEM and friction) for flood model"""
+    """
+    This class is to generate terrain data (DEM and friction) for flood model
+    """  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
@@ -75,6 +77,12 @@ class TerrainFloodModelGenerator:
         self.adjust_manning = adjust_manning
         self.vectors = vectors
         self.crs = crs
+
+        # Generate "adjusted_manning_preparation" folder to store all necessary files
+        # for adjusted Manning's n
+        if self.adjust_manning:
+            self.adjust_manning_path = self.flood_model_path / "adjusted_manning_preparation"
+            self.adjust_manning_path.mkdir(parents=True, exist_ok=True)
 
     def fill_nan_and_write_nodata(
         self,
@@ -173,7 +181,7 @@ class TerrainFloodModelGenerator:
         """Generate Strahler order streams raster to filter river in Manning's n"""
         # Split terrain data to collect roughness raster
         TerrainFilter(
-            path=self.flood_model_path,
+            path=self.adjust_manning_path,
             hydromt_path=self.hydromt_path,
             river_name=self.river_name,
             origin_filename='4m_geofabric'
@@ -181,7 +189,7 @@ class TerrainFloodModelGenerator:
 
         # Set up class to generate Strahler order streams
         strahler_for_manning = TerrainAttributesGenerator(
-            self.flood_model_path,
+            self.adjust_manning_path,
             'dem',
             10,
             1000,
@@ -215,7 +223,7 @@ class TerrainFloodModelGenerator:
             Roughness resampled to 8m
         """
         # Get roughness path
-        roughness_path = self.flood_model_path / "4m_geofabric_roughness_split.tif"
+        roughness_path = self.adjust_manning_path / "4m_geofabric_roughness_split.tif"
 
         # Auto chunk size from native block size
         with rio.open(roughness_path) as src:
@@ -244,7 +252,7 @@ class TerrainFloodModelGenerator:
         )
 
         # Save roughness 8m out
-        roughness_outpath = self.flood_model_path / "roughness_8m.tif"
+        roughness_outpath = self.adjust_manning_path / "roughness_8m.tif"
         roughness_8m.rio.to_raster(
             roughness_outpath,
             tiled=True,
@@ -272,7 +280,7 @@ class TerrainFloodModelGenerator:
             Mask to choose only 3 and 4 orders
         """
         # Get strahler path
-        strahler_path = self.flood_model_path / "4m_geofabric_strahler_d8.tif"
+        strahler_path = self.adjust_manning_path / "4m_geofabric_strahler_d8.tif"
 
         # Read strahler
         strahler = rxr.open_rasterio(strahler_path)
