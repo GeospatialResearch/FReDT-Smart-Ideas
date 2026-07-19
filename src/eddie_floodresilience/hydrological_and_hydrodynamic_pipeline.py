@@ -69,6 +69,8 @@ class HydrologicalAndHydrodynamicPipeline:
             False means no Mannning's n adjustment
         flood_model : str
             Either "lisflood-fp" or "bg-flood"
+        flood_type : str = 'fluvial'
+            Flood type: 'pluvial' or 'fluvial'. Default is 'fluvial'
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -99,7 +101,9 @@ class HydrologicalAndHydrodynamicPipeline:
         num_threads: int,
         flood_aoi_boundary: list,
         adjust_manning: bool,
-        flood_model: str,
+
+        flood_model: str = 'lisflood-fp',
+        flood_type: str = 'fluvial',
 
         polygons: gpd.GeoDataFrame | None = None,
         vectors: pd.DataFrame = None,
@@ -137,8 +141,10 @@ class HydrologicalAndHydrodynamicPipeline:
         adjust_manning : bool
             True means adjusting Manning's n by resampling 4m Manning's n
             False means no Mannning's n adjustment
-        flood_model : str
+        flood_model : str = 'lisflood-fp'
             Either "lisflood-fp" or "bg-flood"
+        flood_type : str = 'fluvial'
+            Flood type: 'pluvial' or 'fluvial'. Default is 'fluvial'
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -163,7 +169,9 @@ class HydrologicalAndHydrodynamicPipeline:
         self.num_threads = num_threads
         self.flood_aoi_boundary = flood_aoi_boundary
         self.adjust_manning = adjust_manning
+
         self.flood_model = flood_model
+        self.flood_type = flood_type
 
         self.polygons = polygons
         self.vectors = vectors
@@ -419,6 +427,7 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.start_time,
                 self.end_time,
                 scenario_and_id_folder,
+                self.flood_type,
                 self.crs,
                 self.polygons,
                 self.vectors
@@ -435,6 +444,7 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.start_time,
                 self.end_time,
                 scenario_and_id_folder,
+                self.flood_type,
                 self.crs,
                 self.polygons,
                 self.vectors
@@ -501,6 +511,7 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # OTAUTAU
 def otautau(
+        flood_type: str = 'fluvial',
         landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
         elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
@@ -509,6 +520,8 @@ def otautau(
 
     Parameters
     ----------
+    flood_type : str = 'fluvial'
+        Flood type: 'pluvial' or 'fluvial'. Default is 'fluvial'
     landcover_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
@@ -555,7 +568,9 @@ def otautau(
         num_threads,
         flood_aoi_boundary,
         adjust_manning,
+
         flood_model,
+        flood_type,
 
         polygons,
         vectors,
@@ -617,14 +632,17 @@ def otautau(
 
 
 def mataura(
+        flood_type: str = 'fluvial',
         landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
         elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
     """
-    Run a hydrological and hydrodynamic simulation for Mataura.
+    Run a hydrological and hydrodynamic simulation for Otautau.
 
     Parameters
     ----------
+    flood_type : str = 'fluvial'
+        Flood type: 'pluvial' or 'fluvial'. Default is 'fluvial'
     landcover_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
@@ -671,7 +689,9 @@ def mataura(
         num_threads,
         flood_aoi_boundary,
         adjust_manning,
+
         flood_model,
+        flood_type,
 
         polygons,
         vectors,
@@ -685,14 +705,17 @@ def mataura(
 
 
 def whirinaki(
+        flood_type: str = 'fluvial',
         landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
         elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
     """
-    Run a hydrological and hydrodynamic simulation for Whirinaki.
+    Run a hydrological and hydrodynamic simulation for Otautau.
 
     Parameters
     ----------
+    flood_type : str = 'fluvial'
+        Flood type: 'pluvial' or 'fluvial'. Default is 'fluvial'
     landcover_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
@@ -717,7 +740,7 @@ def whirinaki(
     num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1641148, 6072532, 1642796, 6076268]
     adjust_manning = False
-    flood_model = 'bg-flood'
+    flood_model = 'lisflood-fp'
 
     polygons = landcover_scenario_gdf
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
@@ -738,7 +761,9 @@ def whirinaki(
         num_threads,
         flood_aoi_boundary,
         adjust_manning,
+
         flood_model,
+        flood_type,
 
         polygons,
         vectors,
@@ -753,14 +778,17 @@ def whirinaki(
 
 # RIVERTON
 def riverton(
+        flood_type: str = 'fluvial',
         landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
         elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
     """
-    Run a hydrological and hydrodynamic simulation for Riverton.
+    Run a hydrological and hydrodynamic simulation for Otautau.
 
     Parameters
     ----------
+    flood_type : str = 'fluvial'
+        Flood type: 'pluvial' or 'fluvial'. Default is 'fluvial'
     landcover_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
@@ -806,7 +834,9 @@ def riverton(
         num_threads,
         flood_aoi_boundary,
         adjust_manning,
+
         flood_model,
+        flood_type,
 
         polygons,
         vectors,
@@ -827,7 +857,7 @@ if __name__ == '__main__':
     df = pd.read_csv(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
     )
-    whirinaki(gdf, df)
+    whirinaki('pluvial', None, None)
 
     # # Riverton
     # riverton(None, None)

@@ -44,6 +44,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
+        flood_type: str = 'fluvial',
         polygons: str = None,
         vectors: pd.DataFrame = None
     ) -> None:
@@ -62,6 +63,8 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details.
+        flood_type : str = 'fluvial'
+            Flood type: 'pluvial' or 'fluvial'. Default is 'fluvial'
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -75,6 +78,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
             hydromt_path,
             terrain_bounding_box,
             start_time, end_time,
+            flood_type,
             polygons,
             vectors
         )
@@ -245,19 +249,41 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         # Path to Manning's n
         n = str(self.flood_model_path / "manning.asc")
 
-        # Create parameters list
-        parameters_list = [
-            ('resroot', 'out'),
-            ('dirroot', str(output_directory)),
-            ('saveint', 21600),
-            ('massint', 500),
-            ('sim_time', f'{self.seconds}'),
-            ('initial_tstep', 5),
-            ('bcifile', bci),
-            ('bdyfile', bdy),
-            ('DEMFile', z),
-            ('manningfile', n)
-        ]
+        # For pluvial
+        if self.flood_type == 'pluvial':
+            # Add pluvial parameter
+            rainfile = str(self.flood_model_path / "precipitation_dynamic.nc")
+
+            # Create parameters list
+            parameters_list = [
+                ('resroot', 'out'),
+                ('dirroot', str(output_directory)),
+                ('saveint', 21600),
+                ('massint', 500),
+                ('sim_time', f'{self.seconds}'),
+                ('initial_tstep', 5),
+                ('bcifile', bci),
+                ('bdyfile', bdy),
+                ('DEMFile', z),
+                ('manningfile', n),
+                ('dynamicrainfile', rainfile)
+            ]
+
+        # For fluvial
+        else:
+            # Create parameters list
+            parameters_list = [
+                ('resroot', 'out'),
+                ('dirroot', str(output_directory)),
+                ('saveint', 21600),
+                ('massint', 500),
+                ('sim_time', f'{self.seconds}'),
+                ('initial_tstep', 5),
+                ('bcifile', bci),
+                ('bdyfile', bdy),
+                ('DEMFile', z),
+                ('manningfile', n)
+            ]
 
         # Write into array
         parameters_array = np.array(parameters_list)

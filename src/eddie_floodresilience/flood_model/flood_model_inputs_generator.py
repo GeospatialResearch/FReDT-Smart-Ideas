@@ -189,8 +189,7 @@ class TerrainGenerator:
         terrain_bounding_box = self.extract_terrain_bounding_box(terrain_crs_clipped)
 
         # Write out clipped terrain data
-        if self.vectors is None:
-            self.write_out_terrain_data(terrain_crs_clipped)
+        self.write_out_terrain_data(terrain_crs_clipped)
 
         return terrain_bounding_box, terrain_crs_clipped
 
