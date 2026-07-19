@@ -66,6 +66,7 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
+        flood_type: str = 'fluvial',
         polygons: str = None,
         vectors: str = None
     ) -> None:
@@ -98,6 +99,7 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
             terrain_bounding_box,
             start_time,
             end_time,
+            flood_type,
             polygons,
             vectors
         )
@@ -336,28 +338,50 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
         # Get terrain name path
         terrain_name = str(self.flood_model_path / "8m_geofabric_clipped.nc")
 
-        # Create param text
-        param_text = dedent(f"""\
-        topo = {terrain_name}?z;
-        dx = 16.0;
-        outputtimestep = 7200;
-        endtime = {self.seconds};
-        mask = 9999;
-        gpudevice = 1;
-        smallnc = 0;
-        zsoffset = 1.500000;
-        zsinit = -2.500000;
-        frictionmodel = 1;
-        cfmap = {terrain_name}?zo;
-        outfile = output.nc;
-        outvars = hmax;
-        top = top_bnd.txt,2;
-        bottom = bottom_bnd.txt,2;
-        right = right_bnd.txt,2;
-        left = left_bnd.txt,2;
-        """)
+        if self.flood_type == 'fluvial':
+            # Create param text
+            param_text = dedent(f"""\
+            bathy = {terrain_name}?z;
+            dx = 16.0;
+            outputtimestep = 7200;
+            endtime = {self.seconds};
+            mask = 9999;
+            gpudevice = 1;
+            smallnc = 0;
+            zsoffset = 1.500000;
+            zsinit = -2.500000;
+            frictionmodel = 1;
+            cfmap = {terrain_name}?zo;
+            outfile = output.nc;
+            outvars = hmax;
+            top = top_bnd.txt,2;
+            bottom = bottom_bnd.txt,2;
+            right = right_bnd.txt,2;
+            left = left_bnd.txt,2;
+            """)
 
-        # rainfile = {str(self.flood_model_path / "precipitation_dynamic.nc")}?depth;
+        else:
+            # Create param text
+            param_text = dedent(f"""\
+            bathy = {terrain_name}?z;
+            dx = 16.0;
+            outputtimestep = 7200;
+            endtime = {self.seconds};
+            mask = 9999;
+            gpudevice = 1;
+            smallnc = 0;
+            zsoffset = 1.500000;
+            zsinit = -2.500000;
+            frictionmodel = 1;
+            cfmap = {terrain_name}?zo;
+            rainfile = {str(self.flood_model_path / "precipitation_dynamic.nc")}?depth;
+            outfile = output.nc;
+            outvars = hmax;
+            top = top_bnd.txt,2;
+            bottom = bottom_bnd.txt,2;
+            right = right_bnd.txt,2;
+            left = left_bnd.txt,2;
+            """)
 
         # Set up output path
         output_path = self.flood_model_path / self.output_folder / "BG_param.txt"

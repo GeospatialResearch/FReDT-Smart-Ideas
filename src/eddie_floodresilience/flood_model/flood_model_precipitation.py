@@ -18,7 +18,7 @@
 """This script formats and writes precipitation data for flood model inputs."""
 import logging
 from abc import ABC, abstractmethod
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 
 import netCDF4
@@ -96,7 +96,7 @@ class PrecipitationGenerator:
         with xr.open_dataset(precipitation_given_time_path) as precipitation_given_time:
             # Extract precipitation within time
             precipitation_subset = precipitation_given_time.sel(
-                time=slice(self.start_time, self.end_time)
+                time=slice(self.start_time, self.end_time + timedelta(hours=1))
             )
 
         return precipitation_subset

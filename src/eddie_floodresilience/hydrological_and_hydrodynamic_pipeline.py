@@ -496,11 +496,11 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
-
-            # Generate wflow data
-            self.wflow_data_pipeline(scenario_and_id_folder)
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
+            #
+            # # Generate wflow data
+            # self.wflow_data_pipeline(scenario_and_id_folder)
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
@@ -857,7 +857,7 @@ if __name__ == '__main__':
     df = pd.read_csv(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
     )
-    whirinaki('fluvial', None, None)
+    whirinaki('pluvial', gdf, df)
 
     # # Riverton
     # riverton(None, None)

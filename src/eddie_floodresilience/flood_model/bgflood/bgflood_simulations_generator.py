@@ -81,6 +81,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
+            self.flood_type,
             self.polygons,
             self.vectors
         )
@@ -160,6 +161,9 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         int
             The model output ID of the flood model run
         """
+        # Get original path
+        original_path = self.flood_model_path.parents[1] / "original_scenario/hydrodynamic_process"
+
         # Four cases:
         # 1. Original scenario (polygon=None, vector=None)
         # 2. Polygon=None, vector!=None
@@ -170,31 +174,30 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
+            # Generate precipitation data for flood model
+            if self.flood_type == 'pluvial':
+                self.precipitation_data_for_flood_model_generator()
+
             # Generate parameter files for flood model
             self.parameter_files_for_flood_model_generator()
-
-            # # Generate precipitation data for flood model
-            # self.precipitation_data_for_flood_model_generator()
-
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(None)
 
         # This 'elif' includes 3 and 4
         elif self.polygons is not None or self.vectors is None:
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
+            # Copy precipitation
+            if self.flood_type == 'pluvial':
+                shutil.copy2(
+                    original_path / "precipitation_dynamic.nc",
+                    self.flood_model_path / "precipitation_dynamic.nc"
+                )
+
             # Generate parameter files for flood model
             self.parameter_files_for_flood_model_generator()
 
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(None)
-
         # This 'else' includes 2
         else:
-            # Get original path
-            original_path = self.flood_model_path.parents[1] / "original_scenario/hydrodynamic_process"
-
             # Copy injection points
             shutil.copy2(
                 original_path / "injection_points_flow.csv",
@@ -206,11 +209,18 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                     self.flood_model_path / original_file.name
                 )
 
+            # Copy precipitation
+            if self.flood_type == 'pluvial':
+                shutil.copy2(
+                    original_path / "precipitation_dynamic.nc",
+                    self.flood_model_path / "precipitation_dynamic.nc"
+                )
+
             # Generate parameter files for flood model
             self.parameter_files_for_flood_model_generator()
 
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(None)
+        # Generate simulations by running flood model
+        max_gtiff = self.flood_model_simulations_generator(None)
 
         # Add the results to the database and geoserver
         model_output_id = self.serve_flood_model_outputs(max_gtiff)
