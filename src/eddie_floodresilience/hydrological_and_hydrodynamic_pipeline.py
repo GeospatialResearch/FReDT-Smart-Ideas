@@ -740,7 +740,7 @@ def whirinaki(
     num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1641148, 6072532, 1642796, 6076268]
     adjust_manning = False
-    flood_model = 'lisflood-fp'
+    flood_model = 'bg-flood'
 
     polygons = landcover_scenario_gdf
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
@@ -857,7 +857,7 @@ if __name__ == '__main__':
     df = pd.read_csv(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
     )
-    whirinaki('pluvial', None, None)
+    whirinaki('fluvial', None, None)
 
     # # Riverton
     # riverton(None, None)

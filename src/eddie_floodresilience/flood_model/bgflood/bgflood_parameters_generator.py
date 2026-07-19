@@ -92,15 +92,23 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
             This vector dataframe has 'value' column to specify increasing or decreasing elevation,
             and 'distance' column to specify how smooth to decrease elevation.
         """
-        super().__init__(flood_model_path, hydromt_path, terrain_bounding_box, start_time, end_time, polygons, vectors)
+        super().__init__(
+            flood_model_path,
+            hydromt_path,
+            terrain_bounding_box,
+            start_time,
+            end_time,
+            polygons,
+            vectors
+        )
 
+        # Modify injection points
         # Add column that converts time to seconds
         self.injection_points_flow['time_in_second'] = np.arange(
             0,
             3600 * (len(self.injection_points_flow)),
             3600
         )
-
         self.injection_points = gpd.read_file(self.flood_model_path / "injection_points.shp")
 
         # Create output folder
@@ -137,19 +145,65 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
                     delimiter="\t"
                 )
 
+    def generate_tidal_direction_list(self) -> list:
+        """
+        Generate a list of tidal directions - top, bottom, right, left
+
+        Returns
+        -------
+        directions : list
+            A list of directions with their polygons
+        """
+        # Get xmin, ymin, xmax, ymax from 10-m-buffered bounding box
+        xmin, ymin, xmax, ymax = self.terrain_bounding_box.buffer(10).bounds
+
+        # Get centroid of bounding box
+        centroid = self.terrain_bounding_box.centroid
+
+        # Create a list of directions
+        top = {'top': Polygon([(xmin, ymax), (xmax, ymax), centroid])}
+        bottom = {'bottom': Polygon([(xmin, ymin), (xmax, ymax), centroid])}
+        right = {'right': Polygon([(xmax, ymax), (xmax, ymax), centroid])}
+        left = {'left': Polygon([(xmin, ymax), (xmin, ymin), centroid])}
+        directions = [top, bottom, right, left]
+
+        return directions
+
     def tide_text_file_design(
         self,
-        direction: str
+        direction_name: str
     ) -> None:
         """
         Design codes for generating tide text data
 
         Parameters
         ----------
-        direction : str
-            Four edges of DEM - top, bottom, left, and right
+        direction_name : str
+            Any of four edges of DEM - top, bottom, left, and right
         """
-        with open(self.flood_model_path / self.output_folder / f"{direction}_bnd.txt", "w", encoding="utf-8") as f:
+        with open(self.flood_model_path / self.output_folder / f"{direction_name}_bnd.txt", "w",
+                  encoding="utf-8") as f:
+            # write header
+            f.write("# Water level boundary\n")
+
+            # Write tide values
+            for _idx, row in self.tide_df.iterrows():
+                line = f"{row.seconds:<10.0f}{row.value:.4f}\n"
+                f.write(line)
+
+    def nontide_text_file_design(
+        self,
+        direction_name: str
+    ) -> None:
+        """
+        Design codes for generating non-tide text data
+
+        Parameters
+        ----------
+        direction_name : str
+            Any of four edges of DEM - top, bottom, left, and right
+        """
+        with open(self.flood_model_path / self.output_folder / f"{direction_name}_bnd.txt", "w", encoding="utf-8") as f:
             # write header
             f.write("# Water level boundary\n")
 
@@ -157,13 +211,24 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
             for t in self.injection_points_flow["time_in_second"]:
                 f.write(f"{int(t)}\t0.0\n")
 
-    def tide_text_file_generator(self) -> None:
-        """Generate tide text data for four edges for BG-Flood"""
-        log.info("Writing tide boundary configuration.")
-        self.tide_text_file_design('top')
-        self.tide_text_file_design('bottom')
-        self.tide_text_file_design('left')
-        self.tide_text_file_design('right')
+    def generate_tidal_point_files(self) -> None:
+        """Generate tidal point files"""
+        # Generate a list of directions
+        directions = self.generate_tidal_direction_list()
+
+        # Get tidal point
+        tidal_point = gpd.read_file(self.flood_model_path / "tidal_point.shp")
+
+        for direction in directions:
+            # Get direction and name
+            direction_value = list(direction.values())[0]
+            direction_name = list(direction.keys())[0]
+
+            if tidal_point.geometry[0].within(direction_value):
+                self.tide_text_file_design(direction_name)
+
+            else:
+                self.nontide_text_file_design(direction_name)
 
     def pixel_bounds_from_centroid(
         self,
@@ -310,7 +375,7 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
         self.write_injection_point_files()
 
         # Generate tide files
-        self.tide_text_file_generator()
+        self.generate_tidal_point_files()
 
         # Generate param files
         self.write_flood_model_parameter_file()

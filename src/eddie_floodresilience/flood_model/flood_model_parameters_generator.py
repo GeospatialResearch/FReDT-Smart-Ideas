@@ -27,6 +27,8 @@ from shapely.geometry import Polygon
 
 from eddie.digitaltwin.utils import LogLevel, setup_logging
 
+from src.eddie_floodresilience.flood_model.flood_model_tide_generator import TidalDataGenerator
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
@@ -80,6 +82,17 @@ class FloodModelParametersGenerator(ABC):
         self.vectors = vectors
         self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
         self.seconds = int((end_time - start_time).total_seconds())
+
+        # Set up tide generator
+        tide_df_generator = TidalDataGenerator(
+            self.flood_model_path,
+            self.hydromt_path,
+            self.start_time,
+            self.end_time,
+            self.terrain_bounding_box
+        )
+        # Generate tide dataframe
+        self.tide_df = tide_df_generator.generate_tidal_data()
 
     @abstractmethod
     def parameter_files_generator(self) -> Path:
