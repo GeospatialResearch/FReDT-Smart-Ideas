@@ -637,7 +637,7 @@ def mataura(
         elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
     """
-    Run a hydrological and hydrodynamic simulation for Otautau.
+    Run a hydrological and hydrodynamic simulation for Mataura.
 
     Parameters
     ----------
