@@ -740,7 +740,7 @@ def whirinaki(
     num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1641148, 6072532, 1642796, 6076268]
     adjust_manning = False
-    flood_model = 'bg-flood'
+    flood_model = 'lisflood-fp'
 
     polygons = landcover_scenario_gdf
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
