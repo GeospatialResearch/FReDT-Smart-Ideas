@@ -147,13 +147,13 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
                     delimiter="\t"
                 )
 
-    def generate_tidal_direction_list(self) -> list:
+    def generate_tidal_direction_list(self) -> list[dict[str, Polygon]]:
         """
         Generate a list of tidal directions - top, bottom, right, left
 
         Returns
         -------
-        directions : list
+        directions : list[dict[str, Polygon]]
             A list of directions with their polygons
         """
         # Get xmin, ymin, xmax, ymax from 10-m-buffered bounding box
