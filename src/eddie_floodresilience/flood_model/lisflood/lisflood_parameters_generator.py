@@ -189,41 +189,24 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
         # Path to Manning's n
         n = str(self.flood_model_path / "manning.asc")
 
+        # Create parameters list
+        parameters_list = [
+            ('resroot', 'out'),
+            ('dirroot', str(output_directory)),
+            ('saveint', 21600),
+            ('massint', 500),
+            ('sim_time', f'{self.seconds}'),
+            ('initial_tstep', 5),
+            ('bcifile', bci),
+            ('bdyfile', bdy),
+            ('DEMFile', z),
+            ('manningfile', n)
+        ]
         # For pluvial
         if self.flood_type == 'pluvial':
             # Add pluvial parameter
             rainfile = str(self.flood_model_path / "precipitation_dynamic.nc")
-
-            # Create parameters list
-            parameters_list = [
-                ('resroot', 'out'),
-                ('dirroot', str(output_directory)),
-                ('saveint', 21600),
-                ('massint', 500),
-                ('sim_time', f'{self.seconds}'),
-                ('initial_tstep', 5),
-                ('bcifile', bci),
-                ('bdyfile', bdy),
-                ('DEMFile', z),
-                ('manningfile', n),
-                ('dynamicrainfile', rainfile)
-            ]
-
-        # For fluvial
-        else:
-            # Create parameters list
-            parameters_list = [
-                ('resroot', 'out'),
-                ('dirroot', str(output_directory)),
-                ('saveint', 21600),
-                ('massint', 500),
-                ('sim_time', f'{self.seconds}'),
-                ('initial_tstep', 5),
-                ('bcifile', bci),
-                ('bdyfile', bdy),
-                ('DEMFile', z),
-                ('manningfile', n)
-            ]
+            parameters_list.append(('dynamicrainfile', rainfile))
 
         # Write into array
         parameters_array = np.array(parameters_list)
