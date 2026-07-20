@@ -70,8 +70,8 @@ class FloodModelParametersGenerator(ABC):
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details.
-        flood_type : str = 'fluvial'
-            Flood type: 'pluvial' or 'fluvial'. Default is 'fluvial'
+        flood_type : FloodType = FloodType.FLUVIAL
+            Either FLUVIAL or PLUVIAL. Default is FLUVIAL
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values

@@ -75,10 +75,9 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
     def parameter_files_for_flood_model_generator(self) -> Path:
         """
-        Generate parameters files for flood model
-        
+        Generate parameters files for flood model.
         Returns
-        ------
+        -------
         Path
             The directory the parameter file was created in.
         """  # pylint: disable=duplicate-code
@@ -124,7 +123,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         output_folder_path = self.flood_model_path / "output"
 
         # Copy flood model folder, including executable and .dlls
-        shutil.copytree(EnvVariable.FLOOD_MODEL_DIR / "BG_Flood", output_folder_path, dirs_exist_ok=True)
+        shutil.copytree(EnvVariable.FLOOD_MODEL_DIR, output_folder_path, dirs_exist_ok=True)
 
         # Identify the BG-Flood Model executable, accounting for OS differences
         operating_system = platform.system()
