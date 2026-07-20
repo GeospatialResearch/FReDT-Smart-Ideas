@@ -31,6 +31,7 @@ from src.eddie_floodresilience.flood_model import serve_model
 from .lisflood_inputs_generator import TerrainFloodModelGenerator
 from .lisflood_parameters_generator import LisfloodParametersGenerator
 from .lisflood_precipitation import LisfloodPrecipitationFloodModelGenerator
+from ..flood_model_parameters_generator import FloodType
 from ..flood_model_precipitation import PrecipitationGenerator
 from ..flood_model_siumulations_generator import BaseFloodModelSimulationsGenerator
 
@@ -195,7 +196,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
-            if self.flood_type == 'pluvial':
+            if self.flood_type == FloodType.PLUVIAL:
                 # Copy rainfall
                 shutil.copy2(
                     original_dir / "precipitation_dynamic.nc",
@@ -214,7 +215,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
-            if self.flood_type == 'pluvial':
+            if self.flood_type == FloodType.PLUVIAL:
                 # Copy rainfall
                 shutil.copy2(
                     original_dir / "precipitation_dynamic.nc",
@@ -237,7 +238,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                     scenario_dir / original_file_dir.name
                 )
 
-            if self.flood_type == 'pluvial':
+            if self.flood_type == FloodType.PLUVIAL:
                 # Copy rainfall
                 shutil.copy2(
                     original_dir / "precipitation_dynamic.nc",
@@ -252,7 +253,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
-            if self.flood_type == 'pluvial':
+            if self.flood_type == FloodType.PLUVIAL:
                 # Generate precipitation data for flood model
                 self.precipitation_data_for_flood_model_generator()
 

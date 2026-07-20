@@ -20,6 +20,7 @@
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 import pandas as pd
@@ -31,6 +32,13 @@ from src.eddie_floodresilience.flood_model.flood_model_tide_generator import Tid
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
+
+class FloodType(StrEnum):
+    """Class for flood type options: 'pluvial' and 'fluvial'"""
+
+    FLUVIAL = 'fluvial'
+    PLUVIAL = 'pluvial'
 
 
 class FloodModelParametersGenerator(ABC):

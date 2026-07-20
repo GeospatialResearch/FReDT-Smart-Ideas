@@ -25,7 +25,7 @@ import pandas as pd
 import numpy as np
 
 from eddie.digitaltwin.utils import LogLevel, setup_logging
-from ..flood_model_parameters_generator import FloodModelParametersGenerator
+from ..flood_model_parameters_generator import FloodModelParametersGenerator, FloodType
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -203,7 +203,7 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
             ('manningfile', n)
         ]
         # For pluvial
-        if self.flood_type == 'pluvial':
+        if self.flood_type == FloodType.PLUVIAL:
             # Add pluvial parameter
             rainfile = str(self.flood_model_path / "precipitation_dynamic.nc")
             parameters_list.append(('dynamicrainfile', rainfile))

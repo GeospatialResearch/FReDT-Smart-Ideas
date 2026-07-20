@@ -30,6 +30,7 @@ from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.serve_model import convert_nc_to_gtiff
 from .bgflood_parameters_generator import BGFloodParametersGenerator
 from .bgflood_precipitation import BGFloodPrecipitationGenerator, BGFloodPrecipitationFloodModelGenerator
+from ..flood_model_parameters_generator import FloodType
 from ..flood_model_siumulations_generator import BaseFloodModelSimulationsGenerator
 
 setup_logging(LogLevel.DEBUG)
@@ -72,8 +73,15 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate precipitation data for flood model
             precipitation_data_for_flood_model.precipitation_for_flood_model_generator()
 
-    def parameter_files_for_flood_model_generator(self) -> None:
-        """Generate parameters files for flood model"""  # pylint: disable=duplicate-code
+    def parameter_files_for_flood_model_generator(self) -> Path:
+        """
+        Generate parameters files for flood model
+        
+        Returns
+        ------
+        Path
+            The directory the parameter file was created in.
+        """  # pylint: disable=duplicate-code
         # Call out class used to generate parameter files
         parameters_files_generator = BGFloodParametersGenerator(
             self.flood_model_path,
@@ -87,7 +95,9 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         )
 
         # Generate parameter files
-        parameters_files_generator.parameter_files_generator()
+        output_dir = parameters_files_generator.parameter_files_generator()
+
+        return output_dir
 
     # pylint: disable=useless-type-doc,useless-param-doc
     def flood_model_simulations_generator(self, _output_dir: Path | None) -> Path:
@@ -113,8 +123,8 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         # Get the output folder path
         output_folder_path = self.flood_model_path / "output"
 
-        # # Copy flood model folder, including executable and .dlls
-        # shutil.copytree(EnvVariable.FLOOD_MODEL_DIR, output_folder_path, dirs_exist_ok=True)
+        # Copy flood model folder, including executable and .dlls
+        shutil.copytree(EnvVariable.FLOOD_MODEL_DIR / "BG_Flood", output_folder_path, dirs_exist_ok=True)
 
         # Identify the BG-Flood Model executable, accounting for OS differences
         operating_system = platform.system()
@@ -128,9 +138,6 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                 log.warning(
                     f"{operating_system} is not officially supported. Only Windows and Linux are officially supported.")
                 log.warning(f"Attempting to run BG_Flood linux script in {operating_system}")
-
-        # Copy BG_flood programme
-        shutil.copy2(flood_model_exe_path, output_folder_path)
 
         # BG flood command
         output_executable = output_folder_path / flood_model_exe_path.name
@@ -175,7 +182,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.injection_points_for_flood_model_generator()
 
             # Generate precipitation data for flood model
-            if self.flood_type == 'pluvial':
+            if self.flood_type == FloodType.PLUVIAL:
                 self.precipitation_data_for_flood_model_generator()
 
             # Generate parameter files for flood model
@@ -187,7 +194,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.injection_points_for_flood_model_generator()
 
             # Copy precipitation
-            if self.flood_type == 'pluvial':
+            if self.flood_type == FloodType.PLUVIAL:
                 shutil.copy2(
                     original_path / "precipitation_dynamic.nc",
                     self.flood_model_path / "precipitation_dynamic.nc"
@@ -210,7 +217,7 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                 )
 
             # Copy precipitation
-            if self.flood_type == 'pluvial':
+            if self.flood_type == FloodType.PLUVIAL:
                 shutil.copy2(
                     original_path / "precipitation_dynamic.nc",
                     self.flood_model_path / "precipitation_dynamic.nc"
@@ -219,8 +226,11 @@ class BGFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate parameter files for flood model
             self.parameter_files_for_flood_model_generator()
 
+        # Generate parameter files for flood model
+        output_dir = self.parameter_files_for_flood_model_generator()
+
         # Generate simulations by running flood model
-        max_gtiff = self.flood_model_simulations_generator(None)
+        max_gtiff = self.flood_model_simulations_generator(output_dir)
 
         # Add the results to the database and geoserver
         model_output_id = self.serve_flood_model_outputs(max_gtiff)
