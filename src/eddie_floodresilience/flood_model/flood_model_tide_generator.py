@@ -64,8 +64,8 @@ class TidalDataGenerator:
         """
         self.flood_model_path = flood_model_path
         self.hydromt_path = hydromt_path
-        self.number_of_days = (end_time - start_time).days
-        self.start_date = start_time.strftime("%Y-%m-%d")
+        self.start_time = start_time
+        self.end_time = end_time
         self.terrain_bounding_box = terrain_bounding_box
 
         # River outlet
@@ -194,13 +194,17 @@ class TidalDataGenerator:
         tidal_point_gdf_4326 = tidal_point_gdf.to_crs(4326)
         tidal_point_4326 = tidal_point_gdf_4326.geometry.iloc[0]
 
+        # Get time
+        number_of_days = math.ceil((self.end_time - self.start_time).total_seconds() / 86400)
+        start_date = self.start_time.strftime("%Y-%m-%d")
+
         # Design query params
         params_dict = {
             "apikey": config.EnvVariable.NIWA_API_KEY,
             "lat": float(tidal_point_4326.y),
             "long": float(tidal_point_4326.x),
-            "numberOfDays": self.number_of_days,
-            "startDate": self.start_date,
+            "numberOfDays": number_of_days,
+            "startDate": start_date,
             "datum": 'MSL',
             "interval": 10
         }
@@ -325,6 +329,12 @@ class TidalDataGenerator:
 
             # Resample tidal data
             tidal_df = self.resample_tidal_data(tidal_dict)
+
+            # Filter the time
+            tidal_df = tidal_df[
+                (tidal_df.index.tz_localize(None) >= self.start_time) &
+                (tidal_df.index.tz_localize(None) <= self.end_time)
+            ]
 
             # Add more seconds
             tidal_df["seconds"] = (

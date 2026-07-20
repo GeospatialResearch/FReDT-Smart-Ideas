@@ -20,6 +20,7 @@
 import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
+from enum import StrEnum
 from pathlib import Path
 
 import pandas as pd
@@ -27,8 +28,17 @@ from shapely.geometry import Polygon
 
 from eddie.digitaltwin.utils import LogLevel, setup_logging
 
+from src.eddie_floodresilience.flood_model.flood_model_tide_generator import TidalDataGenerator
+
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
+
+
+class FloodType(StrEnum):
+    """Class for flood type options: 'pluvial' and 'fluvial'"""
+
+    FLUVIAL = 'fluvial'
+    PLUVIAL = 'pluvial'
 
 
 class FloodModelParametersGenerator(ABC):
@@ -41,6 +51,7 @@ class FloodModelParametersGenerator(ABC):
         terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
+        flood_type: str = 'fluvial',
         polygons: str = None,
         vectors: pd.DataFrame = None
     ) -> None:
@@ -59,6 +70,8 @@ class FloodModelParametersGenerator(ABC):
             Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
         end_time : datetime
             Ending time details.
+        flood_type : FloodType = FloodType.FLUVIAL
+            Either FLUVIAL or PLUVIAL. Default is FLUVIAL
         polygons : str = None
             Name of polygon file that is used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
@@ -72,10 +85,22 @@ class FloodModelParametersGenerator(ABC):
         self.terrain_bounding_box = terrain_bounding_box
         self.start_time = start_time
         self.end_time = end_time
+        self.flood_type = flood_type
         self.polygons = polygons
         self.vectors = vectors
         self.injection_points_flow = pd.read_csv(self.flood_model_path / "injection_points_flow.csv")
         self.seconds = int((end_time - start_time).total_seconds())
+
+        # Set up tide generator
+        tide_df_generator = TidalDataGenerator(
+            self.flood_model_path,
+            self.hydromt_path,
+            self.start_time,
+            self.end_time,
+            self.terrain_bounding_box
+        )
+        # Generate tide dataframe
+        self.tide_df = tide_df_generator.generate_tidal_data()
 
     @abstractmethod
     def parameter_files_generator(self) -> Path:

@@ -41,6 +41,7 @@ from src.eddie_floodresilience.flood_model.flooded_buildings import (
 from src.eddie_floodresilience.tables import FloodModelOutputDifference
 from . import serve_model
 from .flood_model_inputs_generator import InjectionPointsFloodModelGenerator, TerrainGenerator
+from .flood_model_parameters_generator import FloodType
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -59,6 +60,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         start_time: datetime,
         end_time: datetime,
         scenario_and_id_folder: Path,
+        flood_type: FloodType = FloodType.FLUVIAL,
         crs: int = 2193,
         polygons: str = None,
         vectors: pd.DataFrame = None
@@ -80,12 +82,14 @@ class BaseFloodModelSimulationsGenerator(ABC):
         adjust_manning : bool
             True means adjusting Manning's n by resampling 4m Manning's n
             False means no Mannning's n adjustment
-        start_time: datetime
+        start_time : datetime
             Starting time of the flood event
-        end_time: datetime
+        end_time : datetime
             Ending time of the flood event
-        scenario_and_id_folder: Path
+        scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
+        flood_type : FloodType = FloodType.FLUVIAL
+            Either FLUVIAL or PLUVIAL. Default is FLUVIAL
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         polygons : str = None
@@ -106,6 +110,7 @@ class BaseFloodModelSimulationsGenerator(ABC):
         self.scenario_and_id_folder = scenario_and_id_folder
         # Set up hydrodynamic process folder
         self.flood_model_path = self.scenario_and_id_folder / "hydrodynamic_process"
+        self.flood_type = flood_type
         self.crs = crs
         self.polygons = polygons
         self.vectors = vectors

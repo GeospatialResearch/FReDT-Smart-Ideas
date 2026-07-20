@@ -18,17 +18,14 @@
 """This script sets parameter files for LISFLOOD-FP model runs."""
 
 import logging
-from datetime import datetime
 from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
 import numpy as np
-from shapely.geometry import Polygon
 
 from eddie.digitaltwin.utils import LogLevel, setup_logging
-from src.eddie_floodresilience.flood_model.lisflood.lisflood_tide_generator import TidalDataGenerator
-from ..flood_model_parameters_generator import FloodModelParametersGenerator
+from ..flood_model_parameters_generator import FloodModelParametersGenerator, FloodType
 
 setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
@@ -36,59 +33,6 @@ log = logging.getLogger(__name__)
 
 class LisfloodParametersGenerator(FloodModelParametersGenerator):
     """This class is to generate parameter files for flood model"""
-
-    def __init__(
-        self,
-        flood_model_path: Path,
-        hydromt_path: Path,
-        terrain_bounding_box: Polygon,
-        start_time: datetime,
-        end_time: datetime,
-        polygons: str = None,
-        vectors: pd.DataFrame = None
-    ) -> None:
-        """
-        Generate parameter files for flood model
-
-        Parameters
-        ----------
-        flood_model_path : Path
-            Directory to folder storing flood model data
-        hydromt_path : Path
-            Directory to folder storing necessary data
-        terrain_bounding_box : Polygon
-            Bounding's box of terrain data
-        start_time : datetime
-            Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
-        end_time : datetime
-            Ending time details.
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
-            This polygon dataframe has 'landcover' column with new values
-        vectors : pd.DataFrame = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
-        """
-        super().__init__(
-            flood_model_path,
-            hydromt_path,
-            terrain_bounding_box,
-            start_time, end_time,
-            polygons,
-            vectors
-        )
-
-        # Set up tide generator
-        tide_df_generator = TidalDataGenerator(
-            self.flood_model_path,
-            self.hydromt_path,
-            self.start_time,
-            self.end_time,
-            self.terrain_bounding_box
-        )
-        # Generate tide dataframe
-        self.tide_df = tide_df_generator.generate_tidal_data()
 
     def bci_generator(self) -> None:
         """Generate bci files - where the locations of injection points are defined"""
@@ -258,6 +202,11 @@ class LisfloodParametersGenerator(FloodModelParametersGenerator):
             ('DEMFile', z),
             ('manningfile', n)
         ]
+        # For pluvial
+        if self.flood_type == FloodType.PLUVIAL:
+            # Add pluvial parameter
+            rainfile = str(self.flood_model_path / "precipitation_dynamic.nc")
+            parameters_list.append(('dynamicrainfile', rainfile))
 
         # Write into array
         parameters_array = np.array(parameters_list)

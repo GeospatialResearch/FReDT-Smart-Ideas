@@ -227,7 +227,8 @@ class ElevationSolution:
                 self.dem = dem.squeeze().load()
 
         else:
-            with xr.open_dataset(self.scenario_and_id_folder.parent / "8m_geofabric_clipped.nc") as terrain_data:
+            terrain_file = r"original_scenario/hydrodynamic_process/8m_geofabric_clipped.nc"
+            with xr.open_dataset(self.scenario_and_id_folder.parent / terrain_file) as terrain_data:
                 self.dem = terrain_data.z.squeeze()
                 self.roughness_length = terrain_data.zo.squeeze()
 
@@ -397,18 +398,6 @@ class ElevationSolution:
             )
 
         else:
-            # Find existing elevation files
-            existing_z_files = sorted(
-                hydrodynamic_process_path.glob("8m_geofabric_clipped_elevation_*.nc")
-            )
-
-            # Decide the number of output file
-            # based on the number of running the model
-            number = len(existing_z_files) + 1
-
-            # Create filename
-            output_name = f"8m_geofabric_clipped_elevation_{number:03d}.nc"
-
             # Merge z and zo
             terrain_data = xr.Dataset({
                 "z": modified_dem,
@@ -419,4 +408,4 @@ class ElevationSolution:
             terrain_data.rio.write_crs("EPSG:2193", inplace=True)
 
             # Write out
-            terrain_data.to_netcdf(hydrodynamic_process_path / output_name)
+            terrain_data.to_netcdf(hydrodynamic_process_path / "8m_geofabric_clipped.nc")

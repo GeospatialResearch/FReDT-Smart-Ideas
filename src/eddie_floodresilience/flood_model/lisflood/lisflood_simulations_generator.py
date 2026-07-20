@@ -31,6 +31,7 @@ from src.eddie_floodresilience.flood_model import serve_model
 from .lisflood_inputs_generator import TerrainFloodModelGenerator
 from .lisflood_parameters_generator import LisfloodParametersGenerator
 from .lisflood_precipitation import LisfloodPrecipitationFloodModelGenerator
+from ..flood_model_parameters_generator import FloodType
 from ..flood_model_precipitation import PrecipitationGenerator
 from ..flood_model_siumulations_generator import BaseFloodModelSimulationsGenerator
 
@@ -97,6 +98,7 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             self.terrain_bounding_box,
             self.start_time,
             self.end_time,
+            self.flood_type,
             self.polygons,
             self.vectors
         )
@@ -172,24 +174,58 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
         int
             The Flood Model output ID
         """
+        # Set up path to copy data from original scenario to the current scenario
+        # This will be adjusted in the future to copy not only from the original scenario
+        # Set up folders
+        original_hydrological_folder = r"original_scenario/hydrodynamic_process"
+        scenario_hydrological_folder = self.scenario_and_id_folder / "hydrodynamic_process"
+        # Set up directories
+        original_dir = self.flood_model_path.parents[1] / original_hydrological_folder
+        scenario_dir = self.flood_model_path.parents[1] / scenario_hydrological_folder
+
         # Four cases:
         # 1. Original scenario (polygon=None, vector=None)
         # 2. Polygon=None, vector!=None
         # 3. Polygon!=None, vector=None
         # 4. Polygon!=None, vector!=None
-        # This includes case 2
-        if self.vectors is not None:
+        # This includes case 4
+        if self.polygons is not None and self.vectors is not None:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
 
-            # Set up path to copy data from original scenario to the current scenario
-            # This will be adjusted in the future to copy not only from the original scenario
-            # Set up folders
-            original_hydrological_folder = r"original_scenario/hydrodynamic_process"
-            scenario_hydrological_folder = self.scenario_and_id_folder / "hydrodynamic_process"
-            # Set up directories
-            original_dir = self.flood_model_path.parents[1] / original_hydrological_folder
-            scenario_dir = self.flood_model_path.parents[1] / scenario_hydrological_folder
+            # Generate injection points for flood model
+            self.injection_points_for_flood_model_generator()
+
+            if self.flood_type == FloodType.PLUVIAL:
+                # Copy rainfall
+                shutil.copy2(
+                    original_dir / "precipitation_dynamic.nc",
+                    scenario_dir / "precipitation_dynamic.nc"
+                )
+
+        # This includes case 3
+        elif self.polygons is not None:
+            # Copy terrain data from original scenario
+            for original_file_dir in original_dir.glob("*.asc"):
+                shutil.copy2(
+                    original_file_dir,
+                    scenario_dir / original_file_dir.name
+                )
+
+            # Generate injection points for flood model
+            self.injection_points_for_flood_model_generator()
+
+            if self.flood_type == FloodType.PLUVIAL:
+                # Copy rainfall
+                shutil.copy2(
+                    original_dir / "precipitation_dynamic.nc",
+                    scenario_dir / "precipitation_dynamic.nc"
+                )
+
+        # This includes case 2
+        elif self.vectors is not None:
+            # Generate terrain data for flood model
+            self.terrain_data_for_flood_model_generator()
 
             # Copy injection points
             shutil.copy2(
@@ -202,13 +238,14 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
                     scenario_dir / original_file_dir.name
                 )
 
-            # Generate parameter files for flood model
-            output_dir = self.parameter_files_for_flood_model_generator()
+            if self.flood_type == FloodType.PLUVIAL:
+                # Copy rainfall
+                shutil.copy2(
+                    original_dir / "precipitation_dynamic.nc",
+                    scenario_dir / "precipitation_dynamic.nc"
+                )
 
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(output_dir)
-
-        # This includes the rest
+        # This includes 1
         else:
             # Generate terrain data for flood model
             self.terrain_data_for_flood_model_generator()
@@ -216,14 +253,15 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
             # Generate injection points for flood model
             self.injection_points_for_flood_model_generator()
 
-            # # Generate precipitation data for flood model
-            # self.precipitation_data_for_flood_model_generator()
+            if self.flood_type == FloodType.PLUVIAL:
+                # Generate precipitation data for flood model
+                self.precipitation_data_for_flood_model_generator()
 
-            # Generate parameter files for flood model
-            output_dir = self.parameter_files_for_flood_model_generator()
+        # Generate parameter files for flood model
+        output_dir = self.parameter_files_for_flood_model_generator()
 
-            # Generate simulations by running flood model
-            max_gtiff = self.flood_model_simulations_generator(output_dir)
+        # Generate simulations by running flood model
+        max_gtiff = self.flood_model_simulations_generator(output_dir)
 
         # Add the results to the database and geoserver
         model_output_id = self.serve_flood_model_outputs(max_gtiff)
