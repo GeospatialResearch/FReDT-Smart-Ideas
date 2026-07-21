@@ -19,19 +19,16 @@
 Runs backend tasks using Celery. Allowing for multiple long-running tasks to complete in the background.
 Allows the frontend to send tasks and retrieve status later.
 """
-import logging
 from typing import List, NamedTuple
 
 import geopandas as gpd
+from celery.signals import setup_logging as celery_setup_logging_signal
 
 from eddie.digitaltwin import cache_new_results, check_cache_results
-from eddie.digitaltwin.utils import setup_logging
+from eddie.digitaltwin.utils import setup_logging, LogLevel
 from eddie.tasks import OnFailureStateTask, app  # pylint: disable=cyclic-import
 from src.eddie_floodresilience import hydrological_and_hydrodynamic_pipeline
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import get_hydrograph_csv
-
-setup_logging()
-log = logging.getLogger(__name__)
 
 
 class DepthTimePlot(NamedTuple):
@@ -50,6 +47,12 @@ class DepthTimePlot(NamedTuple):
 
     depths: List[float]
     times: List[float]
+
+
+@celery_setup_logging_signal.connect
+def configure_celery_logging(*_args: tuple, **_kwargs: dict) -> None:  # pylint: disable=missing-param-doc
+    """Set up celery logging to use the same logging as if running the modules directly."""
+    setup_logging(LogLevel.INFO)
 
 
 @app.task(base=OnFailureStateTask)

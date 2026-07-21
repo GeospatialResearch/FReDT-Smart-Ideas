@@ -17,7 +17,6 @@
 
 """This script sets parameter files for flood model runs."""
 
-import logging
 from abc import ABC, abstractmethod
 from datetime import datetime
 from enum import StrEnum
@@ -26,12 +25,7 @@ from pathlib import Path
 import pandas as pd
 from shapely.geometry import Polygon
 
-from eddie.digitaltwin.utils import LogLevel, setup_logging
-
 from src.eddie_floodresilience.flood_model.flood_model_tide_generator import TidalDataGenerator
-
-setup_logging(LogLevel.DEBUG)
-log = logging.getLogger(__name__)
 
 
 class FloodType(StrEnum):

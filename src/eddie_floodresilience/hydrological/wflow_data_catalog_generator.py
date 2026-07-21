@@ -11,9 +11,6 @@ from pathlib import Path
 import yaml
 import geopandas as gpd
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
-
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

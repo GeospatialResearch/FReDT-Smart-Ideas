@@ -33,7 +33,6 @@ from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generat
     LisFloodModelSimulationsGenerator
 from src.eddie_floodresilience.tables import PipelineOutput
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
@@ -851,6 +850,7 @@ def riverton(
 
 
 if __name__ == '__main__':
+    setup_logging(LogLevel.DEBUG)
     # Whirinaki
     gdf = gpd.read_file(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
