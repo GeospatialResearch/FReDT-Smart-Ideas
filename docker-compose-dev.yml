@@ -32,7 +32,7 @@ services:
     # Bind host data directories to container, allowing different instances to share data sources.
     - ${DATA_DIR}:/stored_data
     - ${DATA_DIR_GEOSERVER}:/stored_data/geoserver
-    - ${HYDROMT_PATH}:/necessary_data
+    - ${HYDROMT_PATH}:/necessary_data:ro
 
   terria_map:
     volumes:
