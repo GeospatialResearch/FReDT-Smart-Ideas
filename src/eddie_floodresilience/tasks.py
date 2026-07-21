@@ -116,7 +116,9 @@ def create_hydrological_and_hydrodynamic_model_whirinaki_1999(
         The resultant flood model output ID.
     """
     landcover_scenario_gdf = read_location_geojson(location_geojson, landcover_name)
-    flood_model_output_id = hydrological_and_hydrodynamic_pipeline.whirinaki(landcover_scenario_gdf)
+    flood_model_output_id = hydrological_and_hydrodynamic_pipeline.whirinaki(
+        landcover_scenario_gdf=landcover_scenario_gdf
+    )
     return flood_model_output_id
 
 
@@ -138,7 +140,9 @@ def create_hydrological_and_hydrodynamic_model_mataura_2020(location_geojson: st
         The resultant flood model output ID.
     """
     landcover_scenario_gdf = read_location_geojson(location_geojson, landcover_name)
-    flood_model_output_id = hydrological_and_hydrodynamic_pipeline.mataura(landcover_scenario_gdf)
+    flood_model_output_id = hydrological_and_hydrodynamic_pipeline.mataura(
+        landcover_scenario_gdf=landcover_scenario_gdf
+    )
     return flood_model_output_id
 
 
