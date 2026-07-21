@@ -105,16 +105,14 @@ ENV JULIA_DEPOT_PATH="/opt/julia"
 RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="0.8.1")'
 
 # Copy python virtual environment from build layer
-COPY --chown=root:root --chmod=777 --from=build /venv /venv
-USER nonroot
+COPY --chown=root:root --chmod=655 --from=build /venv /venv
+
 # download whitebox binaries
 RUN <<EOF
   set -ex
   source /venv/bin/activate
   python -c "from whitebox.whitebox_tools import WhiteboxTools; wbt = WhiteboxTools()"
 EOF
-
-USER root
 
 # Copy source files and essential runtime files
 COPY --chown=root:root --chmod=444 selected_polygon.geojson .
