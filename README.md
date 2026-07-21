@@ -36,7 +36,7 @@ The following list defines the basic steps required to set up and run the digita
 
 ### Officially Supported Operating Systems
 
-* Windows 10/11
+* Windows 10/11 Note: Performance may not be as good on WSL as on Linux.
 * Ubuntu 22.04
 
 Note: Other Linux-based operating systems are likely to work but have not been as thoroughly tested.
