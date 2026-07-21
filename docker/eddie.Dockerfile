@@ -104,21 +104,15 @@ ENV JULIA_DEPOT_PATH="/opt/julia"
 # Install Julia package Wflow
 RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="0.8.1")'
 
-COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/rainfall_gauges_HIRDS /Barra
-COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/hydrological_hydrodynamic_mataura_path_001 /stored_data/mataura/hydrological_hydrodynamic_mataura_path_001
-COPY --chown=nonroot:nonroot --chmod=755 stored_data_mataura_template/necessary_data /necessary_data
-
 # Copy python virtual environment from build layer
-COPY --chown=root:root --chmod=777 --from=build /venv /venv
-USER nonroot
+COPY --chown=root:root --chmod=655 --from=build /venv /venv
+
 # download whitebox binaries
 RUN <<EOF
   set -ex
   source /venv/bin/activate
   python -c "from whitebox.whitebox_tools import WhiteboxTools; wbt = WhiteboxTools()"
 EOF
-
-USER root
 
 # Copy source files and essential runtime files
 COPY --chown=root:root --chmod=444 selected_polygon.geojson .

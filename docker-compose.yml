@@ -49,8 +49,6 @@ services:
       - .env
       - api_keys.env
       - .env.docker-override
-    volumes:
-      - stored_data:/stored_data
     healthcheck:
       test: curl --fail -s http://localhost:5000/ || exit 1
       interval: 10s
@@ -63,6 +61,41 @@ services:
       - message_broker
       - geoserver
 
+  celery_worker:
+    # Performs tasks such as complex computation asynchronously on behalf of backend
+    build:
+      context: .
+      dockerfile: docker/eddie.Dockerfile
+    container_name: celery_worker_digital_twin
+    entrypoint: ["src/celery_worker_entrypoint.sh"]
+    restart: always
+    env_file:
+      - .env
+      - api_keys.env
+      - .env.docker-override
+    volumes:
+      # Bind host data directories to container, allowing different instances to share data sources.
+      - stored_data:/stored_data
+      - geoserver_data:/stored_data/geoserver
+      - ${HYDROMT_PATH}:/necessary_data:ro
+    ports:
+      - "5001:5001"
+    healthcheck:
+      test: curl --fail -s http://localhost:5001/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - db_postgres
+      - message_broker
+      - geoserver
+    deploy:
+      resources:
+        reservations:
+          devices:
+          - driver: nvidia
+            count: all # Use all available GPUs
+            capabilities: [ gpu ]
 
   geoserver:
     # Serves geospatial web data through interactions with files and database
@@ -71,7 +104,7 @@ services:
       dockerfile: geoserver.Dockerfile
     container_name: geoserver_digital_twin
     volumes:
-      - ${DATA_DIR_GEOSERVER}:/opt/geoserver_data
+      - geoserver_data:/opt/geoserver_data
     depends_on:
       - db_postgres
     environment:
