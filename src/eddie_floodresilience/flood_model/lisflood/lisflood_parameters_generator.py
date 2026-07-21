@@ -24,10 +24,8 @@ import geopandas as gpd
 import pandas as pd
 import numpy as np
 
-from eddie.digitaltwin.utils import LogLevel, setup_logging
 from ..flood_model_parameters_generator import FloodModelParametersGenerator, FloodType
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

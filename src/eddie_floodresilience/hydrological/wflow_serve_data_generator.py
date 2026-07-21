@@ -28,12 +28,10 @@ import rioxarray as rxr
 
 from eddie import geoserver as gs
 from eddie.digitaltwin import setup_environment
-from eddie.digitaltwin.utils import setup_logging
 from eddie.geoserver.raster_layers import CoverageDimension
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import find_landcover_file
 
-setup_logging()
 log = logging.getLogger(__name__)
 
 

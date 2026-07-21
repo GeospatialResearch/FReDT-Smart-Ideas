@@ -1,6 +1,5 @@
 """Generate data for wflow from terrain attributes generated before"""
 
-import logging
 import os
 from pathlib import Path
 from typing import Tuple
@@ -12,11 +11,6 @@ import pyflwdir
 import rioxarray as rxr
 import xarray as xr
 from hydromt import flw
-
-from eddie.digitaltwin.utils import setup_logging, LogLevel
-
-setup_logging(LogLevel.DEBUG)
-log = logging.getLogger(__name__)
 
 
 class TerrainDataWflowPreparator:

@@ -32,7 +32,6 @@ from sqlalchemy.sql import insert, text
 from eddie import geoserver
 from eddie.digitaltwin import setup_environment
 from eddie.digitaltwin.tables import create_table
-from eddie.digitaltwin.utils import LogLevel, setup_logging
 
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.bg_flood_model import store_model_output_metadata_to_db
@@ -43,7 +42,6 @@ from . import serve_model
 from .flood_model_inputs_generator import InjectionPointsFloodModelGenerator, TerrainGenerator
 from .flood_model_parameters_generator import FloodType
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

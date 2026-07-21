@@ -21,10 +21,8 @@ import logging
 
 import xarray as xr
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
 from ..flood_model_precipitation import BasePrecipitationFloodModelGenerator, PrecipitationGenerator
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

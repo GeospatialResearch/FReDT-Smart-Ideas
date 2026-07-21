@@ -27,9 +27,6 @@ import xarray as xr
 from tqdm import tqdm
 from rasterio.enums import Resampling
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
-
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

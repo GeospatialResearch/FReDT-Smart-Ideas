@@ -29,9 +29,7 @@ from scipy.ndimage import distance_transform_edt
 from whitebox.whitebox_tools import WhiteboxTools
 from whitebox_workflows import WbEnvironment
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 GLOBCOVER_CLASSES: dict[str, int] = {

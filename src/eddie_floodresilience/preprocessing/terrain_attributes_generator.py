@@ -19,9 +19,6 @@ from shapely.geometry import box, LineString, MultiLineString
 from whitebox.whitebox_tools import WhiteboxTools
 from whitebox_workflows import WbEnvironment, Raster
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
-
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 # Create whitebox environment and whitebox tools

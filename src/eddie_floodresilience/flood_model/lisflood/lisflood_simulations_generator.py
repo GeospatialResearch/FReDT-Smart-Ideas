@@ -24,8 +24,6 @@ import platform
 import shutil
 import subprocess
 
-from eddie.digitaltwin.utils import LogLevel, setup_logging
-
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model import serve_model
 from .lisflood_inputs_generator import TerrainFloodModelGenerator
@@ -35,7 +33,6 @@ from ..flood_model_parameters_generator import FloodType
 from ..flood_model_precipitation import PrecipitationGenerator
 from ..flood_model_siumulations_generator import BaseFloodModelSimulationsGenerator
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
