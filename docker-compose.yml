@@ -49,8 +49,6 @@ services:
       - .env
       - api_keys.env
       - .env.docker-override
-    volumes:
-      - stored_data:/stored_data
     healthcheck:
       test: curl --fail -s http://localhost:5000/ || exit 1
       interval: 10s
