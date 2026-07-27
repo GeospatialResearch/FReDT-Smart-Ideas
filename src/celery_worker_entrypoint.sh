@@ -8,4 +8,4 @@ source /venv/bin/activate
 # Run health-checker application, which reports back on the health of this container.
 # And in parallel run the celery workers
 health-checker --listener 0.0.0.0:5001 --log-level error --script-timeout 10 --script "celery -A src.eddie_floodresilience.tasks inspect ping"  \
-& celery -A src.eddie_floodresilience.tasks worker -P threads --loglevel=INFO
+& celery -A src.eddie_floodresilience.tasks worker -P gevent --loglevel=INFO
