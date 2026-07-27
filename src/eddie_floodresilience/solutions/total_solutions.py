@@ -45,6 +45,18 @@ GLOBCOVER_CLASSES: dict[str, int] = {
     "Bare Land": 200,
 }
 
+LCDB_CLASSES: dict[str, int] = {
+    "High producing Exotic Grassland": 40,
+    "Low Producing Grassland": 41,
+    "Herbaceous Freshwater Vegetation": 45,
+    "Manuka and/or Kanuka": 52,
+    "Broadleaved Indigenous Hardwoods": 54,
+    "Forest - Harvested": 64,
+    "Deciduous Hardwoods": 68,
+    "Indigenous Forest": 69,
+    "Exotic Forest (needleleaf forest)": 71,
+}
+
 wbe = WbEnvironment()
 wbe.verbose = True
 wbe.max_procs = -1
@@ -109,7 +121,7 @@ class LandCoverSolution:
         # Copy original land cover data to not be affected by the change
         modified_landcover = current_landcover.copy()
         if "landcover" not in polygons.columns:
-            polygons["landcover"] = polygons["landcover_name"].map(GLOBCOVER_CLASSES)
+            polygons["landcover"] = polygons["landcover_name"].map(LCDB_CLASSES)
 
         # Create rasterization shapes
         shapes = [
