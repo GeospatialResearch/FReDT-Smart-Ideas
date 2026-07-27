@@ -484,7 +484,7 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
         "name": f"Landcover - {scenario_name}",
         "url": gs_landcover_url,
         "layers": layer_name,
-        "styles": "landcover",
+        "styles": "globcover_landcover",
     }
 
 
