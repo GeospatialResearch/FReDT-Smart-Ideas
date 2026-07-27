@@ -140,7 +140,12 @@ class WflowServeDataGenerator:
             clipped_landcover.rio.to_raster(clipped_path)
 
         layer_name = f"landcover_{self.flood_model_output_id}"
-        if layer_name not in gs.raster_layers.get_workspace_raster_layers(workspace_name):
+        if layer_name in gs.raster_layers.get_workspace_raster_layers(workspace_name):
+            # This can happen if the database is not in sync with geoserver. Better to allow it to continue.
+            # This is only likely to happen on development machines in very particular cases..
+            log.warning(f"{workspace_name}:{layer_name} already exists. Skipping adding {landcover_file}")
+        else:
+            # Add the landcover raster to geoserver
             coverage_dimensions = [CoverageDimension(layer_name, "landcover_class", "Int32")]
             gs.add_gtiff_to_geoserver(clipped_path, workspace_name, layer_name, coverage_dimensions)
         # Delete tmp clipped file
