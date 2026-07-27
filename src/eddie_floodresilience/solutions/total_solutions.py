@@ -29,33 +29,9 @@ from scipy.ndimage import distance_transform_edt
 from whitebox.whitebox_tools import WhiteboxTools
 from whitebox_workflows import WbEnvironment
 
+from src.eddie_floodresilience.solutions.landcover import LCDB_CLASSES
 
 log = logging.getLogger(__name__)
-
-GLOBCOVER_CLASSES: dict[str, int] = {
-    "Dense Deciduous Forest": 50,
-    "Evergreen Forest": 40,
-    "Deciduous Forest": 60,
-    "Needleleaf Forest": 70,
-    "Pasture Mosaic": 120,
-    "Shrubland": 130,
-    "Pasture": 140,
-    "Sparse Vegetation": 150,
-    "Wetland": 160,
-    "Bare Land": 200,
-}
-
-LCDB_CLASSES: dict[str, int] = {
-    "High producing Exotic Grassland": 40,
-    "Low Producing Grassland": 41,
-    "Herbaceous Freshwater Vegetation": 45,
-    "Manuka and/or Kanuka": 52,
-    "Broadleaved Indigenous Hardwoods": 54,
-    "Forest - Harvested": 64,
-    "Deciduous Hardwoods": 68,
-    "Indigenous Forest": 69,
-    "Exotic Forest (needleleaf forest)": 71,
-}
 
 wbe = WbEnvironment()
 wbe.verbose = True

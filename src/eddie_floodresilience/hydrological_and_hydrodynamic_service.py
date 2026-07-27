@@ -28,7 +28,7 @@ from pywps.response.execute import ExecuteResponse
 
 from src.eddie_floodresilience import tasks
 from src.eddie_floodresilience.config import EnvVariable as EnvVar
-from src.eddie_floodresilience.solutions.total_solutions import LCDB_CLASSES
+from src.eddie_floodresilience.solutions.landcover import LCDB_CLASSES
 
 
 class PredefinedScenario(Process, ABC):
