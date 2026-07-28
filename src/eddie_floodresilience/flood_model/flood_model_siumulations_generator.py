@@ -60,8 +60,8 @@ class BaseFloodModelSimulationsGenerator(ABC):
         scenario_and_id_folder: Path,
         flood_type: FloodType = FloodType.FLUVIAL,
         crs: int = 2193,
-        polygons: str = None,
-        vectors: pd.DataFrame = None
+        polygons: gpd.GeoDataFrame | None = None,
+        vectors: pd.DataFrame | None = None
     ) -> None:
         """
         Generate flood model simulations
@@ -90,13 +90,13 @@ class BaseFloodModelSimulationsGenerator(ABC):
             Either FLUVIAL or PLUVIAL. Default is FLUVIAL
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataFrame | None = None
             This polygon dataframe has 'landcover' column with new values
-        vectors : pd.DataFrame = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
         """
         self.hydromt_path = hydromt_path
         self.river_name = river_name

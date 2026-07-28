@@ -22,6 +22,7 @@ from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
 
+import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon
 
@@ -46,8 +47,8 @@ class FloodModelParametersGenerator(ABC):
         start_time: datetime,
         end_time: datetime,
         flood_type: str = 'fluvial',
-        polygons: str = None,
-        vectors: pd.DataFrame = None
+        polygons: gpd.GeoDataFrame | None = None,
+        vectors: pd.DataFrame | None = None
     ) -> None:
         """
         Generate parameter files for flood model
@@ -66,13 +67,13 @@ class FloodModelParametersGenerator(ABC):
             Ending time details.
         flood_type : FloodType = FloodType.FLUVIAL
             Either FLUVIAL or PLUVIAL. Default is FLUVIAL
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataFrame | None = None
             This polygon dataframe has 'landcover' column with new values
-        vectors : pd.DataFrame = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
         """
         self.flood_model_path = flood_model_path
         self.hydromt_path = hydromt_path
