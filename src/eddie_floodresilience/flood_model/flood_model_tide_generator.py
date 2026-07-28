@@ -27,10 +27,8 @@ import pandas as pd
 import requests
 from shapely.geometry import Point, Polygon
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
 from src.eddie_floodresilience import config
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

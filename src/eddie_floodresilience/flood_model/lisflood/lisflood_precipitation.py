@@ -17,13 +17,7 @@
 
 """This script formats and writes precipitation data for LISFLOOD-FP inputs."""
 
-import logging
-
-from eddie.digitaltwin.utils import setup_logging, LogLevel
 from ..flood_model_precipitation import BasePrecipitationFloodModelGenerator
-
-setup_logging(LogLevel.DEBUG)
-log = logging.getLogger(__name__)
 
 
 class LisfloodPrecipitationFloodModelGenerator(BasePrecipitationFloodModelGenerator):

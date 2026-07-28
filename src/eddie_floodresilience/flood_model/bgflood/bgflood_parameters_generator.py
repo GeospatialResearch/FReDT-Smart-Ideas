@@ -25,10 +25,8 @@ import geopandas as gpd
 import numpy as np
 from shapely.geometry import Polygon, Point
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
 from ..flood_model_parameters_generator import FloodType, FloodModelParametersGenerator
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

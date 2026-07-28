@@ -27,10 +27,6 @@ import pandas as pd
 import xarray as xr
 from shapely.geometry import box, mapping, Point, Polygon, LineString, MultiLineString, MultiPoint
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
-
-
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

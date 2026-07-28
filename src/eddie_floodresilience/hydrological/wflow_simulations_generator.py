@@ -25,11 +25,9 @@ from datetime import datetime
 
 import geopandas as gpd
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

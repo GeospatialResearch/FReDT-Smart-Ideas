@@ -21,9 +21,6 @@ from pathlib import Path
 
 import rioxarray as rxr
 
-from eddie.digitaltwin.utils import setup_logging, LogLevel
-
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

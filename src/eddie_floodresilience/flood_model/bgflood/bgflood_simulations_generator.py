@@ -24,8 +24,6 @@ import shutil
 import subprocess
 from pathlib import Path
 
-from eddie.digitaltwin.utils import LogLevel, setup_logging
-
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.serve_model import convert_nc_to_gtiff
 from .bgflood_parameters_generator import BGFloodParametersGenerator
@@ -33,7 +31,6 @@ from .bgflood_precipitation import BGFloodPrecipitationGenerator, BGFloodPrecipi
 from ..flood_model_parameters_generator import FloodType
 from ..flood_model_siumulations_generator import BaseFloodModelSimulationsGenerator
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 

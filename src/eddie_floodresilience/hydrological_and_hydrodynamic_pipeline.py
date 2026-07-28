@@ -33,7 +33,6 @@ from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generat
     LisFloodModelSimulationsGenerator
 from src.eddie_floodresilience.tables import PipelineOutput
 
-setup_logging(LogLevel.DEBUG)
 log = logging.getLogger(__name__)
 
 
@@ -469,7 +468,11 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Download external spatial data into database
         bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.flood_aoi_boundary)], crs="EPSG:2193")
-        retrieve_from_instructions.main(bbox_gdf, Path("src/eddie_floodresilience/static_boundary_instructions.json"))
+        retrieve_from_instructions.main(
+            bbox_gdf,
+            Path("src/eddie_floodresilience/static_boundary_instructions.json"),
+            log_level=LogLevel.INFO
+        )
 
         # Set scenario
         scenario_and_id_folder = self.scenario_folder_generator()
@@ -851,6 +854,7 @@ def riverton(
 
 
 if __name__ == '__main__':
+    setup_logging(LogLevel.INFO)
     # Whirinaki
     gdf = gpd.read_file(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
