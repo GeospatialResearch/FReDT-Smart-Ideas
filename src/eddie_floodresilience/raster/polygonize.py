@@ -16,9 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Shared generic raster operations for polygonization."""
-import shapely
-import numpy as np
 import geopandas as gpd
+import numpy as np
+import rasterio as rio
+import shapely
 import xarray as xr
 
 

@@ -473,18 +473,116 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
     Returns
     ----------
     dict
-        The TerriaJS catalog item JSON for the building flood status layer.
+        The TerriaJS catalog item JSON for the landcover layer.
     """
     gs_intermediate_workspace = f"{EnvVar.POSTGRES_DB}-intermediate-wflow"
     gs_landcover_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_intermediate_workspace}/ows"
-    layer_name = f"{gs_intermediate_workspace}:landcover_{scenario_id}"
+    layer_name = f"{gs_intermediate_workspace}:lcdb_mauri_view"
 
     return {
-        "type": "wms",
+        "type": "wfs",
         "name": f"Landcover - {scenario_name}",
         "url": gs_landcover_url,
-        "layers": layer_name,
-        "styles": "lcdb_landcover",
+        "typeNames": layer_name,
+        "parameters": {
+            "viewparams": f"scenario:{scenario_id}"
+        },
+        "activeStyle": "Mauri",
+        "styles": [
+            {
+                "id": "Mauri",
+                "color": {
+                    "mapType": "continuous",
+                    "minimumValue": 1,
+                    "maximumValue": 10,
+                    "colorPalette": "Reds",
+                    "legend": {
+                        "items": [
+                            {
+                                "titleAbove": "Ahua Pai",
+                                "color": "rgb(103, 0, 13)"
+                            },
+                            {"color": "#9b0d14"},
+                            {"color": "#c2181c"},
+                            {"color": "#e23028"},
+                            {"color": "#f5553d"},
+                            {
+                                "color": "#fb7c5c",
+                                "title": "E Kino Ana"
+                            },
+                            {"color": "#fca082"},
+                            {"color": "#fdc3ac"},
+                            {"color": "#fdc3ac"},
+                            {"color": "#fee0d3"},
+                            {
+                                "titleBelow": "Mauri Mate",
+                                "color": "#fff5f0"
+                            }
+                        ]
+                    }
+                },
+                "hidden": False
+            },
+            {
+                "id": "LCDB description",
+                "color": {
+                    "enumColors": [
+                        {
+                            "value": "Indigenous Forest",
+                            "color": "rgba(0,114,0,1)"
+                        },
+                        {
+                            "value": "Manuka and/or Kanuka",
+                            "color": "rgba(165,190,0,1)"
+                        },
+                        {
+                            "value": "High producing Exotic Grassland",
+                            "color": "rgba(230,159,0,1)"
+                        },
+                        {
+                            "value": "Low Producing Grassland",
+                            "color": "rgba(240,184,77,1)"
+                        },
+                        {
+                            "value": "Exotic Forest (needleleaf forest)",
+                            "color": "rgba(102,187,106,1)"
+                        },
+                        {
+                            "value": "Broadleaved Indigenous Hardwoods",
+                            "color": "rgba(56,176,0,1)"
+                        },
+                        {
+                            "value": "Deciduous Hardwoods",
+                            "color": "rgba(0,68,27,1)"
+                        },
+                        {
+                            "value": "Herbaceous Freshwater Vegetation",
+                            "color": "rgba(74,144,226,1)"
+                        },
+                        {
+                            "value": "Forest - Harvested",
+                            "color": "rgba(199,199,166,1)"
+                        },
+                        {
+                            "value": "Fernland",
+                            "color": "rgba(109,61,169,1)"
+                        }
+                    ],
+                },
+                "hidden": False
+            },
+            {
+                "id": "Atua Domain",
+                "color": {
+                    "colorPalette": "Dark2"
+                },
+                "hidden": False
+            },
+            {
+                "id": "flood_model_output_id",
+                "hidden": True
+            }
+        ]
     }
 
 
