@@ -48,9 +48,10 @@ def polygonize_raster(
     polygons_records = []
     # Add each polygon to a list in a form ready to be ingested into a GeoDataFrame to be returned
     for polygon, val in polygons:
-        new_row = {"geometry": shapely.Polygon(polygon['coordinates'][0])}
+        new_row = {"geometry": shapely.geometry.shape(polygon)}
         if column_name is not None:
             new_row[column_name] = val
         polygons_records.append(new_row)
 
-    return gpd.GeoDataFrame(polygons_records, crs=raster.rio.crs.wkt)
+    gdf = gpd.GeoDataFrame(polygons_records, crs=raster.rio.crs.wkt)
+    return gdf
