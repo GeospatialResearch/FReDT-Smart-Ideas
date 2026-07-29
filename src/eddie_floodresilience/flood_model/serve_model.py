@@ -25,7 +25,6 @@ import os
 import pathlib
 from datetime import datetime
 from textwrap import dedent
-from xml.sax import saxutils
 
 import rasterio as rio
 import xarray as xr
@@ -105,11 +104,9 @@ def create_building_layers(conn: Connection, workspace_name: str, data_store_nam
         """
         # @formatter:on
     )
-    xml_escaped_sql = saxutils.escape(flooded_buildings_sql_query, entities={r"'": "&apos;", "\n": "&#xd;"})
-    sql_view_query_template = resources.read_text("eddie.geoserver.templates", "scenario_sql_view_element_template.xml")
 
-    flood_status_xml_query = sql_view_query_template.format(
-        layer_name=flood_status_layer_name, xml_escaped_sql=xml_escaped_sql
+    flood_status_xml_query = geoserver.database_layers.generate_metadata_elem(
+        flood_status_layer_name, flooded_buildings_sql_query
     )
 
     geoserver.create_datastore_layer(

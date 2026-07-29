@@ -20,7 +20,6 @@ import importlib
 import logging
 from pathlib import Path
 from textwrap import dedent
-from xml.sax import saxutils
 
 import geopandas as gpd
 import pandas as pd
@@ -126,13 +125,8 @@ def add_landcover_mauri_geoserver_view(conn: Connection, workspace_name: str) ->
         """
         # @formatter:on
     )
-    xml_escaped_sql = saxutils.escape(landcover_sql_query, entities={r"'": "&apos;", "\n": "&#xd;"})
-    sql_view_query_template = resources.read_text("eddie.geoserver.templates", "scenario_sql_view_element_template.xml")
 
-    landcover_mauri_xml_query = sql_view_query_template.format(
-        layer_name=gs_layer_name, xml_escaped_sql=xml_escaped_sql
-    )
-
+    landcover_mauri_xml_query = gs.database_layers.generate_metadata_elem(gs_layer_name, landcover_sql_query)
     gs.create_datastore_layer(
         conn, workspace_name, data_store, gs_layer_name, landcover_mauri_xml_query
     )
