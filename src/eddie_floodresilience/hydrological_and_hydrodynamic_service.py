@@ -567,6 +567,70 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
                         {
                             "value": "Fernland",
                             "color": "rgba(109,61,169,1)"
+                        },
+                        {
+                            "value": "Gravel and Rock",
+                            "color": "#F2F3F4"
+                        },
+                        {
+                            "value": "River",
+                            "color": "rgba(0,0,205,1)"
+                        },
+                        {
+                            "value": "Gorse and/or Broom",
+                            "color": "rgba(164,143,45,1)"
+                        },
+                        {
+                            "value": "Matagouri or Grey Scrub",
+                            "color": "rgba(177,124,66,1)"
+                        },
+                        {
+                            "value": "Tall Tussock Grassland",
+                            "color": "rgba(233,240,77,1)"
+                        },
+                        {
+                            "value": "Mixed Exotic Shrubland",
+                            "color": "rgba(14,171,155,1)"
+                        },
+                        {
+                            "value": "Sub-alpine Shrubland",
+                            "color": "rgba(80,66,3,1)"
+                        },
+                        {
+                            "value": "Alpine Grass/Herbfield",
+                            "color": "rgba(43,169,16,1)"
+                        },
+                        {
+                            "value": "Lake or Pond",
+                            "color": "rgba(0,0,205,1)"
+                        },
+                        {
+                            "value": "Short-rotation Cropland",
+                            "color": "rgba(223,224,10,1)"
+                        },
+                        {
+                            "value": "Built-up Area",
+                            "color": "rgba(0,0,0,1)"
+                        },
+                        {
+                            "value": "Urban Parkland/ Open Space",
+                            "color": "rgba(5,121,110,1)"
+                        },
+                        {
+                            "value": "Landslide",
+                            "color": "rgba(74,4,123,1)"
+                        },
+                        {
+                            "value": "Surface Mine or Dump",
+                            "color": "rgba(154,6,6,1)"
+                        },
+                        {
+                            "value": "Transport Infrastructure",
+                            "color": "rgba(57,56,56,1)"
+                        },
+                        {
+                            "value": "Depleted Grassland",
+                            "color": "rgba(201,162,85,1)"
                         }
                     ],
                 },
