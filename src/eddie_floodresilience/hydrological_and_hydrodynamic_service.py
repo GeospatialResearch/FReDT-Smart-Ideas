@@ -487,6 +487,7 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
         "parameters": {
             "viewparams": f"scenario:{scenario_id}"
         },
+        "maxFeatures": 100000,
         "activeStyle": "Mauri",
         "styles": [
             {
