@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-
+from osgeo import gdal
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -855,14 +855,14 @@ def riverton(
 
 if __name__ == '__main__':
     setup_logging(LogLevel.INFO)
-    # Whirinaki
-    gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
-    )
-    df = pd.read_csv(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
-    )
-    whirinaki(FloodType.FLUVIAL, None, None)
+    # # Whirinaki
+    # gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
+    # )
+    # df = pd.read_csv(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
+    # )
+    # whirinaki(FloodType.FLUVIAL, None, df)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
@@ -873,8 +873,8 @@ if __name__ == '__main__':
     # )
     # mataura(FloodType.FLUVIAL, gdf, None)
 
-    # # Otautau
-    # gdf = gpd.read_file(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
-    # )
-    # otautau(FloodType.FLUVIAL, gdf, None)
+    # Otautau
+    gdf = gpd.read_file(
+        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
+    )
+    otautau(FloodType.FLUVIAL, gdf, None)
