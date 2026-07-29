@@ -24,6 +24,7 @@ import logging
 import os
 import pathlib
 from datetime import datetime
+from textwrap import dedent
 from xml.sax import saxutils
 
 import rasterio as rio
@@ -92,39 +93,25 @@ def create_building_layers(conn: Connection, workspace_name: str, data_store_nam
 
     # More complex layer that has to do dynamic sql queries against model output ID to fetch
     flood_status_layer_name = "building_flood_status"
-    flooded_buildings_sql_query = """
-                                  SELECT *,
-                                         is_flooded::int AS is_flooded_int
-                                  FROM nz_building_outlines
-                                           LEFT OUTER JOIN building_flood_status USING (building_outline_id)
-                                  WHERE building_outline_lifecycle ILIKE 'current'
-                                    AND flood_model_id = %scenario%
-                                  """
+    flooded_buildings_sql_query = dedent(
+        # @formatter:off - formatter impacts the %scenario% term
+        """
+        SELECT *,
+               is_flooded::int AS is_flooded_int
+        FROM nz_building_outlines
+                 LEFT OUTER JOIN building_flood_status USING (building_outline_id)
+        WHERE building_outline_lifecycle ILIKE 'current'
+          AND flood_model_id = %scenario%
+        """
+        # @formatter:on
+    )
     xml_escaped_sql = saxutils.escape(flooded_buildings_sql_query, entities={r"'": "&apos;", "\n": "&#xd;"})
+    sql_view_query_template = resources.read_text("eddie.geoserver.templates", "scenario_sql_view_element_template.xml")
 
-    flood_status_xml_query = rf"""
-      <metadata>
-        <entry key="JDBC_VIRTUAL_TABLE">
-          <virtualTable>
-            <name>{flood_status_layer_name}</name>
-            <sql>
-                {xml_escaped_sql}
-            </sql>
-            <escapeSql>false</escapeSql>
-            <geometry>
-              <name>geometry</name>
-              <type>Polygon</type>
-              <srid>2193</srid>
-            </geometry>
-            <parameter>
-              <name>scenario</name>
-              <defaultValue>-1</defaultValue>
-              <regexpValidator>^(-)?[\d]+$</regexpValidator>
-            </parameter>
-          </virtualTable>
-        </entry>
-      </metadata>
-    """
+    flood_status_xml_query = sql_view_query_template.format(
+        layer_name=flood_status_layer_name, xml_escaped_sql=xml_escaped_sql
+    )
+
     geoserver.create_datastore_layer(
         conn,
         workspace_name,

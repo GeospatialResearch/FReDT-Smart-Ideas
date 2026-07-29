@@ -127,29 +127,12 @@ def add_landcover_mauri_geoserver_view(conn: Connection, workspace_name: str) ->
         # @formatter:on
     )
     xml_escaped_sql = saxutils.escape(landcover_sql_query, entities={r"'": "&apos;", "\n": "&#xd;"})
-    landcover_mauri_xml_query = dedent(fr"""
-    <metadata>
-        <entry key="JDBC_VIRTUAL_TABLE">
-          <virtualTable>
-            <name>{gs_layer_name}</name>
-            <sql>
-                {xml_escaped_sql}
-            </sql>
-            <escapeSql>false</escapeSql>
-            <geometry>
-              <name>geometry</name>
-              <type>Polygon</type>
-              <srid>2193</srid>
-            </geometry>
-            <parameter>
-              <name>scenario</name>
-              <defaultValue>-1</defaultValue>
-              <regexpValidator>^(-)?[\d]+$</regexpValidator>
-            </parameter>
-          </virtualTable>
-        </entry>
-      </metadata>
-    """)
+    sql_view_query_template = resources.read_text("eddie.geoserver.templates", "scenario_sql_view_element_template.xml")
+
+    landcover_mauri_xml_query = sql_view_query_template.format(
+        layer_name=gs_layer_name, xml_escaped_sql=xml_escaped_sql
+    )
+
     gs.create_datastore_layer(
         conn, workspace_name, data_store, gs_layer_name, landcover_mauri_xml_query
     )
