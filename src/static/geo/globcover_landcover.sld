@@ -7,7 +7,7 @@
             <sld:FeatureTypeConstraint/>
         </sld:LayerFeatureConstraints>
         <sld:UserStyle>
-            <sld:Name>wflow_landuse</sld:Name>
+            <sld:Name>globcover_landcover</sld:Name>
             <sld:FeatureTypeStyle>
                 <sld:Rule>
                     <sld:RasterSymbolizer>
