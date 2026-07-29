@@ -203,7 +203,7 @@ class WflowBuildGenerator:
             A dictionary that contains rivers' section
         """
         # Set up river path
-        river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
+        river_path = self.hydromt_path / "river_data" / self.river_name / f"{self.river_name}.json"
 
         # Get river information
         with open(river_path, "r", encoding="utf-8") as f:
