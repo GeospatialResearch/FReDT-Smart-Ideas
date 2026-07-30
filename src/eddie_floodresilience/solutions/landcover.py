@@ -16,6 +16,15 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Provides definitions of landcover class value mappings."""
+from enum import StrEnum
+
+
+class LandcoverClassDataset(StrEnum):
+    """Specifies which Land cover dataset is being used"""
+
+    GLOBCOVER = "globcover"
+    LCDB = "lcdb"
+
 
 GLOBCOVER_CLASSES: dict[str, int] = {
     "Dense Deciduous Forest": 50,

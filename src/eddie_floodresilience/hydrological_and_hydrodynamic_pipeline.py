@@ -26,10 +26,10 @@ from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator
 from src.eddie_floodresilience.flood_model.flood_model_parameters_generator import FloodType
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
-from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
+from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
 from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 from src.eddie_floodresilience.tables import PipelineOutput
 
@@ -85,7 +85,7 @@ class HydrologicalAndHydrodynamicPipeline:
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
             Name of land cover dataset. Default is 'globcover'
     """  # pylint: disable=too-many-instance-attributes
 
@@ -110,7 +110,7 @@ class HydrologicalAndHydrodynamicPipeline:
         vectors: pd.DataFrame | None = None,
         resolution: float = 0.00045,
         threshold: int = 1000,
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
     ) -> None:
         """
         Generate hydrological and hydrodynamic results
@@ -160,7 +160,7 @@ class HydrologicalAndHydrodynamicPipeline:
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
             Name of land cover dataset. Default is 'globcover'
         """
         # Set up necessary parameters
@@ -270,8 +270,8 @@ class HydrologicalAndHydrodynamicPipeline:
         return scenario_and_id_folder
 
     def total_solutions(
-            self,
-            scenario_and_id_folder: Path
+        self,
+        scenario_and_id_folder: Path
     ) -> None:
         """
         Develop solutions for flood risk resilience
@@ -293,7 +293,7 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.landcover,
                 self.polygons
             )
-            self.landcover = landcover_solution.apply_landcover_solution().name
+            landcover_solution.apply_landcover_solution()
 
             # Elevation solution
             elevation_solution = ElevationSolution(
@@ -312,7 +312,7 @@ class HydrologicalAndHydrodynamicPipeline:
                 self.landcover,
                 self.polygons
             )
-            self.landcover = landcover_solution.apply_landcover_solution().name
+            landcover_solution.apply_landcover_solution()
 
         elif self.vectors is not None:
 
@@ -346,8 +346,8 @@ class HydrologicalAndHydrodynamicPipeline:
         terrain_data.terrain_for_wflow_generator()
 
     def wflow_data_pipeline(
-            self,
-            scenario_and_id_folder: Path
+        self,
+        scenario_and_id_folder: Path
     ) -> None:
         """
         Generate wflow model data for flood model
@@ -388,11 +388,10 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_model_output_id: int
             The flood model output ID to associate the WFlow data with
         """
-        landcover_mapping_type = DataCatalogGenerator.landcover_mapping_type(self.landcover)
         wflow_serve_data = WflowServeDataGenerator(
             self.hydromt_path,
             self.polygons,
-            landcover_mapping_type,
+            self.landcover,
             scenario_and_id_folder,
             flood_model_output_id
         )
@@ -400,8 +399,8 @@ class HydrologicalAndHydrodynamicPipeline:
         wflow_serve_data.serve_data()
 
     def flood_data_pipeline(
-            self,
-            scenario_and_id_folder: Path
+        self,
+        scenario_and_id_folder: Path
     ) -> int:
         """
         Generate flood model data.
@@ -516,9 +515,9 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # OTAUTAU
 def otautau(
-        flood_type: FloodType = FloodType.FLUVIAL,
-        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-        elevation_scenario_df: pd.DataFrame | None = None
+    flood_type: FloodType = FloodType.FLUVIAL,
+    landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
+    elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Otautau.
@@ -558,7 +557,7 @@ def otautau(
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'lcdb'
+    landcover = LandcoverClassDataset.LCDB
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -607,7 +606,7 @@ def otautau(
 #     vectors = None # r'vectors/vectors.csv'
 #     resolution = 200
 #     threshold = 25000
-#     landcover = 'lcdb'
+#     landcover = LandcoverClassDataset.LCDB
 #
 #     # Set up hydraulic and hydrodynamic pipeline
 #     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -638,9 +637,9 @@ def otautau(
 
 
 def mataura(
-        flood_type: FloodType = FloodType.FLUVIAL,
-        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-        elevation_scenario_df: pd.DataFrame | None = None
+    flood_type: FloodType = FloodType.FLUVIAL,
+    landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
+    elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Mataura.
@@ -680,7 +679,7 @@ def mataura(
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'lcdb'
+    landcover = LandcoverClassDataset.LCDB
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -711,9 +710,9 @@ def mataura(
 
 
 def whirinaki(
-        flood_type: FloodType = FloodType.FLUVIAL,
-        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-        elevation_scenario_df: pd.DataFrame | None = None
+    flood_type: FloodType = FloodType.FLUVIAL,
+    landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
+    elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Whirinaki.
@@ -752,7 +751,7 @@ def whirinaki(
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
-    landcover = 'lcdb'
+    landcover = LandcoverClassDataset.LCDB
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -784,9 +783,9 @@ def whirinaki(
 
 # RIVERTON
 def riverton(
-        flood_type: FloodType = FloodType.FLUVIAL,
-        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-        elevation_scenario_df: pd.DataFrame | None = None
+    flood_type: FloodType = FloodType.FLUVIAL,
+    landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
+    elevation_scenario_df: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Riverton.
@@ -825,7 +824,7 @@ def riverton(
     vectors = elevation_scenario_df  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'lcdb'
+    landcover = LandcoverClassDataset.LCDB
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(

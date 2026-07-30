@@ -31,6 +31,7 @@ from eddie.digitaltwin import setup_environment
 from eddie.geoserver.raster_layers import CoverageDimension
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import find_landcover_file
+from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +59,7 @@ class WflowServeDataGenerator:
         self,
         hydromt_path: Path,
         polygons: gpd.GeoDataFrame | None,
-        landcover_mapping_type: str,
+        landcover_mapping_type: LandcoverClassDataset,
         scenario_and_id_folder: Path,
         flood_model_output_id: int
     ) -> None:
@@ -72,7 +73,7 @@ class WflowServeDataGenerator:
         polygons: gpd.GeoDataFrame | None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        landcover_mapping_type : str
+        landcover_mapping_type : LandcoverClassDataset
             Name of landcover dataset - globcover or lcdb
         scenario_and_id_folder : Path
             Directory to the scenario folder name with ID

@@ -14,6 +14,8 @@ from dateutil.relativedelta import relativedelta
 import geopandas as gpd
 import yaml
 
+from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
+
 log = logging.getLogger(__name__)
 
 
@@ -44,7 +46,7 @@ class WflowBuildGenerator:
             Directory to the scenario folder name with ID
     polygons : gpd.GeoDataFrame | None = None
         This polygon dataframe has 'landcover' column with new values
-    landcover : str = 'globcover'
+    landcover : LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER = 'globcover'
         Name of land cover dataset. Default is globcover
     """  # pylint: disable=too-many-instance-attributes
 
@@ -58,7 +60,7 @@ class WflowBuildGenerator:
         forcing_path: Path,
         scenario_and_id_folder: Path,
         polygons: gpd.GeoDataFrame = None,
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
     ) -> None:
         """
         Generate wflow_build.yml for preprocessing data for wflow.
@@ -88,7 +90,7 @@ class WflowBuildGenerator:
             Directory to the scenario folder name with ID
         polygons : gpd.GeoDataFrame | None = None
             This polygon dataframe has 'landcover' column with new values
-        landcover : str = 'globcover'
+        landcover : LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER = 'globcover'
             Name of land cover dataset. Default is global cover
         """
         self.start_time = start_time - relativedelta(months=2)
@@ -252,10 +254,11 @@ class WflowBuildGenerator:
         lulc : dict
             A dictionary that contains landcover's section
         """
-        if self.landcover.startswith("globcover"):
-            landcover_mapping = str(self.hydromt_path / "globcover_mapping_modified.csv")
-        else:
-            landcover_mapping = str(self.hydromt_path / "lcdb_mapping.csv")
+        match self.landcover:
+            case LandcoverClassDataset.GLOBCOVER:
+                landcover_mapping = str(self.hydromt_path / "globcover_mapping_modified.csv")
+            case LandcoverClassDataset.LCDB:
+                landcover_mapping = str(self.hydromt_path / "lcdb_mapping.csv")
 
         # Generate landuse/landcover's section
         landcover = {
@@ -277,7 +280,7 @@ class WflowBuildGenerator:
             A dictionary that contains lai's section
         """
         # Set up lulc_zero_classes
-        if self.landcover.startswith("globcover"):
+        if self.landcover == LandcoverClassDataset.GLOBCOVER:
             lulc_zero_classes = [200, 210, 220]
         else:
             lulc_zero_classes = [14, 20, 21, 22]

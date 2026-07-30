@@ -29,10 +29,11 @@ from scipy.ndimage import distance_transform_edt
 from whitebox.whitebox_tools import WhiteboxTools
 from whitebox_workflows import WbEnvironment
 
-from src.eddie_floodresilience.solutions.landcover import LCDB_CLASSES
+from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset, LCDB_CLASSES
 
 log = logging.getLogger(__name__)
 
+# pylint: disable=duplicate-code
 wbe = WbEnvironment()
 wbe.verbose = True
 wbe.max_procs = -1
@@ -47,7 +48,7 @@ class LandCoverSolution:
         self,
         hydromt_path: Path,
         scenario_and_id_folder: Path,
-        landcover: str = 'globcover',
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER,
         polygons: gpd.GeoDataFrame | None = None
     ) -> None:
         """
@@ -61,7 +62,7 @@ class LandCoverSolution:
         ----------
         hydromt_path : Path
             A directory to where all necessary files are stored to run wflow model
-        landcover : str = 'globcover'
+        landcover : LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
             Name of land cover dataset. Default is 'globcover'
         scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
@@ -100,13 +101,7 @@ class LandCoverSolution:
             polygons["landcover"] = polygons["landcover_name"].map(LCDB_CLASSES)
 
         # Create rasterization shapes
-        shapes = [
-            (geom, value)
-            for geom, value in zip(
-                polygons.geometry,
-                polygons["landcover"]
-            )
-        ]
+        shapes = list(zip(polygons.geometry, polygons["landcover"]))
 
         # Rasterize all polygons at once
         polygon_raster = rasterize(
@@ -133,14 +128,8 @@ class LandCoverSolution:
             Directory to the modified landcover.
         """
         # Set up land cover features based on chosen land cover
-        if self.landcover.startswith('globcover'):
-            original_landcover = 'original_globcover.tif'
-            crs = 4326
-            folder_landcover = 'globcover'
-        else:
-            original_landcover = 'original_lcdb.tif'
-            crs = 2193
-            folder_landcover = 'lcdb'
+        original_landcover = f'original_{self.landcover}.tif'
+        crs = 4326 if self.landcover == LandcoverClassDataset.GLOBCOVER else 2193
 
         # Read current land cover data
         with rxr.open_rasterio(self.hydromt_path / original_landcover) as current_landcover:
@@ -157,11 +146,11 @@ class LandCoverSolution:
         )
 
         # self.hydromt_path may not be writable on linux, so write to self.hydro_combination_path
-        globcover_dir = self.scenario_and_id_folder / 'hydrological_process' / folder_landcover
+        globcover_dir = self.scenario_and_id_folder / 'hydrological_process' / self.landcover
         globcover_dir.mkdir(parents=True, exist_ok=True)
 
         # Set up the path for new land cover with scenario and ID
-        output_path = globcover_dir / f"{folder_landcover}_{self.scenario_and_id_folder.name}.tif"
+        output_path = globcover_dir / f"{self.landcover}_{self.scenario_and_id_folder.name}.tif"
 
         # Write out new land cover
         modified_landcover.rio.to_raster(
