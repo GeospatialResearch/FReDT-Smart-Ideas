@@ -22,15 +22,15 @@ from eddie.digitaltwin.tables import create_table
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 from src.eddie_floodresilience.config import EnvVariable
-from src.eddie_floodresilience.flood_model.flood_model_parameters_generator import FloodType
-from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
-from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
-from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
-from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
-from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
+from src.eddie_floodresilience.flood_model.flood_model_parameters_generator import FloodType
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
+from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
+from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
+from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
+from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
+from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
 from src.eddie_floodresilience.tables import PipelineOutput
 
 log = logging.getLogger(__name__)
@@ -74,10 +74,11 @@ class HydrologicalAndHydrodynamicPipeline:
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : pd.DataFrame = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
         resolution : float
             Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
@@ -93,7 +94,7 @@ class HydrologicalAndHydrodynamicPipeline:
         hydro_combination_path: Path,
 
         forcing_name: Union[str, Path],
-        river_name: Union[str, Path],
+        river_name: str,
         precipitation_path: Path,
         start_time: datetime,
         end_time: datetime,
@@ -106,7 +107,7 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_type: FloodType = FloodType.FLUVIAL,
 
         polygons: gpd.GeoDataFrame | None = None,
-        vectors: pd.DataFrame = None,
+        vectors: pd.DataFrame | None = None,
         resolution: float = 0.00045,
         threshold: int = 1000,
         landcover: str = 'globcover'
@@ -121,15 +122,15 @@ class HydrologicalAndHydrodynamicPipeline:
         forcing_name: Union[str, Path]
             Name of forcing data. Should be the site name. Ex: 'whirin
             Or a directory to forcing data
-        river_name: Union[str, Path]
+        river_name: str
             Name of river data. Should be the site name. Ex: 'whirinaki'
         precipitation_path: Path
             A directory to where the precipitation files are stored
-        start_time : str
+        start_time : datetime
             Starting time of simulation.
             This should include the spin-up time.
             Normally, it is 1-year before the flood event.
-        end_time : str
+        end_time : datetime
             Ending time of simulation
             This should include some periods of time after the flood event.
             Normally, it is about 2-3 months.
@@ -148,10 +149,11 @@ class HydrologicalAndHydrodynamicPipeline:
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : pd.DataFrame = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
         resolution : float
             Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
@@ -434,7 +436,6 @@ class HydrologicalAndHydrodynamicPipeline:
             )
 
         else:
-            # pylint: disable=E1121
             flood_data = BGFloodModelSimulationsGenerator(
                 self.hydromt_path,
                 self.river_name,
@@ -585,6 +586,7 @@ def otautau(
 
     flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
     return flood_model_output_id
+
 
 # # WAIMEA
 # def main():

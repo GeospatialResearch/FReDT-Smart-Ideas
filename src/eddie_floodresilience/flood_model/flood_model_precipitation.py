@@ -24,6 +24,7 @@ from pathlib import Path
 import netCDF4
 import numpy as np
 import xarray as xr
+from shapely import Polygon
 from tqdm import tqdm
 from rasterio.enums import Resampling
 
@@ -37,7 +38,7 @@ class PrecipitationGenerator:
         self,
         flood_model_path: Path,
         precipitation_path: Path,
-        terrain_bounding_box: xr.Dataset,
+        terrain_bounding_box: Polygon,
         start_time: datetime,
         end_time: datetime,
         crs: int = 2193

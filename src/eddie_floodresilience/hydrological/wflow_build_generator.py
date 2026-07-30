@@ -7,10 +7,11 @@ Created on Thu Apr  9 09:01:33 2026
 
 import json
 import logging
-from pathlib import Path
 from datetime import datetime
-from dateutil.relativedelta import relativedelta
+from pathlib import Path
 
+from dateutil.relativedelta import relativedelta
+import geopandas as gpd
 import yaml
 
 log = logging.getLogger(__name__)
@@ -41,8 +42,7 @@ class WflowBuildGenerator:
         A directory to where the forcing files are stored
     scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
-    polygons : str = None
-        Name of polygon file that is used to change the landcover information.
+    polygons : gpd.GeoDataFrame | None = None
         This polygon dataframe has 'landcover' column with new values
     landcover : str = 'globcover'
         Name of land cover dataset. Default is globcover
@@ -57,7 +57,7 @@ class WflowBuildGenerator:
         river_name: str,
         forcing_path: Path,
         scenario_and_id_folder: Path,
-        polygons: str = None,
+        polygons: gpd.GeoDataFrame = None,
         landcover: str = 'globcover'
     ) -> None:
         """
@@ -86,8 +86,7 @@ class WflowBuildGenerator:
             A directory to where the forcing files are stored
         scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataFrame | None = None
             This polygon dataframe has 'landcover' column with new values
         landcover : str = 'globcover'
             Name of land cover dataset. Default is global cover

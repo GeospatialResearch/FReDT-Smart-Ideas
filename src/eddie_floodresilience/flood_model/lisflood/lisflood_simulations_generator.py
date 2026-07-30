@@ -140,9 +140,9 @@ class LisFloodModelSimulationsGenerator(BaseFloodModelSimulationsGenerator):
 
         # Flood simulation command
         flood_simulation_command = [
-            lisflood_path,
+            str(lisflood_path),
             "-v",
-            par_file_path
+            str(par_file_path)
         ]
 
         # Generate flood model simulations
