@@ -4,7 +4,6 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-from osgeo import gdal
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -28,8 +27,8 @@ from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generat
     LisFloodModelSimulationsGenerator
 from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
-from src.eddie_floodresilience.solutions.nature_based_solution import NatureBasedSolution
-from src.eddie_floodresilience.solutions.engineering_solution import EngineeringSolution
+from src.eddie_floodresilience.solutions.nature.nature_based_solution import NatureBasedSolution
+from src.eddie_floodresilience.solutions.engineer.engineering_solution import EngineeringSolution
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 from src.eddie_floodresilience.tables import PipelineOutput

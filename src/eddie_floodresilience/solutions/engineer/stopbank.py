@@ -25,21 +25,21 @@ import rioxarray as rxr
 import xarray as xr
 from rasterio.features import rasterize
 from scipy.ndimage import distance_transform_edt
-from whitebox.whitebox_tools import WhiteboxTools
-from whitebox_workflows import WbEnvironment
 
 
-class EngineeringSolution:
-    """This class is to change the elevation"""
+class StopbankElevation:
+    """This class is to build up the stopbank by changing the elevation"""
 
     def __init__(
         self,
         flood_model: str,
         scenario_and_id_folder: Path,
+        dem: xr.DataArray,
+        roughness_length: xr.DataArray,
         vectors: pd.DataFrame | None = None
-    ) -> None:
+    ):
         """
-        Change the elevation based on the vector.
+        Change the stopbank elevation.
         This class relates to functions:
         - flood_model_executor in lisflood_simulations_generator.py
         - par_generator in lisflood_parameters_generator.py
@@ -51,6 +51,10 @@ class EngineeringSolution:
             Either "lisflood-fp" or "bg-flood"
         scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
+        dem : xr.DataArray
+            DEM
+        roughness_length : xr.DataArray
+            Roughness length
         vectors : pd.DataFrame | None = None
             Dataframe that contains 'vector_path', 'value', 'distance' columns:
             - 'vector_path': Column that stores directories to specific vectors
@@ -61,17 +65,8 @@ class EngineeringSolution:
         self.scenario_and_id_folder = scenario_and_id_folder
         self.flood_model = flood_model
 
-        # Read terrain data
-        if flood_model == "lisflood-fp":
-            z_file = r"original_scenario/hydrodynamic_process/z.asc"
-            with rxr.open_rasterio(self.scenario_and_id_folder.parent / z_file) as dem:
-                self.dem = dem.squeeze().load()
-
-        else:
-            terrain_file = r"original_scenario/hydrodynamic_process/8m_geofabric_clipped.nc"
-            with xr.open_dataset(self.scenario_and_id_folder.parent / terrain_file) as terrain_data:
-                self.dem = terrain_data.z.squeeze()
-                self.roughness_length = terrain_data.zo.squeeze()
+        self.dem = dem
+        self.roughness_length = roughness_length
 
     def rasterize_vector(self, vector_path: str) -> xr.DataArray:
         """
@@ -104,8 +99,8 @@ class EngineeringSolution:
 
         return vector_raster
 
+    @staticmethod
     def increase_elevation(
-        self,
         dem: xr.DataArray,
         mask: xr.DataArray,
         value: float
@@ -135,8 +130,8 @@ class EngineeringSolution:
 
         return increased_dem
 
+    @staticmethod
     def decrease_elevation(
-        self,
         dem: xr.DataArray,
         mask: xr.DataArray,
         value: float,
