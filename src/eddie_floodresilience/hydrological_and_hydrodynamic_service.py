@@ -28,11 +28,13 @@ from pywps.response.execute import ExecuteResponse
 
 from src.eddie_floodresilience import tasks
 from src.eddie_floodresilience.config import EnvVariable as EnvVar
-from src.eddie_floodresilience.solutions.landcover import LCDB_CLASSES
+from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset, LandCoverColorMapping
 
 
 class PredefinedScenario(Process, ABC):
     """Abstract base class for a Process for a scenario. Children of this provide the specific task to run."""
+
+    _LAND_COVER_COLOR_MAPPINGS = LandCoverColorMapping(LandcoverClassDataset.LCDB)
 
     def __init__(self, title: str, identifier: str, task: Callable, isBaseline: bool = False) -> None:
         """Define inputs and outputs of the WPS process, and assign process handler."""
@@ -47,6 +49,7 @@ class PredefinedScenario(Process, ABC):
                 allowed_values=[0, 1]
             ), ]
         else:
+            landcover_classes = self._LAND_COVER_COLOR_MAPPINGS.filtered_color_mapping.landcover_name
             inputs = [
                 ComplexInput(
                     'location',
@@ -60,7 +63,7 @@ class PredefinedScenario(Process, ABC):
                     "landcover",
                     "Landcover Class",
                     data_type="string",
-                    allowed_values=list(LCDB_CLASSES.keys())
+                    allowed_values=list(landcover_classes)
                 ),
             ]
         # Create area WPS outputs
@@ -83,7 +86,7 @@ class PredefinedScenario(Process, ABC):
                               supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
             )
 
-        handler = handler_for_task(task, isBaseline)
+        handler = handler_for_task(task, self._LAND_COVER_COLOR_MAPPINGS, isBaseline)
         # Initialise the process
         super().__init__(
             handler,
@@ -94,7 +97,7 @@ class PredefinedScenario(Process, ABC):
         )
 
 
-def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
+def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, is_baseline: bool = False) -> Callable:
     """
     Create a process handler for a given task.
 
@@ -102,6 +105,8 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
     ----------
     task : Task
         The callback function to be executed as a task.
+    color_mapping: LandCoverColorMapping
+        Contains mapping of LandCover details to colors for styling.
     is_baseline : bool = False
         Whether the scenario is configurable or a baseline. If it is a baseline then we do not have to read the inputs.
 
@@ -154,7 +159,9 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
         scenario_name = "Baseline" if is_baseline else str(scenario_id)
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
-        response.outputs['landcover'].data = json.dumps(landcover_catalog(scenario_id, scenario_name))
+        response.outputs['landcover'].data = json.dumps(
+            landcover_catalog(scenario_id, scenario_name, color_mapping)
+        )
         response.outputs['catchmentBoundary'].data = json.dumps(catchment_boundary_catalog(scenario_id, scenario_name))
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id, scenario_name))
         response.outputs['injectionPoints'].data = json.dumps(
@@ -459,7 +466,7 @@ def catchment_boundary_catalog(scenario_id: int, scenario_name: str) -> dict:
     }
 
 
-def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
+def landcover_catalog(scenario_id: int, scenario_name: str, color_mapping: LandCoverColorMapping) -> dict:
     """
     Create a dictionary in the format of a terria js catalog json for the landcover layer.
 
@@ -469,6 +476,8 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
         The ID of the scenario to create the catalog item for.
     scenario_name : str
         The name of the scenario to create the catalog item for.
+    color_mapping: LandCoverColorMapping
+        Contains mapping of LandCover details to colors for styling.
 
     Returns
     ----------
@@ -478,6 +487,13 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
     gs_intermediate_workspace = f"{EnvVar.POSTGRES_DB}-intermediate-wflow"
     gs_landcover_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_intermediate_workspace}/ows"
     layer_name = f"{gs_intermediate_workspace}:lcdb_mauri_view"
+
+    landcover_color_styles = [
+        {
+            "value": mapping.landcover_name,
+            "color": mapping.color
+        } for _idx, mapping in color_mapping.color_mapping.iterrows() if isinstance(mapping.color, str)
+    ]
 
     return {
         "type": "wfs",
@@ -527,112 +543,7 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
             {
                 "id": "LCDB description",
                 "color": {
-                    "enumColors": [
-                        {
-                            "value": "Indigenous Forest",
-                            "color": "rgba(0,114,0,1)"
-                        },
-                        {
-                            "value": "Manuka and/or Kanuka",
-                            "color": "rgba(165,190,0,1)"
-                        },
-                        {
-                            "value": "High producing Exotic Grassland",
-                            "color": "rgba(230,159,0,1)"
-                        },
-                        {
-                            "value": "Low Producing Grassland",
-                            "color": "rgba(240,184,77,1)"
-                        },
-                        {
-                            "value": "Exotic Forest (needleleaf forest)",
-                            "color": "rgba(102,187,106,1)"
-                        },
-                        {
-                            "value": "Broadleaved Indigenous Hardwoods",
-                            "color": "rgba(56,176,0,1)"
-                        },
-                        {
-                            "value": "Deciduous Hardwoods",
-                            "color": "rgba(0,68,27,1)"
-                        },
-                        {
-                            "value": "Herbaceous Freshwater Vegetation",
-                            "color": "rgba(74,144,226,1)"
-                        },
-                        {
-                            "value": "Forest - Harvested",
-                            "color": "rgba(199,199,166,1)"
-                        },
-                        {
-                            "value": "Fernland",
-                            "color": "rgba(109,61,169,1)"
-                        },
-                        {
-                            "value": "Gravel and Rock",
-                            "color": "#F2F3F4"
-                        },
-                        {
-                            "value": "River",
-                            "color": "rgba(0,0,205,1)"
-                        },
-                        {
-                            "value": "Gorse and/or Broom",
-                            "color": "rgba(164,143,45,1)"
-                        },
-                        {
-                            "value": "Matagouri or Grey Scrub",
-                            "color": "rgba(177,124,66,1)"
-                        },
-                        {
-                            "value": "Tall Tussock Grassland",
-                            "color": "rgba(233,240,77,1)"
-                        },
-                        {
-                            "value": "Mixed Exotic Shrubland",
-                            "color": "rgba(14,171,155,1)"
-                        },
-                        {
-                            "value": "Sub-alpine Shrubland",
-                            "color": "rgba(80,66,3,1)"
-                        },
-                        {
-                            "value": "Alpine Grass/Herbfield",
-                            "color": "rgba(43,169,16,1)"
-                        },
-                        {
-                            "value": "Lake or Pond",
-                            "color": "rgba(0,0,205,1)"
-                        },
-                        {
-                            "value": "Short-rotation Cropland",
-                            "color": "rgba(223,224,10,1)"
-                        },
-                        {
-                            "value": "Built-up Area",
-                            "color": "rgba(0,0,0,1)"
-                        },
-                        {
-                            "value": "Urban Parkland/ Open Space",
-                            "color": "rgba(5,121,110,1)"
-                        },
-                        {
-                            "value": "Landslide",
-                            "color": "rgba(74,4,123,1)"
-                        },
-                        {
-                            "value": "Surface Mine or Dump",
-                            "color": "rgba(154,6,6,1)"
-                        },
-                        {
-                            "value": "Transport Infrastructure",
-                            "color": "rgba(57,56,56,1)"
-                        },
-                        {
-                            "value": "Depleted Grassland",
-                            "color": "rgba(201,162,85,1)"
-                        }
-                    ],
+                    "enumColors": landcover_color_styles,
                 },
                 "hidden": False
             },

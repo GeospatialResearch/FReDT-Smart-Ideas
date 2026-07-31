@@ -29,7 +29,7 @@ from scipy.ndimage import distance_transform_edt
 from whitebox.whitebox_tools import WhiteboxTools
 from whitebox_workflows import WbEnvironment
 
-from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset, LCDB_CLASSES
+from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset, LandCoverColorMapping
 
 log = logging.getLogger(__name__)
 
@@ -95,10 +95,11 @@ class LandCoverSolution:
         modified_landcover : xr.DataArray
             Raster of land cover that is modified
         """
-        # Copy original land cover data to not be affected by the change
-        modified_landcover = current_landcover.copy()
+        # Add the "landcover" id colomn using a lookup from LandcoverColorMappings
         if "landcover" not in polygons.columns:
-            polygons["landcover"] = polygons["landcover_name"].map(LCDB_CLASSES)
+            landcover_mapping = LandCoverColorMapping(self.landcover).color_mapping
+            landcover_merged = polygons.merge(landcover_mapping, on="landcover_name", how="left")
+            polygons["landcover"] = landcover_merged.landuse_class_id
 
         # Create rasterization shapes
         shapes = list(zip(polygons.geometry, polygons["landcover"]))
@@ -112,7 +113,9 @@ class LandCoverSolution:
             dtype='uint8'
         )
 
-        # Applyg changes
+        # Copy original land cover data to not be affected by the change
+        modified_landcover = current_landcover.copy()
+        # Apply changes
         mask = polygon_raster != 0
         modified_landcover.values[mask] = polygon_raster[mask]
 

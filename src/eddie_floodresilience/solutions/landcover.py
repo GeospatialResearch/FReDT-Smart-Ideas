@@ -16,7 +16,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 """Provides definitions of landcover class value mappings."""
+import importlib
 from enum import StrEnum
+
+import pandas as pd
 
 
 class LandcoverClassDataset(StrEnum):
@@ -26,27 +29,46 @@ class LandcoverClassDataset(StrEnum):
     LCDB = "lcdb"
 
 
-GLOBCOVER_CLASSES: dict[str, int] = {
-    "Dense Deciduous Forest": 50,
-    "Evergreen Forest": 40,
-    "Deciduous Forest": 60,
-    "Needleleaf Forest": 70,
-    "Pasture Mosaic": 120,
-    "Shrubland": 130,
-    "Pasture": 140,
-    "Sparse Vegetation": 150,
-    "Wetland": 160,
-    "Bare Land": 200,
-}
+class LandCoverColorMapping:
+    """Reads appropriate color mapping for landcover dataset."""
 
-LCDB_CLASSES: dict[str, int] = {
-    "High Producing Exotic Grassland": 40,
-    "Low Producing Grassland": 41,
-    "Herbaceous Freshwater Vegetation": 45,
-    "Manuka and/or Kanuka": 52,
-    "Broadleaved Indigenous Hardwoods": 54,
-    "Forest - Harvested": 64,
-    "Deciduous Hardwoods": 68,
-    "Indigenous Forest": 69,
-    "Exotic Forest (needleleaf forest)": 71,
-}
+    _RESOURCES_PATH = importlib.resources.files(f"{__package__}.resources")
+
+    _color_mapping: pd.DataFrame = None
+
+    def __init__(self, landcover_class_dataset: LandcoverClassDataset) -> None:
+        """
+        Create reader for appropriate landcover class mapping file.
+
+        Parameters
+        ----------
+        landcover_class_dataset : LandcoverClassDataset
+            Name of land cover dataset to be mapped.
+        """
+        self._landcover_class_dataset = landcover_class_dataset
+
+    @property
+    def color_mapping(self) -> pd.DataFrame:
+        """
+        Property for displaying color mapping.
+
+        Returns
+        -------
+        pd.DataFrame
+            Copy of lazy initialized color mapping.
+        """
+        if self._color_mapping is None:
+            mapping_path = self._RESOURCES_PATH / f"{self._landcover_class_dataset}_color_mapping.csv"
+            self._color_mapping = pd.read_csv(mapping_path)
+        return self._color_mapping.copy()
+
+    @property
+    def filtered_color_mapping(self) -> pd.DataFrame:
+        """
+        Property for displaying color mapping filtered to those marked as displayed.
+
+        Returns
+        pd.DataFrame
+            A lazy-initialised color mapping dataframe filtered based on "displayed" column.
+        """
+        return self.color_mapping.loc[self.color_mapping.displayed].copy()
