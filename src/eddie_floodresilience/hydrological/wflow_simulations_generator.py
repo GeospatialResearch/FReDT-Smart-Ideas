@@ -27,6 +27,7 @@ import geopandas as gpd
 
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
+from ..solutions.landcover import LandcoverClassDataset
 
 log = logging.getLogger(__name__)
 
@@ -64,7 +65,7 @@ class WflowSimulationsGenerator:
     resolution : float
         Resolution for flow data.
         Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
-    landcover : str = 'globcover'
+    landcover : LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER = 'globcover'
         Name of land cover dataset. Default is 'globcover'
     """  # pylint: disable=too-many-instance-attributes
 
@@ -80,7 +81,7 @@ class WflowSimulationsGenerator:
         scenario_and_id_folder: Path,
         polygons: gpd.GeoDataFrame | None = None,
         resolution: float = 0.00045,
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
     ) -> None:
         """
         Generate wflow model simulations
@@ -114,7 +115,7 @@ class WflowSimulationsGenerator:
         resolution : float
             Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
-        landcover : str = 'globcover'
+        landcover : LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER = 'globcover'
             Name of land cover dataset. Default is 'globcover'
         """
         self.hydromt_path = hydromt_path

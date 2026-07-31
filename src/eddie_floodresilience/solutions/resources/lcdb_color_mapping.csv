@@ -1,0 +1,36 @@
+LCDB group,landuse_class_id,landcover_name,color,displayed
+Artificial surfaces,1,Built-up Area,#000000,False
+Artificial surfaces,2,Urban Parkland/ Open Space,#05796E,False
+Artificial surfaces,6,Surface Mine or Dump,#9A0606,False
+Artificial surfaces,5,Transport Infrastructure,#393838,False
+Bare or Lightly-vegetated surfaces,10,Sand and Gravel,,False
+Bare or Lightly-vegetated surfaces,16,Gravel and Rock,#F2F3F4,False
+Bare or Lightly-vegetated surfaces,12,Landslide,#4A047B,False
+Bare or Lightly-vegetated surfaces,14,Permanent Snow and Ice,,False
+Bare or Lightly-vegetated surfaces,15,Alpine Grass/Herbfield,#2BA910,False
+Water bodies,20,Lake or Pond,#0000CD,False
+Water bodies,21,River,#0000CD,False
+Water bodies,22,Estuarine Open Water,,False
+Cropland,30,Short-rotation Cropland,#DFE00A,False
+Cropland,33,Orchard Vineyard & Perennial Crops,,False
+"Grassland, Sedgeland, and Marshland",40,High producing Exotic Grassland,#E69F00,True
+"Grassland, Sedgeland, and Marshland",41,Low Producing Grassland,#F0B84D,True
+"Grassland, Sedgeland, and Marshland",43,Tall Tussock Grassland,#E9F04D,False
+"Grassland, Sedgeland, and Marshland",44,Depleted Grassland,#C9A255,False
+"Grassland, Sedgeland, and Marshland",45,Herbaceous Freshwater Vegetation,#4A90E2,True
+"Grassland, Sedgeland, and Marshland",46,Herbaceous Saline Vegetation,,False
+"Grassland, Sedgeland, and Marshland",47,Flaxland,,False
+Scrub and Shrubland,50,Fernland,#6D3DA9,False
+Scrub and Shrubland,51,Gorse and/or Broom,#A48F2D,False
+Scrub and Shrubland,52,Manuka and/or Kanuka,#A5BE00,True
+Scrub and Shrubland,58,Matagouri or Grey Scrub,#B17C42,False
+Scrub and Shrubland,54,Broadleaved Indigenous Hardwoods,#38B000,True
+Scrub and Shrubland,55,Sub-alpine Shrubland,#504203,False
+Scrub and Shrubland,56,Mixed Exotic Shrubland,#0EAB9B,False
+Scrub and Shrubland,80,Peat Shrubland (Chatham Islands only),,False
+Scrub and Shrubland,81,Dune Shrubland (Chatham Islands only),,False
+Forest,71,Exotic Forest (needleleaf forest),#66BB6A,True
+Forest,64,Forest - Harvested,#C7C7A6,True
+Forest,68,Deciduous Hardwoods,#00441B,True
+Forest,69,Indigenous Forest,#007200,True
+Forest,70,Mangrove,,False

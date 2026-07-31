@@ -1,4 +1,4 @@
-# # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 # Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
 # LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
 #
@@ -15,4 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Package contains modules related to solutions that can build up to a scenario."""
+"""Shared generic raster operations."""
+
+from .polygonize import polygonize_raster
+
+__all__ = [
+    "polygonize_raster",
+]

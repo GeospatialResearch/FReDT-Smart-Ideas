@@ -1,0 +1,36 @@
+LCDB group,LCDB class,LCDB description,Atua Domain,Mauri
+Artificial surfaces,1,Built-up Area,,1.0
+Artificial surfaces,2,Urban Parkland/ Open Space,,1.0
+Artificial surfaces,6,Surface Mine or Dump,,1.0
+Artificial surfaces,5,Transport Infrastructure,,1.0
+Bare or Lightly-vegetated surfaces,10,Sand and Gravel,,1.0
+Bare or Lightly-vegetated surfaces,16,Gravel and Rock,,1.0
+Bare or Lightly-vegetated surfaces,12,Landslide,,1.0
+Bare or Lightly-vegetated surfaces,14,Permanent Snow and Ice,,1.0
+Bare or Lightly-vegetated surfaces,15,Alpine Grass/Herbfield,,1.0
+Water bodies,20,Lake or Pond,"Tangaroa (Sea, rivers, lakes)",5.0
+Water bodies,21,River,"Tangaroa (Sea, rivers, lakes)",5.0
+Water bodies,22,Estuarine Open Water,"Tangaroa (Sea, rivers, lakes)",5.0
+Cropland,30,Short-rotation Cropland,Rongomaraeroa (Cultivated food),5.0
+Cropland,33,Orchard Vineyard & Perennial Crops,Rongomaraeroa (Cultivated food),5.0
+"Grassland, Sedgeland, and Marshland",40,High producing Exotic Grassland,Rongomaraeroa (Cultivated food),5.0
+"Grassland, Sedgeland, and Marshland",41,Low Producing Grassland,Rongomaraeroa (Cultivated food),5.0
+"Grassland, Sedgeland, and Marshland",43,Tall Tussock Grassland,Rongomaraeroa (Cultivated food),5.0
+"Grassland, Sedgeland, and Marshland",44,Depleted Grassland,Rongomaraeroa (Cultivated food),5.0
+"Grassland, Sedgeland, and Marshland",45,Herbaceous Freshwater Vegetation,Moana Tu i te Repo (Wetland),7.0
+"Grassland, Sedgeland, and Marshland",46,Herbaceous Saline Vegetation,Moana Tu i te Repo (Wetland),7.0
+"Grassland, Sedgeland, and Marshland",47,Flaxland,Moana Tu i te Repo (Wetland),7.0
+Scrub and Shrubland,50,Fernland,Tāne Mahuta (Forest),7.0
+Scrub and Shrubland,51,Gorse and/or Broom,Tāne Mahuta (Forest),7.0
+Scrub and Shrubland,52,Manuka and/or Kanuka,Tāne Mahuta (Forest),7.0
+Scrub and Shrubland,58,Matagouri or Grey Scrub,Tāne Mahuta (Forest),7.0
+Scrub and Shrubland,54,Broadleaved Indigenous Hardwoods,Tāne Mahuta (Forest),8.0
+Scrub and Shrubland,55,Sub-alpine Shrubland,Tāne Mahuta (Forest),7.0
+Scrub and Shrubland,56,Mixed Exotic Shrubland,Tāne Mahuta (Forest),7.0
+Scrub and Shrubland,80,Peat Shrubland (Chatham Islands only),Tāne Mahuta (Forest),7.0
+Scrub and Shrubland,81,Dune Shrubland (Chatham Islands only),Tāne Mahuta (Forest),7.0
+Forest,71,Exotic Forest (needleleaf forest),Tāne Mahuta (Forest),7.0
+Forest,64,Forest - Harvested,Tāne Mahuta (Forest),3.0
+Forest,68,Deciduous Hardwoods,Tāne Mahuta (Forest),8.0
+Forest,69,Indigenous Forest,Tāne Mahuta (Forest),8.0
+Forest,70,Mangrove,Moana Tu i te Repo (Wetland),7.0

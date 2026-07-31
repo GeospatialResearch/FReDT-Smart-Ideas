@@ -11,6 +11,8 @@ from pathlib import Path
 import yaml
 import geopandas as gpd
 
+from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
+
 log = logging.getLogger(__name__)
 
 
@@ -24,7 +26,7 @@ class DataCatalogGenerator:
         river_name: str,
         scenario_and_id_folder: Path,
         polygons: gpd.GeoDataFrame | None = None,
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
     ) -> None:
         """
         Generate data_catalog.yml for preprocessing data for wflow.
@@ -44,7 +46,7 @@ class DataCatalogGenerator:
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        landcover : str = 'globcover'
+        landcover : LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER = 'globcover'
             Name of land cover. Default is 'globcover'
         """
         self.hydromt_path = hydromt_path
@@ -53,27 +55,6 @@ class DataCatalogGenerator:
         self.scenario_and_id_folder = scenario_and_id_folder
         self.polygons = polygons
         self.landcover = landcover
-
-    @staticmethod
-    def landcover_mapping_type(landcover: str) -> str:
-        """
-        Identify what type of landcover data source is being used.
-
-        Parameters
-        ----------
-        landcover : str
-            Name of land cover.
-
-        Returns
-        ----------
-        str
-            Name of landcover dataset - globcover or lcdb
-        """
-        if landcover.startswith('globcover'):
-            landcover_mapping_type = 'globcover'
-        else:
-            landcover_mapping_type = 'lcdb'
-        return landcover_mapping_type
 
     def meta_section(self) -> dict:
         """
@@ -177,13 +158,11 @@ class DataCatalogGenerator:
         landcover : dict
             A dictionary contains information of landcover
         """
-        landcover_mapping_type = self.landcover_mapping_type(self.landcover)
-
         # Check landcover path
         is_baseline = self.polygons is None
         landcover_file = find_landcover_file(
             self.hydromt_path,
-            landcover_mapping_type,
+            self.landcover,
             self.scenario_and_id_folder,
             is_baseline
         )
@@ -487,7 +466,7 @@ class DataCatalogGenerator:
 
 def find_landcover_file(
     hydromt_path: Path,
-    landcover_mapping_type: str,
+    landcover_mapping_type: LandcoverClassDataset,
     scenario_and_id_folder: Path,
     is_baseline: bool = True
 ) -> Path:
@@ -498,7 +477,7 @@ def find_landcover_file(
     ----------
     hydromt_path : Path
         A directory to where all necessary files are stored to run wflow model
-    landcover_mapping_type : str
+    landcover_mapping_type : LandcoverClassDataset
         Name of landcover dataset - globcover or lcdb
     scenario_and_id_folder : Path
         Directory to the scenario folder name with ID

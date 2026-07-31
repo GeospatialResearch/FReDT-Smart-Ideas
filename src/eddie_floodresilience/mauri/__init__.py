@@ -15,4 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-"""Package contains modules related to solutions that can build up to a scenario."""
+"""Package contains modules related to visualizing and quantifying Mayri metrics."""
+
+from .assign_mauri import serve_landcover_with_mauri
+
+__all__ = [
+    "serve_landcover_with_mauri",
+]
