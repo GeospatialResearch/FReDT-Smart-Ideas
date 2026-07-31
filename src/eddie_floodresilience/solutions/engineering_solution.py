@@ -36,7 +36,7 @@ class EngineeringSolution:
         self,
         flood_model: str,
         scenario_and_id_folder: Path,
-        vectors: pd.DataFrame = None
+        vectors: pd.DataFrame | None = None
     ) -> None:
         """
         Change the elevation based on the vector.
@@ -51,8 +51,8 @@ class EngineeringSolution:
             Either "lisflood-fp" or "bg-flood"
         scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
-        vectors : pd.DataFrame = None
-            Name of dataframe that contains 'vector_path', 'value', 'distance' columns:
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
             - 'vector_path': Column that stores directories to specific vectors
             - 'value: Column that stores value of the vectors used to increase/decrease elevation
             - 'distance': Column that stores value to smooth the decreased elevation

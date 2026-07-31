@@ -23,6 +23,7 @@ from textwrap import dedent
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 from shapely.geometry import Polygon, Point
 
 from ..flood_model_parameters_generator import FloodType, FloodModelParametersGenerator
@@ -44,13 +45,13 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
         Starting time details. Format is "yyyy-mm-ddThh:mm:ss"
     end_time : datetime
         Ending time details.
-    polygons : str = None
-        Name of polygon file that is used to change the landcover information.
+    polygons : gpd.GeoDataFrame | None = None
         This polygon dataframe has 'landcover' column with new values
-    vectors : str = None
-        Name of vector file that is used to change the elevation information.
-        This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-        and 'distance' column to specify how smooth to decrease elevation.
+    vectors : pd.DataFrame | None = None
+        Dataframe that contains 'vector_path', 'value', 'distance' columns:
+        - 'vector_path': Column that stores directories to specific vectors
+        - 'value: Column that stores value of the vectors used to increase/decrease elevation
+        - 'distance': Column that stores value to smooth the decreased elevation
     injection_points_flow : pd.DataFrame
         The flow data for each point
     injection_points : gpd.GeoDataFrame
@@ -65,8 +66,8 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
         start_time: datetime,
         end_time: datetime,
         flood_type: FloodType = FloodType.FLUVIAL,
-        polygons: str = None,
-        vectors: str = None
+        polygons: gpd.GeoDataFrame | None = None,
+        vectors: pd.DataFrame | None = None
     ) -> None:
         """
         Generate parameter files for flood model
@@ -85,13 +86,13 @@ class BGFloodParametersGenerator(FloodModelParametersGenerator):
             Ending time details.
         flood_type : FloodType = FloodType.FLUVIAL
             Either FLUVIAL or PLUVIAL. Default is FLUVIAL
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataFrame | None = None
             This polygon dataframe has 'landcover' column with new values
-        vectors : str = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
         """
         super().__init__(
             flood_model_path,

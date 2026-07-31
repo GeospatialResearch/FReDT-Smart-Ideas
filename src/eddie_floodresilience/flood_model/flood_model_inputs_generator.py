@@ -39,8 +39,8 @@ class TerrainGenerator:
         hydromt_path: Path,
         river_name: str,
         aoi_boundary: list,
-        polygons: str = None,
-        vectors: pd.DataFrame = None,
+        polygons: gpd.GeoDataFrame | None = None,
+        vectors: pd.DataFrame | None = None,
         crs: int = 2193
     ) -> None:
         """
@@ -57,13 +57,13 @@ class TerrainGenerator:
         aoi_boundary : list
             Boundaries' coordinates of area of interest.
             Format is [xmin, ymin, xmax, ymax]
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataFrame | None = None
             This polygon dataframe has 'landcover' column with new values
-        vectors : pd.DataFrame = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
         """
@@ -607,7 +607,7 @@ class InjectionPointsFloodModelGenerator:
         start_time: datetime,
         end_time: datetime,
         scenario_and_id_folder: Path,
-        polygons: str = None,
+        polygons: gpd.GeoDataFrame | None = None,
         crs: int = 2193
     ) -> None:
         """
@@ -623,8 +623,7 @@ class InjectionPointsFloodModelGenerator:
             Ending time details. Format is Dataframe that contains rivers' flow data at injection points
         scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
-        polygons : str = None
-            Name of polygon file that is used to change the landcover information.
+        polygons : gpd.GeoDataframe | None = None
             This polygon dataframe has 'landcover' column with new values
         crs : int = 2193
             Targeted crs. The default is 2193 for NZTM.
