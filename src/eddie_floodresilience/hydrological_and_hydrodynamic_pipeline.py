@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-
+from osgeo import gdal
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -25,7 +25,8 @@ from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.flood_model_parameters_generator import FloodType
 from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
-from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
+from src.eddie_floodresilience.solutions.nature_based_solution import NatureBasedSolution
+from src.eddie_floodresilience.solutions.engineering_solution import EngineeringSolution
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
@@ -285,7 +286,7 @@ class HydrologicalAndHydrodynamicPipeline:
         if self.polygons is not None and self.vectors is not None:
 
             # Land cover/natural solution
-            landcover_solution = LandCoverSolution(
+            landcover_solution = NatureBasedSolution(
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
@@ -294,7 +295,7 @@ class HydrologicalAndHydrodynamicPipeline:
             self.landcover = landcover_solution.apply_landcover_solution().name
 
             # Elevation solution
-            elevation_solution = ElevationSolution(
+            elevation_solution = EngineeringSolution(
                 self.flood_model,
                 scenario_and_id_folder,
                 self.vectors
@@ -304,7 +305,7 @@ class HydrologicalAndHydrodynamicPipeline:
         elif self.polygons is not None:
 
             # Land cover/natural solution
-            landcover_solution = LandCoverSolution(
+            landcover_solution = NatureBasedSolution(
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
@@ -315,7 +316,7 @@ class HydrologicalAndHydrodynamicPipeline:
         elif self.vectors is not None:
 
             # Elevation solution
-            elevation_solution = ElevationSolution(
+            elevation_solution = EngineeringSolution(
                 self.flood_model,
                 scenario_and_id_folder,
                 self.vectors
@@ -862,7 +863,7 @@ if __name__ == '__main__':
     df = pd.read_csv(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
     )
-    whirinaki(FloodType.FLUVIAL, None, None)
+    whirinaki(FloodType.FLUVIAL, gdf, None)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
