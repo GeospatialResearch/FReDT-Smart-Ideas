@@ -24,13 +24,13 @@ from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
-import rioxarray as rxr
 
 from eddie import geoserver as gs
 from eddie.digitaltwin import setup_environment
-from eddie.geoserver.raster_layers import CoverageDimension
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import find_landcover_file
+from src.eddie_floodresilience.mauri import serve_landcover_with_mauri
+from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
 
 log = logging.getLogger(__name__)
 
@@ -58,7 +58,7 @@ class WflowServeDataGenerator:
         self,
         hydromt_path: Path,
         polygons: gpd.GeoDataFrame | None,
-        landcover_mapping_type: str,
+        landcover_mapping_type: LandcoverClassDataset,
         scenario_and_id_folder: Path,
         flood_model_output_id: int
     ) -> None:
@@ -72,7 +72,7 @@ class WflowServeDataGenerator:
         polygons: gpd.GeoDataFrame | None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        landcover_mapping_type : str
+        landcover_mapping_type : LandcoverClassDataset
             Name of landcover dataset - globcover or lcdb
         scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
@@ -130,26 +130,7 @@ class WflowServeDataGenerator:
             self.hydromt_path, self.landcover_mapping_type, self.scenario_and_id_folder, is_baseline
         )
 
-        tmp_dir = Path("tmp/gtiff") / self.hydromt_path.name
-        tmp_dir.mkdir(parents=True, exist_ok=True)
-        clipped_path = tmp_dir / landcover_file.name
-
-        with rxr.open_rasterio(landcover_file) as src:
-            catchment = catchment_poly.to_crs(src.rio.crs).geometry
-            clipped_landcover = src.rio.clip(catchment, drop=True)
-            clipped_landcover.rio.to_raster(clipped_path)
-
-        layer_name = f"landcover_{self.flood_model_output_id}"
-        if layer_name in gs.raster_layers.get_workspace_raster_layers(workspace_name):
-            # This can happen if the database is not in sync with geoserver. Better to allow it to continue.
-            # This is only likely to happen on development machines in very particular cases..
-            log.warning(f"{workspace_name}:{layer_name} already exists. Skipping adding {landcover_file}")
-        else:
-            # Add the landcover raster to geoserver
-            coverage_dimensions = [CoverageDimension(layer_name, "landcover_class", "Int32")]
-            gs.add_gtiff_to_geoserver(clipped_path, workspace_name, layer_name, coverage_dimensions)
-        # Delete tmp clipped file
-        clipped_path.unlink()
+        serve_landcover_with_mauri(workspace_name, landcover_file, catchment_poly, self.flood_model_output_id)
 
     def _serve_catchment_boundary(self, workspace_name: str, catchment_poly: gpd.GeoDataFrame) -> None:
         """
