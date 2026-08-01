@@ -19,18 +19,17 @@ import logging
 from pathlib import Path
 
 import geopandas as gpd
-import numpy as np
 import pandas as pd
 import rioxarray as rxr
 import xarray as xr
-from rasterio.features import rasterize
-from scipy.ndimage import distance_transform_edt
 
-from src.eddie_floodresilience.solutions.engineer.drainage import GenerateDrainageElevation, GenerateDrainageGeometry
+from src.eddie_floodresilience.solutions.engineer.drainage import GenerateFullDrainage
+from src.eddie_floodresilience.solutions.engineer.stopbank import GenerateFullStopbank
 
+log = logging.getLogger(__name__)
 
 class EngineeringSolution:
-    """This class is to change the elevation"""
+    """This class is to apply engineering solution"""
 
     def __init__(
         self,
@@ -39,7 +38,7 @@ class EngineeringSolution:
         vectors: gpd.GeoDataFrame | None = None
     ) -> None:
         """
-        Change the elevation based on the vector.
+        Apply engineering solution by changing the elevation based on the vector.
         This class relates to functions:
         - flood_model_executor in lisflood_simulations_generator.py
         - par_generator in lisflood_parameters_generator.py
@@ -73,34 +72,104 @@ class EngineeringSolution:
                 self.dem = terrain_data.z.squeeze()
                 self.roughness_length = terrain_data.zo.squeeze()
 
-    def generate_drainage(self):
-        """Modify drainage"""
-        # Set up function to generate DEM with drainage
-        generate_dem_with_drainage = GenerateDrainageElevation(
-            self.vectors,
-            self.dem
+    @staticmethod
+    def generate_dem_with_full_drainage(
+        drainage_vector: pd.Series,
+        dem_need_modification: xr.DataArray
+    ) -> xr.DataArray:
+        """
+        Generate DEM with full drainage
+
+        Parameters
+        ----------
+        dem_need_modification : xr.DataArray
+            DEM that needs modification
+        drainage_vector : pd.Series
+            Drainage information
+
+        Returns
+        -------
+        dem_with_full_drainage : xr.DataArray
+            DEM with full drainage information
+        """
+        # Set up drainage function
+        generate_dem_with_full_drainage = GenerateFullDrainage(
+            dem_need_modification,
+            drainage_vector
         )
 
-        # Generate new DEM with drainage and drainage elevation
-        drainage_elevation, new_dem = generate_dem_with_drainage.generate_elevation_for_drainage_line()
+        # Generate DEM with full drainage
+        dem_with_full_drainage = generate_dem_with_full_drainage.generate_full_drainage()
 
-        # Generate indices of drainage
-        (horizontal_drainage_indices,
-         vertical_drainage_indices) = generate_dem_with_drainage.generate_ordinal_number_of_pixels()
+        return dem_with_full_drainage
 
-        # Set up function to modify drainage geometry - surface width, base width, and slope
-        generate_dem_with_drainage_geometry = GenerateDrainageGeometry(
-            self.dem,
-            new_dem,
-            self.vectors,
-            horizontal_drainage_indices,
-            vertical_drainage_indices,
-            drainage_elevation,
-            self.vectors['base_width'],
-            self.vectors['surface_width'],
-            self.vectors['slope']
+    @staticmethod
+    def generate_dem_with_full_stopbank(
+        dem_need_modification,
+        stopbank_vector
+    ) -> xr.DataArray:
+        """
+        Generate DEM with full stopbank
+
+        Parameters
+        ----------
+        dem_need_modification : xr.DataArray
+            DEM that needs modification
+        stopbank_vector : pd.Series
+            Stopbank information
+        """
+        # Set up stopbank function
+        generate_dem_with_full_stopbank = GenerateFullStopbank(
+            dem_need_modification,
+            stopbank_vector
         )
 
-        # Generate DEM with drainage geometry
-        dem_drainage_geometry = generate_dem_with_drainage_geometry.generate_dem_with_drainage_geometry()
+        # Generate DEM with full stopbank
+        dem_with_full_stopbank = generate_dem_with_full_stopbank.change_elevation()
 
+        return dem_with_full_stopbank
+
+    def apply_engineering_solution(self) -> None:
+        """Apply engineering solution to elevation data"""
+        # Set up log for engineering solution
+        log.info(f"Applying engineering solution")
+
+        # Set up original DEM that needs modification
+        modified_dem = self.dem
+
+        # Apply engineering solution to the DEM
+        for i in range(self.vectors.shape[0]):
+            if self.vectors.iloc[i]['type'] == 'drainage':
+                modified_dem = self.generate_dem_with_full_drainage(
+                    self.vectors.iloc[i],
+                    modified_dem
+                )
+            else:
+                modified_dem = self.generate_dem_with_full_stopbank(
+                    modified_dem,
+                    self.vectors.iloc[i]
+                )
+
+        # Hydrodynamic process path
+        hydrodynamic_process_path = self.scenario_and_id_folder / "hydrodynamic_process"
+
+        if self.flood_model == "lisflood-fp":
+            # Write out
+            modified_dem.rio.to_raster(
+                hydrodynamic_process_path / "z.asc",
+                compress="LZW",
+                tiled=True
+            )
+
+        else:
+            # Merge z and zo
+            terrain_data = xr.Dataset({
+                "z": modified_dem,
+                "zo": self.roughness_length
+            })
+
+            # Add CRS
+            terrain_data.rio.write_crs("EPSG:2193", inplace=True)
+
+            # Write out
+            terrain_data.to_netcdf(hydrodynamic_process_path / "8m_geofabric_clipped.nc")

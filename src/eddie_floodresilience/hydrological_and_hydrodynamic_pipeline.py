@@ -4,6 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
+from osgeo import gdal
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -26,12 +27,11 @@ from src.eddie_floodresilience.flood_model.flood_model_parameters_generator impo
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
-from src.eddie_floodresilience.solutions.nature.nature_based_solution import NatureBasedSolution
-from src.eddie_floodresilience.solutions.engineer.engineering_solution import EngineeringSolution
 from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
 from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
 from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
-from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
+from src.eddie_floodresilience.solutions.nature.nature_based_solution import NatureBasedSolution
+from src.eddie_floodresilience.solutions.engineer.engineering_solution import EngineeringSolution
 from src.eddie_floodresilience.tables import PipelineOutput
 
 log = logging.getLogger(__name__)
@@ -287,43 +287,43 @@ class HydrologicalAndHydrodynamicPipeline:
 
         if self.polygons is not None and self.vectors is not None:
 
-            # Land cover/natural solution
-            landcover_solution = NatureBasedSolution(
+            # Nature based solution
+            nature_based_solution = NatureBasedSolution(
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
                 self.polygons
             )
-            landcover_solution.apply_landcover_solution()
+            nature_based_solution.apply_nature_based_solution()
 
-            # Elevation solution
-            elevation_solution = EngineeringSolution(
+            # Engineering solution
+            engineering_solution = EngineeringSolution(
                 self.flood_model,
                 scenario_and_id_folder,
                 self.vectors
             )
-            elevation_solution.apply_elevation_solution()
+            engineering_solution.apply_engineering_solution()
 
         elif self.polygons is not None:
 
-            # Land cover/natural solution
-            landcover_solution = NatureBasedSolution(
+            # Nature based solution
+            nature_based_solution = NatureBasedSolution(
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
                 self.polygons
             )
-            landcover_solution.apply_landcover_solution()
+            nature_based_solution.apply_nature_based_solution()
 
         elif self.vectors is not None:
 
-            # Elevation solution
-            elevation_solution = EngineeringSolution(
+            # Engineering solution
+            engineering_solution = EngineeringSolution(
                 self.flood_model,
                 scenario_and_id_folder,
                 self.vectors
             )
-            elevation_solution.apply_elevation_solution()
+            engineering_solution.apply_engineering_solution()
 
     def terrain_data_pipeline(self) -> None:
         """Generate terrain data for wflow and flood models"""
@@ -861,10 +861,10 @@ if __name__ == '__main__':
     gdf = gpd.read_file(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
     )
-    df = pd.read_csv(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
+    drainage_gdf = gpd.read_file(
+        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\example_raster_002\river_connection_combination_005.shp"
     )
-    whirinaki(FloodType.FLUVIAL, gdf, None)
+    whirinaki(FloodType.FLUVIAL, None, drainage_gdf)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
