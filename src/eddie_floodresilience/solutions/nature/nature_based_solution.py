@@ -116,6 +116,7 @@ class NatureBasedSolution:
         mask = polygon_raster != 0
         modified_landcover.values[mask] = polygon_raster[mask]
 
+        return modified_landcover
 
     def apply_nature_based_solution(self) -> Path:
         """
