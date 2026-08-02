@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-from osgeo import gdal
+
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -868,27 +868,27 @@ def riverton(
 
 
 if __name__ == '__main__':
-    # setup_logging(LogLevel.INFO)
-    # # Whirinaki
-    # forest_gdf = gpd.read_file(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
-    # )
-    # drainage_gdf = gpd.read_file(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\example_raster_002\river_connection_combination_005.shp"
-    # )
-    # whirinaki(FloodType.FLUVIAL, forest_gdf, drainage_gdf)
+    setup_logging(LogLevel.INFO)
+    # Whirinaki
+    forest_gdf = gpd.read_file(
+        r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\polygons\polygons.shp"
+    )
+    drainage_gdf = gpd.read_file(
+        r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
+    )
+    whirinaki(FloodType.FLUVIAL, forest_gdf, drainage_gdf)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
 
     # # Mataura
-    # nature_scenario_gdf = gpd.read_file(
+    # forest_gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura\polygons_upstream_thick\polygons.shp"
     # )
-    # mataura(FloodType.FLUVIAL, nature_scenario_gdf, None)
+    # mataura(FloodType.FLUVIAL, forest_gdf, None)
 
-    # Otautau
-    nature_scenario_gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
-    )
-    otautau(FloodType.FLUVIAL, None, None)
+    # # Otautau
+    # wetland_gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
+    # )
+    # otautau(FloodType.FLUVIAL, None, None)

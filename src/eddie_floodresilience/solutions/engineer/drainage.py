@@ -14,6 +14,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""This script is for modify drainages"""
+
 import pandas as pd
 from rasterio.features import rasterize
 import geopandas as gpd
@@ -229,22 +231,22 @@ class GenerateDrainageElevation:
 
 
 class GenerateDrainageGeometry:
-    """This class is for generating geometries for drainage line"""
+    """This class is for generating geometries for drainage line"""  # pylint: disable=too-many-instance-attributes
 
     def __init__(
         self,
-        dem,
-        new_dem,
-        drainage_line,
+        dem: xr.DataArray,
+        new_dem: xr.DataArray,
+        drainage_line: gpd.GeoDataFrame,
 
-        horizontal_nums_arr,
-        vertical_nums_arr,
+        horizontal_nums_arr: np.ndarray,
+        vertical_nums_arr: np.ndarray,
 
-        drainage_new_elevation,
+        drainage_new_elevation: np.ndarray,
 
-        drainage_base_width,
-        drainage_surface_width,
-        drainage_slope
+        drainage_base_width: float,
+        drainage_surface_width: float,
+        drainage_slope: float
     ) -> None:
         """
         Generate geometries for drainage line.

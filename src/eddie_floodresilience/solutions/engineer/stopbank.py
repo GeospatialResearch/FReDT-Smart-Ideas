@@ -14,11 +14,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""This script is for modifying stopbank"""
 
 import logging
-from pathlib import Path
 
-import geopandas as gpd
 import numpy as np
 import pandas as pd
 import xarray as xr
@@ -194,5 +193,3 @@ class GenerateFullStopbank:
             )
 
         return modified_dem
-
-

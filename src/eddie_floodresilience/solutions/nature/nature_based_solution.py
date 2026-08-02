@@ -127,7 +127,7 @@ class NatureBasedSolution:
         Path
             Directory to the modified landcover.
         """
-        log.info(f"Applying nature-based solution")
+        log.info("Applying nature-based solution")
 
         # Set up land cover features based on chosen land cover
         original_landcover = f'original_{self.landcover}.tif'

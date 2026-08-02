@@ -14,6 +14,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""This script is to apply engineering solution"""
 
 import logging
 from pathlib import Path
@@ -27,6 +28,7 @@ from src.eddie_floodresilience.solutions.engineer.drainage import GenerateFullDr
 from src.eddie_floodresilience.solutions.engineer.stopbank import GenerateFullStopbank
 
 log = logging.getLogger(__name__)
+
 
 class EngineeringSolution:
     """This class is to apply engineering solution"""
@@ -105,8 +107,8 @@ class EngineeringSolution:
 
     @staticmethod
     def generate_dem_with_full_stopbank(
-        dem_need_modification,
-        stopbank_vector
+        dem_need_modification: xr.DataArray,
+        stopbank_vector: pd.Series
     ) -> xr.DataArray:
         """
         Generate DEM with full stopbank
@@ -117,6 +119,11 @@ class EngineeringSolution:
             DEM that needs modification
         stopbank_vector : pd.Series
             Stopbank information
+
+        Returns
+        -------
+        dem_with_full_stopbank : xr.DataArray
+            DEM with full stopbank information
         """
         # Set up stopbank function
         generate_dem_with_full_stopbank = GenerateFullStopbank(
@@ -132,7 +139,7 @@ class EngineeringSolution:
     def apply_engineering_solution(self) -> None:
         """Apply engineering solution to elevation data"""
         # Set up log for engineering solution
-        log.info(f"Applying engineering solution")
+        log.info("Applying engineering solution")
 
         # Set up original DEM that needs modification
         modified_dem = self.dem
