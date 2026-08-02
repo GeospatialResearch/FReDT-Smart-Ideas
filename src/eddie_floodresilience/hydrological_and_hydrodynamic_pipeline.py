@@ -530,7 +530,7 @@ def otautau(
     nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    engineer_scenario_gdf: pd.DataFrame | None
+    engineer_scenario_gdf: gpd.GeoDataFrame | None
         GeoDataframe that contains:
         - 'type': 'drainage' or 'stopbank'
         - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
@@ -655,7 +655,7 @@ def mataura(
     nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    engineer_scenario_gdf: pd.DataFrame | None
+    engineer_scenario_gdf: gpd.GeoDataFrame | None
         GeoDataframe that contains:
         - 'type': 'drainage' or 'stopbank'
         - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
@@ -731,7 +731,7 @@ def whirinaki(
     nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    engineer_scenario_gdf: pd.DataFrame | None
+    engineer_scenario_gdf: gpd.GeoDataFrame | None
         GeoDataframe that contains:
         - 'type': 'drainage' or 'stopbank'
         - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
@@ -807,7 +807,7 @@ def riverton(
     nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    engineer_scenario_gdf: pd.DataFrame | None
+    engineer_scenario_gdf: gpd.GeoDataFrame | None
         GeoDataframe that contains:
         - 'type': 'drainage' or 'stopbank'
         - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
@@ -876,7 +876,7 @@ if __name__ == '__main__':
     drainage_gdf = gpd.read_file(
         r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
     )
-    whirinaki(FloodType.FLUVIAL, forest_gdf, drainage_gdf)
+    whirinaki(FloodType.FLUVIAL, None, drainage_gdf)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
@@ -891,4 +891,4 @@ if __name__ == '__main__':
     # wetland_gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
     # )
-    # otautau(FloodType.FLUVIAL, None, None)
+    # otautau(FloodType.FLUVIAL, wetland_gdf, None)
