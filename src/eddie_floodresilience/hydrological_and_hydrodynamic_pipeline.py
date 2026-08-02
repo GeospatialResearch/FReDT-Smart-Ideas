@@ -517,8 +517,8 @@ class HydrologicalAndHydrodynamicPipeline:
 # OTAUTAU
 def otautau(
     flood_type: FloodType = FloodType.FLUVIAL,
-    landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-    elevation_scenario_df: pd.DataFrame | None = None
+    nature_scenario_gdf: gpd.GeoDataFrame | None = None,
+    engineer_scenario_gdf: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Otautau.
@@ -527,14 +527,17 @@ def otautau(
     ----------
     flood_type : FloodType = FloodType.FLUVIAL
         Either FLUVIAL or PLUVIAL. Default is FLUVIAL
-    landcover_scenario_gdf: gpd.GeoDataFrame | None
+    nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    elevation_scenario_df: pd.DataFrame | None
-        Dataframe that contains 'vector_path', 'value', 'distance' columns:
-        - 'vector_path': Column that stores directories to specific vectors
-        - 'value: Column that stores value of the vectors used to increase/decrease elevation
-        - 'distance': Column that stores value to smooth the decreased elevation
+    engineer_scenario_gdf: pd.DataFrame | None
+        GeoDataframe that contains:
+        - 'type': 'drainage' or 'stopbank'
+        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
+        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
+        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
+        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
+        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
 
     Returns
     -------
@@ -554,8 +557,8 @@ def otautau(
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
-    polygons = landcover_scenario_gdf  # r'polygons/polygons.shp'
-    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
+    polygons = nature_scenario_gdf  # r'polygons/polygons.shp'
+    vectors = engineer_scenario_gdf  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
     landcover = LandcoverClassDataset.LCDB
@@ -656,7 +659,7 @@ def mataura(
         GeoDataframe that contains:
         - 'type': 'drainage' or 'stopbank'
         - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
-        - 'b_width': bed width for 'drainage'. If 'stopbank', it's 0
+        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
         - 'slope': slope for 'drainage'. If 'stopbank', it's 0
         - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
         - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
@@ -732,7 +735,7 @@ def whirinaki(
         GeoDataframe that contains:
         - 'type': 'drainage' or 'stopbank'
         - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
-        - 'b_width': bed width for 'drainage'. If 'stopbank', it's 0
+        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
         - 'slope': slope for 'drainage'. If 'stopbank', it's 0
         - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
         - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
@@ -808,7 +811,7 @@ def riverton(
         GeoDataframe that contains:
         - 'type': 'drainage' or 'stopbank'
         - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
-        - 'b_width': bed width for 'drainage'. If 'stopbank', it's 0
+        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
         - 'slope': slope for 'drainage'. If 'stopbank', it's 0
         - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
         - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
@@ -865,15 +868,15 @@ def riverton(
 
 
 if __name__ == '__main__':
-    setup_logging(LogLevel.INFO)
-    # Whirinaki
-    forest_gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
-    )
-    drainage_gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\example_raster_002\river_connection_combination_005.shp"
-    )
-    whirinaki(FloodType.FLUVIAL, forest_gdf, drainage_gdf)
+    # setup_logging(LogLevel.INFO)
+    # # Whirinaki
+    # forest_gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
+    # )
+    # drainage_gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\example_raster_002\river_connection_combination_005.shp"
+    # )
+    # whirinaki(FloodType.FLUVIAL, forest_gdf, drainage_gdf)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
@@ -884,8 +887,8 @@ if __name__ == '__main__':
     # )
     # mataura(FloodType.FLUVIAL, nature_scenario_gdf, None)
 
-    # # Otautau
-    # nature_scenario_gdf = gpd.read_file(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
-    # )
-    # otautau(FloodType.FLUVIAL, None, None)
+    # Otautau
+    nature_scenario_gdf = gpd.read_file(
+        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
+    )
+    otautau(FloodType.FLUVIAL, None, None)

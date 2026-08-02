@@ -57,13 +57,11 @@ class GenerateDrainageElevation:
         drainage_points : list
             A list of points along drainage line
         """
-        # Get drainage distance interval along the drainage line.
-        # The drainage distance interval here is basically the resolution nodes.
+        # Get drainage distance interval along the drainage line based on resolution nodes
         # abs() here is for if the value is negative
         drainage_distance_interval = abs(self.dem.rio.resolution()[0])
 
-        # Generate drainage distances along the drainage line
-        # based on drainage distance interval/resolution nodes
+        # Generate drainage distances along the drainage line based on the intervals
         drainage_length = self.drainage_geom.length  # Get drainage length
         drainage_distances = np.arange(
             0,
@@ -196,7 +194,7 @@ class GenerateDrainageElevation:
         Returns
         -------
         drainage_new_elevation : np.ndarray
-            New drainage elevation
+            New drainage elevation along the drainage line
         new_dem : xr.DataArray
             DEM with new drainage elevation
         """
@@ -234,23 +232,44 @@ class GenerateDrainageGeometry:
     """This class is for generating geometries for drainage line"""
 
     def __init__(
-            self,
-            dem,
-            new_dem,
-            drainage_line,
+        self,
+        dem,
+        new_dem,
+        drainage_line,
 
-            horizontal_nums_arr,
-            vertical_nums_arr,
+        horizontal_nums_arr,
+        vertical_nums_arr,
 
-            drainage_new_elevation,
+        drainage_new_elevation,
 
-            drainage_base_width,
-            drainage_surface_width,
-            drainage_slope
+        drainage_base_width,
+        drainage_surface_width,
+        drainage_slope
     ) -> None:
         """
         Generate geometries for drainage line.
         This includes drainage width, drainage base, and drainage slope
+
+        Parameters
+        ----------
+        dem : xr.DataArray
+            Original DEM that is used to add drainages
+        new_dem : xr.DataArray
+            New DEM with the added drainage elevations
+        drainage_line : pd.Series
+            A row of drainage GeoDataFrame
+        horizontal_nums_arr : np.ndarray
+            Horizontal ordinal numbers of drainage line in DEM
+        vertical_nums_arr : np.ndarray
+            Vertical oridinal numbers of drainage line in DEM
+        drainage_new_elevation : np.ndarray
+            New drainage elevation along the drainage line
+        drainage_base_width : float
+            Value of base width of drainage
+        drainage_surface_width : float
+            Value of surface width of drainage
+        drainage_slope : float
+            Value of slope of drainage
         """
         self.dem = dem
         self.new_dem = new_dem
@@ -265,7 +284,7 @@ class GenerateDrainageGeometry:
         self.drainage_surface_width = drainage_surface_width
         self.drainage_slope = drainage_slope
 
-    def generate_distance_pixel_centre_downstream(self):
+    def generate_distance_pixel_centre_downstream(self) -> np.ndarray:
         """
         Generate distance between each drainage pixel distance to downstream
 
@@ -302,9 +321,9 @@ class GenerateDrainageGeometry:
         return distance_pixel_center_downstream
 
     def sort_values_based_on_downstream_distance(
-            self,
-            distance_pixel_center_downstream: np.ndarray
-    ):
+        self,
+        distance_pixel_center_downstream: np.ndarray
+    ) -> tuple[np.ndarray, np.ndarray]:
         """
         Sort out values based on downstream distance along the drainage line
 
@@ -358,9 +377,9 @@ class GenerateDrainageGeometry:
         return drainage_width_mask
 
     def generate_distance_drainage_width(
-            self,
-            drainage_width_horizontal_index: int,
-            drainage_width_vertical_index: int
+        self,
+        drainage_width_horizontal_index: int,
+        drainage_width_vertical_index: int
     ) -> tuple[float, float]:
         """
         Generate distance drainage width to drainage line and downstream
@@ -402,9 +421,9 @@ class GenerateDrainageGeometry:
 
     @staticmethod
     def generate_drainage_width_elevation(
-            distance_pixel_center_downstream_sorted: np.ndarray,
-            distance_drainage_width_to_downstream: float,
-            drainage_new_elevations_sorted: np.ndarray
+        distance_pixel_center_downstream_sorted: np.ndarray,
+        distance_drainage_width_to_downstream: float,
+        drainage_new_elevations_sorted: np.ndarray
     ) -> float:
         """
 
@@ -465,7 +484,7 @@ class GenerateDrainageGeometry:
         # Generate distance beyond the base
         # If < 0, still within the base width, if > 0, beyond the base width
         distance_beyond_base = max(
-            0,
+            0.0,
             diff_surface_vs_base
         )
 
@@ -475,11 +494,11 @@ class GenerateDrainageGeometry:
         return slope_beyond_base_width
 
     def generate_drainage_elevation_with_geometry(
-            self,
-            drainage_width_elevations: float,
-            slope_beyond_base_width: float,
-            drainage_width_horizontal_index: int,
-            drainage_width_vertical_index: int
+        self,
+        drainage_width_elevations: float,
+        slope_beyond_base_width: float,
+        drainage_width_horizontal_index: int,
+        drainage_width_vertical_index: int
     ) -> float:
         """
         Generate new drainage elevation with geometry information
@@ -507,10 +526,10 @@ class GenerateDrainageGeometry:
         # no need for changing
         drainage_new_elevations_with_geometry_minimum = min(
             drainage_new_elevations_with_geometry,
-            self.dem.values[
+            float(self.dem.values[
                 drainage_width_horizontal_index,
                 drainage_width_vertical_index
-            ]
+            ])
         )
 
         return drainage_new_elevations_with_geometry_minimum
@@ -575,7 +594,7 @@ class GenerateFullDrainage:
         self,
         dem: xr.DataArray,
         vector: pd.Series | None = None
-    ):
+    ) -> None:
         """
         Generate drainage with elevation and geometry
 
@@ -590,7 +609,20 @@ class GenerateFullDrainage:
         self.vector = vector
 
     def generate_dem_with_drainage_elevation(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, xr.DataArray]:
-        """Generate DEM with drainage elevation"""
+        """
+        Generate DEM with drainage elevation
+
+        Returns
+        -------
+        horizontal_drainage_indices : np.ndarray
+            Horizontal indices of drainage width
+        vertical_drainage_indices : np.ndarray
+            Vertical indices of drainage width
+        drainage_elevation : np.ndarray
+            Drainage elevation along the drainage line
+        new_dem : xr.DataArray
+            New DEM with drainage elevation
+        """
         # Set up function to generate DEM with drainage
         generate_dem_with_drainage = GenerateDrainageElevation(
             self.vector,
@@ -613,7 +645,25 @@ class GenerateFullDrainage:
         drainage_elevation: np.ndarray,
         new_dem: xr.DataArray
     ) -> xr.DataArray:
-        """Generate DEM with drainage and geometry info"""
+        """
+        Generate DEM with drainage and geometry info
+
+        Parameters
+        ----------
+        horizontal_drainage_indices : np.ndarray
+            Horizontal indices of drainage width
+        vertical_drainage_indices : np.ndarray
+            Vertical indices of drainage width
+        drainage_elevation : np.ndarray
+            Drainage elevation along the drainage line
+        new_dem : xr.DataArray
+            New DEM with drainage elevation
+
+        Returns
+        -------
+        dem_drainage_geometry : xr.DataArray
+            DEM with drainage geometry information
+        """
         # Set up function to modify drainage geometry - surface width, base width, and slope
         generate_dem_with_drainage_geometry = GenerateDrainageGeometry(
             self.dem,
@@ -633,7 +683,14 @@ class GenerateFullDrainage:
         return dem_drainage_geometry
 
     def generate_full_drainage(self) -> xr.DataArray:
-        """Generate drainage with full information"""
+        """
+        Generate drainage with full information
+
+        Returns
+        -------
+        dem_full_drainage : xr.DataArray
+            DEM with full drainage information
+        """
         # Generate drainage information
         (horizontal_drainage_indices,
          vertical_drainage_indices,
