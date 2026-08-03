@@ -14,7 +14,7 @@ from dateutil.relativedelta import relativedelta
 import geopandas as gpd
 import yaml
 
-from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
+from src.eddie_floodresilience.solutions.nature.landcover import LandcoverClassDataset
 
 log = logging.getLogger(__name__)
 
@@ -26,9 +26,9 @@ class WflowBuildGenerator:
     Attributes
     ----------
     start_time : datetime
-            Starting time of simulation.
-            This should include the spin-up time.
-            Normally, it is 1-year before the flood event.
+        Starting time of simulation.
+        This should include the spin-up time.
+        Normally, it is 1-year before the flood event.
     end_time : datetime
         Ending time of simulation
         This should include some periods of time after the flood event.
@@ -36,14 +36,14 @@ class WflowBuildGenerator:
     resolution : float
         Resolution for flow data.
         Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
-    hydromt_path: Path
+    hydromt_path : Path
         A directory to where all necessary files are stored to run wflow model
-    river_name: str
+    river_name : str
         Name of directory to where the river information files are stored
-    forcing_path: Path
+    forcing_path : Path
         A directory to where the forcing files are stored
     scenario_and_id_folder : Path
-            Directory to the scenario folder name with ID
+        Directory to the scenario folder name with ID
     polygons : gpd.GeoDataFrame | None = None
         This polygon dataframe has 'landcover' column with new values
     landcover : LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER = 'globcover'

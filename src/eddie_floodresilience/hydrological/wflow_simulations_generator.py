@@ -27,7 +27,7 @@ import geopandas as gpd
 
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
-from ..solutions.landcover import LandcoverClassDataset
+from ..solutions.nature.landcover import LandcoverClassDataset
 
 log = logging.getLogger(__name__)
 
