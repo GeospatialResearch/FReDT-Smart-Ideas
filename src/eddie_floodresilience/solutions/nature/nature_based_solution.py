@@ -26,7 +26,7 @@ from rasterio.features import rasterize
 from whitebox.whitebox_tools import WhiteboxTools
 from whitebox_workflows import WbEnvironment
 
-from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset, LandCoverColorMapping
+from src.eddie_floodresilience.solutions.nature.landcover import LandcoverClassDataset, LandCoverColorMapping
 
 log = logging.getLogger(__name__)
 

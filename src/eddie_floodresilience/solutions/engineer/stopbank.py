@@ -115,8 +115,8 @@ class GenerateFullStopbank:
 
         return increased_dem
 
+    @staticmethod
     def decrease_elevation(
-        self,
         dem: xr.DataArray,
         mask: xr.DataArray,
         value: float,

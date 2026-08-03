@@ -30,7 +30,7 @@ from eddie.digitaltwin import setup_environment
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import find_landcover_file
 from src.eddie_floodresilience.mauri import serve_landcover_with_mauri
-from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
+from src.eddie_floodresilience.solutions.nature.landcover import LandcoverClassDataset
 
 log = logging.getLogger(__name__)
 

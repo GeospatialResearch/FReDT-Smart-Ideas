@@ -14,7 +14,7 @@ from dateutil.relativedelta import relativedelta
 import geopandas as gpd
 import yaml
 
-from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset
+from src.eddie_floodresilience.solutions.nature.landcover import LandcoverClassDataset
 
 log = logging.getLogger(__name__)
 

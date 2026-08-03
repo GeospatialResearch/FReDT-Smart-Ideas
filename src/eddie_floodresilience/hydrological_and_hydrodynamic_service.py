@@ -28,7 +28,7 @@ from pywps.response.execute import ExecuteResponse
 
 from src.eddie_floodresilience import tasks
 from src.eddie_floodresilience.config import EnvVariable as EnvVar
-from src.eddie_floodresilience.solutions.landcover import LandcoverClassDataset, LandCoverColorMapping
+from src.eddie_floodresilience.solutions.nature.landcover import LandCoverColorMapping, LandcoverClassDataset
 
 
 class PredefinedScenario(Process, ABC):

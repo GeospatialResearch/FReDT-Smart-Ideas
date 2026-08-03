@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """This script is for modify drainages"""
+from typing import NamedTuple
 
 import pandas as pd
 from rasterio.features import rasterize
-import geopandas as gpd
 import xarray as xr
 import numpy as np
 from shapely.geometry import Point
@@ -29,7 +29,7 @@ class GenerateDrainageElevation:
 
     def __init__(
         self,
-        drainage_line: gpd.GeoDataFrame,
+        drainage_line: pd.Series,
         dem: xr.DataArray,
         decrease_elevation_value: float = 0.03
     ) -> None:
@@ -38,7 +38,7 @@ class GenerateDrainageElevation:
 
         Parameters
         ----------
-        drainage_line : gpd.GeoDataFrame
+        drainage_line : pd.Series
             Drainage line
         dem : xr.DataArray
             DEM
@@ -120,9 +120,9 @@ class GenerateDrainageElevation:
 
     @staticmethod
     def check_downstream_upstream(
-            horizontal_nums_arr: np.ndarray,
-            vertical_nums_arr: np.ndarray,
-            drainage_original_elevation: np.ndarray
+        horizontal_nums_arr: np.ndarray,
+        vertical_nums_arr: np.ndarray,
+        drainage_original_elevation: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Check if the line is connected downstream -> upstream. If not, reverse
@@ -156,8 +156,8 @@ class GenerateDrainageElevation:
         return horizontal_nums_arr, vertical_nums_arr, drainage_original_elevation
 
     def generate_minimum_elevation(
-            self,
-            drainage_original_elevation: np.ndarray
+        self,
+        drainage_original_elevation: np.ndarray
     ) -> np.ndarray:
         """
         Compare between new and original elevations and choose the minimum one
@@ -237,7 +237,7 @@ class GenerateDrainageGeometry:
         self,
         dem: xr.DataArray,
         new_dem: xr.DataArray,
-        drainage_line: gpd.GeoDataFrame,
+        drainage_line: pd.Series,
 
         horizontal_nums_arr: np.ndarray,
         vertical_nums_arr: np.ndarray,
@@ -589,6 +589,28 @@ class GenerateDrainageGeometry:
         return new_dem_geometry
 
 
+class DrainageInfo(NamedTuple):
+    """
+    Tuple to contain results of generating DEM with drainage elevation.
+
+    Attributes
+    ----------
+    horizontal_drainage_indices : np.ndarray
+        Horizontal indices of drainage width
+    vertical_drainage_indices : np.ndarray
+        Vertical indices of drainage width
+    drainage_elevation : np.ndarray
+        Drainage elevation along the drainage line
+    new_dem : xr.DataArray
+        New DEM with drainage elevation
+    """
+
+    horizontal_drainage_indices: np.ndarray
+    vertical_drainage_indices: np.ndarray
+    drainage_elevation: np.ndarray
+    new_dem: xr.DataArray
+
+
 class GenerateFullDrainage:
     """This class is to generate drainage with elevation and geometry"""
 
@@ -610,7 +632,7 @@ class GenerateFullDrainage:
         self.dem = dem
         self.vector = vector
 
-    def generate_dem_with_drainage_elevation(self) -> tuple[np.ndarray, np.ndarray, np.ndarray, xr.DataArray]:
+    def generate_dem_with_drainage_elevation(self) -> DrainageInfo:
         """
         Generate DEM with drainage elevation
 
@@ -638,7 +660,11 @@ class GenerateFullDrainage:
         (horizontal_drainage_indices,
          vertical_drainage_indices) = generate_dem_with_drainage.generate_ordinal_number_of_pixels()
 
-        return horizontal_drainage_indices, vertical_drainage_indices, drainage_elevation, new_dem
+        return DrainageInfo(
+            horizontal_drainage_indices,
+            vertical_drainage_indices,
+            drainage_elevation,
+            new_dem)
 
     def generate_dem_with_drainage_geometry(
         self,

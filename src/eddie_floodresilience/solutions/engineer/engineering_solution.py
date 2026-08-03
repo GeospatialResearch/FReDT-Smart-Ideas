@@ -76,8 +76,8 @@ class EngineeringSolution:
 
     @staticmethod
     def generate_dem_with_full_drainage(
-        drainage_vector: pd.Series,
-        dem_need_modification: xr.DataArray
+        dem_need_modification: xr.DataArray,
+        drainage_vector: gpd.GeoSeries
     ) -> xr.DataArray:
         """
         Generate DEM with full drainage
@@ -86,7 +86,7 @@ class EngineeringSolution:
         ----------
         dem_need_modification : xr.DataArray
             DEM that needs modification
-        drainage_vector : pd.Series
+        drainage_vector : gpd.GeoSeries
             Drainage information
 
         Returns
@@ -148,8 +148,8 @@ class EngineeringSolution:
         for i in range(self.vectors.shape[0]):
             if self.vectors.iloc[i]['type'] == 'drainage':
                 modified_dem = self.generate_dem_with_full_drainage(
-                    self.vectors.iloc[i],
-                    modified_dem
+                    modified_dem,
+                    self.vectors.iloc[i]
                 )
             else:
                 modified_dem = self.generate_dem_with_full_stopbank(
