@@ -22,15 +22,16 @@ from eddie.digitaltwin.tables import create_table
 from eddie.digitaltwin.utils import setup_logging, LogLevel
 
 from src.eddie_floodresilience.config import EnvVariable
-from src.eddie_floodresilience.flood_model.flood_model_parameters_generator import FloodType
-from src.eddie_floodresilience.hydrological.wflow_data_catalog_generator import DataCatalogGenerator
-from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
-from src.eddie_floodresilience.solutions.total_solutions import LandCoverSolution, ElevationSolution
-from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
-from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
+from src.eddie_floodresilience.flood_model.flood_model_parameters_generator import FloodType
 from src.eddie_floodresilience.flood_model.lisflood.lisflood_simulations_generator import \
     LisFloodModelSimulationsGenerator
+from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import WflowServeDataGenerator
+from src.eddie_floodresilience.hydrological.wflow_simulations_generator import WflowSimulationsGenerator
+from src.eddie_floodresilience.preprocessing.terrain_data_for_wflow_generator import TerrainDataWflowGenerator
+from src.eddie_floodresilience.solutions.nature.landcover import LandcoverClassDataset
+from src.eddie_floodresilience.solutions.nature.nature_based_solution import NatureBasedSolution
+from src.eddie_floodresilience.solutions.engineer.engineering_solution import EngineeringSolution
 from src.eddie_floodresilience.tables import PipelineOutput
 
 log = logging.getLogger(__name__)
@@ -74,17 +75,18 @@ class HydrologicalAndHydrodynamicPipeline:
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : pd.DataFrame = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
         resolution : float
             Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
             Name of land cover dataset. Default is 'globcover'
     """  # pylint: disable=too-many-instance-attributes
 
@@ -93,7 +95,7 @@ class HydrologicalAndHydrodynamicPipeline:
         hydro_combination_path: Path,
 
         forcing_name: Union[str, Path],
-        river_name: Union[str, Path],
+        river_name: str,
         precipitation_path: Path,
         start_time: datetime,
         end_time: datetime,
@@ -106,10 +108,10 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_type: FloodType = FloodType.FLUVIAL,
 
         polygons: gpd.GeoDataFrame | None = None,
-        vectors: pd.DataFrame = None,
+        vectors: pd.DataFrame | None = None,
         resolution: float = 0.00045,
         threshold: int = 1000,
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
     ) -> None:
         """
         Generate hydrological and hydrodynamic results
@@ -121,15 +123,15 @@ class HydrologicalAndHydrodynamicPipeline:
         forcing_name: Union[str, Path]
             Name of forcing data. Should be the site name. Ex: 'whirin
             Or a directory to forcing data
-        river_name: Union[str, Path]
+        river_name: str
             Name of river data. Should be the site name. Ex: 'whirinaki'
         precipitation_path: Path
             A directory to where the precipitation files are stored
-        start_time : str
+        start_time : datetime
             Starting time of simulation.
             This should include the spin-up time.
             Normally, it is 1-year before the flood event.
-        end_time : str
+        end_time : datetime
             Ending time of simulation
             This should include some periods of time after the flood event.
             Normally, it is about 2-3 months.
@@ -148,17 +150,18 @@ class HydrologicalAndHydrodynamicPipeline:
         polygons : gpd.GeoDataFrame | None = None
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
-        vectors : pd.DataFrame = None
-            Name of vector file that is used to change the elevation information.
-            This vector dataframe has 'value' column to specify increasing or decreasing elevation,
-            and 'distance' column to specify how smooth to decrease elevation.
+        vectors : pd.DataFrame | None = None
+            Dataframe that contains 'vector_path', 'value', 'distance' columns:
+            - 'vector_path': Column that stores directories to specific vectors
+            - 'value: Column that stores value of the vectors used to increase/decrease elevation
+            - 'distance': Column that stores value to smooth the decreased elevation
         resolution : float
             Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
         threshold: int = 1000
             Minimum number of cells/up-slope area required to initiate and main a channel.
             Default is 1000
-        landcover: str = 'globcover'
+        landcover: LandcoverClassDataset = LandcoverClassDataset.GLOBCOVER
             Name of land cover dataset. Default is 'globcover'
         """
         # Set up necessary parameters
@@ -239,17 +242,17 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Choose scenario folder name with ID
         if self.polygons is not None and self.vectors is not None:
-            scenario_and_id_name = f"scenario_landcover_elevation_{scenario_id}"
+            scenario_and_id_name = f"scenario_nature_and_engineer_{scenario_id}"
 
             # Create hydrological process path
             hydrological_process_path = self.hydro_combination_path / scenario_and_id_name / 'hydrological_process'
             hydrological_process_path.mkdir(parents=True, exist_ok=True)
 
         elif self.polygons is not None:
-            scenario_and_id_name = f"scenario_landcover_{scenario_id}"
+            scenario_and_id_name = f"scenario_nature_{scenario_id}"
 
         elif self.vectors is not None:
-            scenario_and_id_name = f"scenario_elevation_{scenario_id}"
+            scenario_and_id_name = f"scenario_engineer_{scenario_id}"
 
         else:
             scenario_and_id_name = "original_scenario"
@@ -268,8 +271,8 @@ class HydrologicalAndHydrodynamicPipeline:
         return scenario_and_id_folder
 
     def total_solutions(
-            self,
-            scenario_and_id_folder: Path
+        self,
+        scenario_and_id_folder: Path
     ) -> None:
         """
         Develop solutions for flood risk resilience
@@ -284,43 +287,43 @@ class HydrologicalAndHydrodynamicPipeline:
 
         if self.polygons is not None and self.vectors is not None:
 
-            # Land cover/natural solution
-            landcover_solution = LandCoverSolution(
+            # Nature based solution
+            nature_based_solution = NatureBasedSolution(
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
                 self.polygons
             )
-            self.landcover = landcover_solution.apply_landcover_solution().name
+            nature_based_solution.apply_nature_based_solution()
 
-            # Elevation solution
-            elevation_solution = ElevationSolution(
+            # Engineering solution
+            engineering_solution = EngineeringSolution(
                 self.flood_model,
                 scenario_and_id_folder,
                 self.vectors
             )
-            elevation_solution.apply_elevation_solution()
+            engineering_solution.apply_engineering_solution()
 
         elif self.polygons is not None:
 
-            # Land cover/natural solution
-            landcover_solution = LandCoverSolution(
+            # Nature based solution
+            nature_based_solution = NatureBasedSolution(
                 self.hydromt_path,
                 scenario_and_id_folder,
                 self.landcover,
                 self.polygons
             )
-            self.landcover = landcover_solution.apply_landcover_solution().name
+            nature_based_solution.apply_nature_based_solution()
 
         elif self.vectors is not None:
 
-            # Elevation solution
-            elevation_solution = ElevationSolution(
+            # Engineering solution
+            engineering_solution = EngineeringSolution(
                 self.flood_model,
                 scenario_and_id_folder,
                 self.vectors
             )
-            elevation_solution.apply_elevation_solution()
+            engineering_solution.apply_engineering_solution()
 
     def terrain_data_pipeline(self) -> None:
         """Generate terrain data for wflow and flood models"""
@@ -344,8 +347,8 @@ class HydrologicalAndHydrodynamicPipeline:
         terrain_data.terrain_for_wflow_generator()
 
     def wflow_data_pipeline(
-            self,
-            scenario_and_id_folder: Path
+        self,
+        scenario_and_id_folder: Path
     ) -> None:
         """
         Generate wflow model data for flood model
@@ -386,11 +389,10 @@ class HydrologicalAndHydrodynamicPipeline:
         flood_model_output_id: int
             The flood model output ID to associate the WFlow data with
         """
-        landcover_mapping_type = DataCatalogGenerator.landcover_mapping_type(self.landcover)
         wflow_serve_data = WflowServeDataGenerator(
             self.hydromt_path,
             self.polygons,
-            landcover_mapping_type,
+            self.landcover,
             scenario_and_id_folder,
             flood_model_output_id
         )
@@ -398,8 +400,8 @@ class HydrologicalAndHydrodynamicPipeline:
         wflow_serve_data.serve_data()
 
     def flood_data_pipeline(
-            self,
-            scenario_and_id_folder: Path
+        self,
+        scenario_and_id_folder: Path
     ) -> int:
         """
         Generate flood model data.
@@ -434,7 +436,6 @@ class HydrologicalAndHydrodynamicPipeline:
             )
 
         else:
-            # pylint: disable=E1121
             flood_data = BGFloodModelSimulationsGenerator(
                 self.hydromt_path,
                 self.river_name,
@@ -515,9 +516,9 @@ class HydrologicalAndHydrodynamicPipeline:
 
 # OTAUTAU
 def otautau(
-        flood_type: FloodType = FloodType.FLUVIAL,
-        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-        elevation_scenario_df: pd.DataFrame | None = None
+    flood_type: FloodType = FloodType.FLUVIAL,
+    nature_scenario_gdf: gpd.GeoDataFrame | None = None,
+    engineer_scenario_gdf: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Otautau.
@@ -526,14 +527,17 @@ def otautau(
     ----------
     flood_type : FloodType = FloodType.FLUVIAL
         Either FLUVIAL or PLUVIAL. Default is FLUVIAL
-    landcover_scenario_gdf: gpd.GeoDataFrame | None
+    nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    elevation_scenario_df: pd.DataFrame | None
-        Dataframe that contains 'vector_path', 'value', 'distance' columns:
-        - 'vector_path': Column that stores directories to specific vectors
-        - 'value: Column that stores value of the vectors used to increase/decrease elevation
-        - 'distance': Column that stores value to smooth the decreased elevation
+    engineer_scenario_gdf: gpd.GeoDataFrame | None
+        GeoDataframe that contains:
+        - 'type': 'drainage' or 'stopbank'
+        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
+        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
+        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
+        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
+        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
 
     Returns
     -------
@@ -553,11 +557,11 @@ def otautau(
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
-    polygons = landcover_scenario_gdf  # r'polygons/polygons.shp'
-    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
+    polygons = nature_scenario_gdf  # r'polygons/polygons.shp'
+    vectors = engineer_scenario_gdf  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'lcdb'
+    landcover = LandcoverClassDataset.LCDB
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -586,6 +590,7 @@ def otautau(
     flood_model_output_id = hydrological_hydrodynamic_pipeline.hydrological_and_hydrodynamic_simulation_generator()
     return flood_model_output_id
 
+
 # # WAIMEA
 # def main():
 #     hydro_combination_path = Path(r"D:/Digital_Twin_data/hydrological_hydrodynamic_waimea_path_027")
@@ -605,7 +610,7 @@ def otautau(
 #     vectors = None # r'vectors/vectors.csv'
 #     resolution = 200
 #     threshold = 25000
-#     landcover = 'lcdb'
+#     landcover = LandcoverClassDataset.LCDB
 #
 #     # Set up hydraulic and hydrodynamic pipeline
 #     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -636,9 +641,9 @@ def otautau(
 
 
 def mataura(
-        flood_type: FloodType = FloodType.FLUVIAL,
-        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-        elevation_scenario_df: pd.DataFrame | None = None
+    flood_type: FloodType = FloodType.FLUVIAL,
+    nature_scenario_gdf: gpd.GeoDataFrame | None = None,
+    engineer_scenario_gdf: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Mataura.
@@ -647,14 +652,17 @@ def mataura(
     ----------
     flood_type : FloodType = FloodType.FLUVIAL
         Either FLUVIAL or PLUVIAL. Default is FLUVIAL
-    landcover_scenario_gdf: gpd.GeoDataFrame | None
+    nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    elevation_scenario_df: pd.DataFrame | None
-        Dataframe that contains 'vector_path', 'value', 'distance' columns:
-        - 'vector_path': Column that stores directories to specific vectors
-        - 'value: Column that stores value of the vectors used to increase/decrease elevation
-        - 'distance': Column that stores value to smooth the decreased elevation
+    engineer_scenario_gdf: gpd.GeoDataFrame | None
+        GeoDataframe that contains:
+        - 'type': 'drainage' or 'stopbank'
+        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
+        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
+        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
+        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
+        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
 
     Returns
     -------
@@ -674,11 +682,11 @@ def mataura(
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
-    polygons = landcover_scenario_gdf
-    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
+    polygons = nature_scenario_gdf
+    vectors = engineer_scenario_gdf  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'lcdb'
+    landcover = LandcoverClassDataset.LCDB
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -709,9 +717,9 @@ def mataura(
 
 
 def whirinaki(
-        flood_type: FloodType = FloodType.FLUVIAL,
-        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-        elevation_scenario_df: pd.DataFrame | None = None
+    flood_type: FloodType = FloodType.FLUVIAL,
+    nature_scenario_gdf: gpd.GeoDataFrame | None = None,
+    engineer_scenario_gdf: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Whirinaki.
@@ -720,14 +728,17 @@ def whirinaki(
     ----------
     flood_type : FloodType = FloodType.FLUVIAL
         Either FLUVIAL or PLUVIAL. Default is FLUVIAL
-    landcover_scenario_gdf: gpd.GeoDataFrame | None
+    nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    elevation_scenario_df: pd.DataFrame | None
-        Dataframe that contains 'vector_path', 'value', 'distance' columns:
-        - 'vector_path': Column that stores directories to specific vectors
-        - 'value: Column that stores value of the vectors used to increase/decrease elevation
-        - 'distance': Column that stores value to smooth the decreased elevation
+    engineer_scenario_gdf: gpd.GeoDataFrame | None
+        GeoDataframe that contains:
+        - 'type': 'drainage' or 'stopbank'
+        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
+        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
+        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
+        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
+        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
 
     Returns
     -------
@@ -746,11 +757,11 @@ def whirinaki(
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
-    polygons = landcover_scenario_gdf
-    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
+    polygons = nature_scenario_gdf
+    vectors = engineer_scenario_gdf  # r'vectors/vectors.csv'
     resolution = 50
     threshold = 1000
-    landcover = 'lcdb'
+    landcover = LandcoverClassDataset.LCDB
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -782,9 +793,9 @@ def whirinaki(
 
 # RIVERTON
 def riverton(
-        flood_type: FloodType = FloodType.FLUVIAL,
-        landcover_scenario_gdf: gpd.GeoDataFrame | None = None,
-        elevation_scenario_df: pd.DataFrame | None = None
+    flood_type: FloodType = FloodType.FLUVIAL,
+    nature_scenario_gdf: gpd.GeoDataFrame | None = None,
+    engineer_scenario_gdf: pd.DataFrame | None = None
 ) -> int:
     """
     Run a hydrological and hydrodynamic simulation for Riverton.
@@ -793,14 +804,17 @@ def riverton(
     ----------
     flood_type : FloodType = FloodType.FLUVIAL
         Either FLUVIAL or PLUVIAL. Default is FLUVIAL
-    landcover_scenario_gdf: gpd.GeoDataFrame | None
+    nature_scenario_gdf: gpd.GeoDataFrame | None
         Polygons that are used to change the landcover information.
         This polygon dataframe has 'landcover_name' column with new values.
-    elevation_scenario_df: pd.DataFrame | None
-        Dataframe that contains 'vector_path', 'value', 'distance' columns:
-        - 'vector_path': Column that stores directories to specific vectors
-        - 'value: Column that stores value of the vectors used to increase/decrease elevation
-        - 'distance': Column that stores value to smooth the decreased elevation
+    engineer_scenario_gdf: gpd.GeoDataFrame | None
+        GeoDataframe that contains:
+        - 'type': 'drainage' or 'stopbank'
+        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
+        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
+        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
+        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
+        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
 
     Returns
     -------
@@ -819,11 +833,11 @@ def riverton(
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
-    polygons = landcover_scenario_gdf
-    vectors = elevation_scenario_df  # r'vectors/vectors.csv'
+    polygons = nature_scenario_gdf
+    vectors = engineer_scenario_gdf  # r'vectors/vectors.csv'
     resolution = 200
     threshold = 25000
-    landcover = 'lcdb'
+    landcover = LandcoverClassDataset.LCDB
 
     # Set up hydraulic and hydrodynamic pipeline
     hydrological_hydrodynamic_pipeline = HydrologicalAndHydrodynamicPipeline(
@@ -854,24 +868,23 @@ def riverton(
 
 
 if __name__ == '__main__':
-    setup_logging(LogLevel.INFO)
-    # # Whirinaki
-    # gdf = gpd.read_file(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\polygons\polygons.shp"
-    # )
-    # df = pd.read_csv(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\whirinaki\vectors\vectors.csv"
-    # )
-    # whirinaki(FloodType.FLUVIAL, None, df)
+    # Whirinaki
+    forest_gdf = gpd.read_file(
+        r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\polygons\polygons.shp"
+    )
+    drainage_gdf = gpd.read_file(
+        r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
+    )
+    whirinaki(FloodType.FLUVIAL, None, drainage_gdf)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
 
     # # Mataura
-    # gdf = gpd.read_file(
+    # forest_gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura\polygons_upstream_thick\polygons.shp"
     # )
-    # mataura(FloodType.FLUVIAL, gdf, None)
+    # mataura(FloodType.FLUVIAL, forest_gdf, None)
 
     # Otautau
     gdf = gpd.read_file(

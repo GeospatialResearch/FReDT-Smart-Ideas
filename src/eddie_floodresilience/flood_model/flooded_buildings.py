@@ -20,13 +20,12 @@ import pathlib
 
 import geopandas as gpd
 import pandas as pd
-import rasterio as rio
-import shapely
 from sqlalchemy.engine import Connection
 from sqlalchemy.sql import text
 import xarray
 
 from src.eddie_floodresilience.flood_model.serve_model import create_building_database_views_if_not_exists
+from src.eddie_floodresilience.raster import polygonize_raster
 
 
 def store_flooded_buildings_in_database(conn: Connection, buildings: pd.DataFrame, flood_model_id: int) -> None:
@@ -171,11 +170,4 @@ def polygonize_flooded_area(flood_raster: xarray.DataArray, flood_depth_threshol
     # Find areas that are flooded to at least the flood_depth_threshold depth
     mask = flood_raster >= flood_depth_threshold
     # Turn the flood mask into a vector polygon form
-    flood_polygons = rio.features.shapes(flood_raster, mask=mask, transform=flood_raster.rio.transform())
-    polygons_records = []
-    # Add each polygon to a list in a form ready to be ingested into a GeoDataFrame to be returned
-    for polygon, _h in flood_polygons:
-        shapely_poly = shapely.Polygon(polygon['coordinates'][0])
-        new_row = {"geometry": shapely_poly}
-        polygons_records.append(new_row)
-    return gpd.GeoDataFrame(polygons_records, crs=flood_raster.rio.crs.wkt)
+    return polygonize_raster(flood_raster, mask)

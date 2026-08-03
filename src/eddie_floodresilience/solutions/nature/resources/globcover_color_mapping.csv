@@ -1,0 +1,23 @@
+landuse_class_id,long_description,landcover_name,color,displayed
+11,Post-flooding or irrigated croplands (or aquatic),,,False
+14,Rainfed croplands,,,False
+20,Mosaic cropland (50-70%) / vegetation (grassland/shrubland/forest) (20-50%),,,False
+30,Mosaic vegetation (grassland/shrubland/forest) (50-70%) / cropland (20-50%),,,False
+40,Closed to open (>15%) broadleaved evergreen or semi-deciduous forest (>5m),Evergreen Forest,#007200,True
+50,Closed (>40%) broadleaved deciduous forest (>5m),Dense Deciduous Forest,#00441b,True
+60,Open (15-40%) broadleaved deciduous forest/woodland (>5m),Deciduous Forest,#38b000,True
+70,Closed (>40%) needleleaved evergreen forest (>5m),Needleleaf Forest,#66BB6A,True
+90,Open (15-40%) needleleaved deciduous or evergreen forest (>5m),,,False
+100,Closed to open (>15%) mixed broadleaved and needleleaved forest (>5m),,,False
+110,Mosaic forest or shrubland (50-70%) / grassland (20-50%),,,False
+120,Mosaic grassland (50-70%) / forest or shrubland (20-50%),Pasture Mosaic,#e69f00,True
+130,Closed to open (>15%) (broadleaved or needleleaved evergreen or deciduous) shrubland (<5m),Shrubland,#a5be00,True
+140,Closed to open (>15%) herbaceous vegetation (grassland savannas or lichens/mosses),Grassland,#f0b84d,True
+150,Sparse (>15%) vegetation (woody vegetation/shrubs/grassland),Sparse Vegetation,#c7c7a6,True
+160,Closed to open (>15%) broadleaved forest regularly flooded (semi-permanently or temporarily) - Fresh or brackish water,Wetland,#4a90e2,True
+170,Closed (>40%) broadleaved forest or shrubland permanently flooded - Saline or brackish water,,,False
+180,Closed to open (>15%) grassland or woody vegetation on regularly flooded or waterlogged soil -  Fresh brackish or saline water,Water,#0000CD,False
+190,Artificial surfaces and associated areas (Urban areas >50%),,,False
+200,Bare areas,Bare Land,#A9A9A9,True
+210,Water bodies,,,False
+220,Permanent snow and ice,,,False

@@ -28,11 +28,13 @@ from pywps.response.execute import ExecuteResponse
 
 from src.eddie_floodresilience import tasks
 from src.eddie_floodresilience.config import EnvVariable as EnvVar
-from src.eddie_floodresilience.solutions.total_solutions import LCDB_CLASSES
+from src.eddie_floodresilience.solutions.nature.landcover import LandCoverColorMapping, LandcoverClassDataset
 
 
 class PredefinedScenario(Process, ABC):
     """Abstract base class for a Process for a scenario. Children of this provide the specific task to run."""
+
+    _LAND_COVER_COLOR_MAPPINGS = LandCoverColorMapping(LandcoverClassDataset.LCDB)
 
     def __init__(self, title: str, identifier: str, task: Callable, isBaseline: bool = False) -> None:
         """Define inputs and outputs of the WPS process, and assign process handler."""
@@ -47,6 +49,7 @@ class PredefinedScenario(Process, ABC):
                 allowed_values=[0, 1]
             ), ]
         else:
+            landcover_classes = self._LAND_COVER_COLOR_MAPPINGS.filtered_color_mapping.landcover_name
             inputs = [
                 ComplexInput(
                     'location',
@@ -60,7 +63,7 @@ class PredefinedScenario(Process, ABC):
                     "landcover",
                     "Landcover Class",
                     data_type="string",
-                    allowed_values=list(LCDB_CLASSES.keys())
+                    allowed_values=list(landcover_classes)
                 ),
             ]
         # Create area WPS outputs
@@ -83,7 +86,7 @@ class PredefinedScenario(Process, ABC):
                               supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
             )
 
-        handler = handler_for_task(task, isBaseline)
+        handler = handler_for_task(task, self._LAND_COVER_COLOR_MAPPINGS, isBaseline)
         # Initialise the process
         super().__init__(
             handler,
@@ -94,7 +97,7 @@ class PredefinedScenario(Process, ABC):
         )
 
 
-def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
+def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, is_baseline: bool = False) -> Callable:
     """
     Create a process handler for a given task.
 
@@ -102,6 +105,8 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
     ----------
     task : Task
         The callback function to be executed as a task.
+    color_mapping: LandCoverColorMapping
+        Contains mapping of LandCover details to colors for styling.
     is_baseline : bool = False
         Whether the scenario is configurable or a baseline. If it is a baseline then we do not have to read the inputs.
 
@@ -154,7 +159,9 @@ def handler_for_task(task: Task, is_baseline: bool = False) -> Callable:
         scenario_name = "Baseline" if is_baseline else str(scenario_id)
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
-        response.outputs['landcover'].data = json.dumps(landcover_catalog(scenario_id, scenario_name))
+        response.outputs['landcover'].data = json.dumps(
+            landcover_catalog(scenario_id, scenario_name, color_mapping)
+        )
         response.outputs['catchmentBoundary'].data = json.dumps(catchment_boundary_catalog(scenario_id, scenario_name))
         response.outputs['floodDepth'].data = json.dumps(flood_depth_catalog(scenario_id, scenario_name))
         response.outputs['injectionPoints'].data = json.dumps(
@@ -459,7 +466,7 @@ def catchment_boundary_catalog(scenario_id: int, scenario_name: str) -> dict:
     }
 
 
-def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
+def landcover_catalog(scenario_id: int, scenario_name: str, color_mapping: LandCoverColorMapping) -> dict:
     """
     Create a dictionary in the format of a terria js catalog json for the landcover layer.
 
@@ -469,22 +476,89 @@ def landcover_catalog(scenario_id: int, scenario_name: str) -> dict:
         The ID of the scenario to create the catalog item for.
     scenario_name : str
         The name of the scenario to create the catalog item for.
+    color_mapping: LandCoverColorMapping
+        Contains mapping of LandCover details to colors for styling.
 
     Returns
     ----------
     dict
-        The TerriaJS catalog item JSON for the building flood status layer.
+        The TerriaJS catalog item JSON for the landcover layer.
     """
     gs_intermediate_workspace = f"{EnvVar.POSTGRES_DB}-intermediate-wflow"
     gs_landcover_url = f"{EnvVar.GEOSERVER_HOST}:{EnvVar.GEOSERVER_PORT}/geoserver/{gs_intermediate_workspace}/ows"
-    layer_name = f"{gs_intermediate_workspace}:landcover_{scenario_id}"
+    layer_name = f"{gs_intermediate_workspace}:lcdb_mauri_view"
+
+    landcover_color_styles = [
+        {
+            "value": mapping.landcover_name,
+            "color": mapping.color
+        } for _idx, mapping in color_mapping.color_mapping.iterrows() if isinstance(mapping.color, str)
+    ]
 
     return {
-        "type": "wms",
+        "type": "wfs",
         "name": f"Landcover - {scenario_name}",
         "url": gs_landcover_url,
-        "layers": layer_name,
-        "styles": "lcdb_landcover",
+        "typeNames": layer_name,
+        "parameters": {
+            "viewparams": f"scenario:{scenario_id}"
+        },
+        "maxFeatures": 100000,
+        "activeStyle": "Mauri",
+        "styles": [
+            {
+                "id": "Mauri",
+                "color": {
+                    "mapType": "continuous",
+                    "minimumValue": 1,
+                    "maximumValue": 10,
+                    "colorPalette": "Reds",
+                    "legend": {
+                        "items": [
+                            {
+                                "titleAbove": "Ahua Pai",
+                                "color": "rgb(103, 0, 13)"
+                            },
+                            {"color": "#9b0d14"},
+                            {"color": "#c2181c"},
+                            {"color": "#e23028"},
+                            {"color": "#f5553d"},
+                            {
+                                "color": "#fb7c5c",
+                                "title": "E Kino Ana"
+                            },
+                            {"color": "#fca082"},
+                            {"color": "#fdc3ac"},
+                            {"color": "#fdc3ac"},
+                            {"color": "#fee0d3"},
+                            {
+                                "titleBelow": "Mauri Mate",
+                                "color": "#fff5f0"
+                            }
+                        ]
+                    }
+                },
+                "hidden": False
+            },
+            {
+                "id": "LCDB description",
+                "color": {
+                    "enumColors": landcover_color_styles,
+                },
+                "hidden": False
+            },
+            {
+                "id": "Atua Domain",
+                "color": {
+                    "colorPalette": "Dark2"
+                },
+                "hidden": False
+            },
+            {
+                "id": "flood_model_output_id",
+                "hidden": True
+            }
+        ]
     }
 
 
