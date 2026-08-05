@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-from osgeo import gdal
+
 import logging
 from datetime import datetime
 from os import cpu_count
