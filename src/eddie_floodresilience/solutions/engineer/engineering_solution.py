@@ -55,18 +55,12 @@ class EngineeringSolution:
         vectors : gpd.GeoDataFrame | None = None
             GeoDataframe that contains:
                 - 'type': 'drainage' or 'stopbank'
-                - 'value': If 'drainage', 'value' will be used to decrease elevation gradually along the drainage line.
-                           Default is 0.03 m
-                           If 'stopbank', 'value' will be used to increase/decrease elevation by the same value.
-                - 'b_width': base width for 'drainage'.
-                             Default is 12m.
-                             If 'stopbank', it's 0
-                - 's_width': surface width for 'drainage'.
-                             Default is 20m.
-                             If 'stopbank', it's 0
-                - 'slope': used for both.
-                           For 'drainage', default is 1m.
-                           For 'stopbank', it's 0. It acts as a rate to control the sharpness of changing elevation
+                - 'value': If 'drainage', elevation is decreased along drainage line by a 'value'. Default is 0.03 m
+                           If 'stopbank', elevation is increased/decreased by the same value.
+                - 'b_width': Base width for 'drainage'. Default is 12m. If 'stopbank', it's 0
+                - 's_width': Surface width for 'drainage'. Default is 20m. If 'stopbank', it's 0
+                - 'slope': Slope of 'drainage'. Default is 1m.
+                           Slope when decreasing 'stopbank' (if necessary). Default is 0
         """
         self.vectors = vectors
         self.scenario_and_id_folder = scenario_and_id_folder
