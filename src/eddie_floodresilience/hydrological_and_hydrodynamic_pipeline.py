@@ -4,7 +4,7 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-
+from osgeo import gdal
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -76,10 +76,14 @@ class HydrologicalAndHydrodynamicPipeline:
             Polygons that are used to change the landcover information.
             This polygon dataframe has 'landcover' column with new values
         vectors : pd.DataFrame | None = None
-            Dataframe that contains 'vector_path', 'value', 'distance' columns:
-            - 'vector_path': Column that stores directories to specific vectors
-            - 'value: Column that stores value of the vectors used to increase/decrease elevation
-            - 'distance': Column that stores value to smooth the decreased elevation
+            GeoDataframe that contains:
+                - 'type': 'drainage' or 'stopbank'
+                - 'value': If 'drainage', elevation is decreased along drainage line by a 'value'. Default is 0.03 m
+                           If 'stopbank', elevation is increased/decreased by the same value.
+                - 'b_width': Base width for 'drainage'. Default is 12m. If 'stopbank', it's 0
+                - 's_width': Surface width for 'drainage'. Default is 20m. If 'stopbank', it's 0
+                - 'slope': Slope of 'drainage'. Default is 1m.
+                           Slope when decreasing 'stopbank' (if necessary). Default is 0
         resolution : float
             Resolution for flow data.
             Default is 0.00045 (in crs 4326) ~ 50 m (in crs 2193)
@@ -532,12 +536,13 @@ def otautau(
         This polygon dataframe has 'landcover_name' column with new values.
     engineer_scenario_gdf: gpd.GeoDataFrame | None
         GeoDataframe that contains:
-        - 'type': 'drainage' or 'stopbank'
-        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
-        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
-        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
-        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
-        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
+            - 'type': 'drainage' or 'stopbank'
+            - 'value': If 'drainage', elevation is decreased along drainage line by a 'value'. Default is 0.03 m
+                       If 'stopbank', elevation is increased/decreased by the same value.
+            - 'b_width': Base width for 'drainage'. Default is 12m. If 'stopbank', it's 0
+            - 's_width': Surface width for 'drainage'. Default is 20m. If 'stopbank', it's 0
+            - 'slope': Slope of 'drainage'. Default is 1m.
+                       Slope when decreasing 'stopbank' (if necessary). Default is 0
 
     Returns
     -------
@@ -657,12 +662,13 @@ def mataura(
         This polygon dataframe has 'landcover_name' column with new values.
     engineer_scenario_gdf: gpd.GeoDataFrame | None
         GeoDataframe that contains:
-        - 'type': 'drainage' or 'stopbank'
-        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
-        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
-        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
-        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
-        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
+            - 'type': 'drainage' or 'stopbank'
+            - 'value': If 'drainage', elevation is decreased along drainage line by a 'value'. Default is 0.03 m
+                       If 'stopbank', elevation is increased/decreased by the same value.
+            - 'b_width': Base width for 'drainage'. Default is 12m. If 'stopbank', it's 0
+            - 's_width': Surface width for 'drainage'. Default is 20m. If 'stopbank', it's 0
+            - 'slope': Slope of 'drainage'. Default is 1m.
+                       Slope when decreasing 'stopbank' (if necessary). Default is 0
 
     Returns
     -------
@@ -733,12 +739,13 @@ def whirinaki(
         This polygon dataframe has 'landcover_name' column with new values.
     engineer_scenario_gdf: gpd.GeoDataFrame | None
         GeoDataframe that contains:
-        - 'type': 'drainage' or 'stopbank'
-        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
-        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
-        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
-        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
-        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
+            - 'type': 'drainage' or 'stopbank'
+            - 'value': If 'drainage', elevation is decreased along drainage line by a 'value'. Default is 0.03 m
+                       If 'stopbank', elevation is increased/decreased by the same value.
+            - 'b_width': Base width for 'drainage'. Default is 12m. If 'stopbank', it's 0
+            - 's_width': Surface width for 'drainage'. Default is 20m. If 'stopbank', it's 0
+            - 'slope': Slope of 'drainage'. Default is 1m.
+                       Slope when decreasing 'stopbank' (if necessary). Default is 0
 
     Returns
     -------
@@ -809,12 +816,13 @@ def riverton(
         This polygon dataframe has 'landcover_name' column with new values.
     engineer_scenario_gdf: gpd.GeoDataFrame | None
         GeoDataframe that contains:
-        - 'type': 'drainage' or 'stopbank'
-        - 's_width': surface width for 'drainage'. If 'stopbank', it's 0
-        - 'b_width': base width for 'drainage'. If 'stopbank', it's 0
-        - 'slope': slope for 'drainage'. If 'stopbank', it's 0
-        - 'value': value to increase/decrease elevation for 'stopbank'. If 'drainage', it's 0
-        - 'distance': value to smooth the decrease elevation for 'stopbank'. If 'drainage', it's 0
+            - 'type': 'drainage' or 'stopbank'
+            - 'value': If 'drainage', elevation is decreased along drainage line by a 'value'. Default is 0.03 m
+                       If 'stopbank', elevation is increased/decreased by the same value.
+            - 'b_width': Base width for 'drainage'. Default is 12m. If 'stopbank', it's 0
+            - 's_width': Surface width for 'drainage'. Default is 20m. If 'stopbank', it's 0
+            - 'slope': Slope of 'drainage'. Default is 1m.
+                       Slope when decreasing 'stopbank' (if necessary). Default is 0
 
     Returns
     -------

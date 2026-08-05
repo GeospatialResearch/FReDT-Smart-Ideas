@@ -244,9 +244,9 @@ class GenerateDrainageGeometry:
 
         drainage_new_elevation: np.ndarray,
 
-        drainage_base_width: float,
-        drainage_surface_width: float,
-        drainage_slope: float
+        drainage_base_width: float = 12,
+        drainage_surface_width: float = 20,
+        drainage_slope: float = 1
     ) -> None:
         """
         Generate geometries for drainage line.
@@ -267,11 +267,11 @@ class GenerateDrainageGeometry:
         drainage_new_elevation : np.ndarray
             New drainage elevation along the drainage line
         drainage_base_width : float
-            Value of base width of drainage
+            Value of base width of drainage. Default is 12m
         drainage_surface_width : float
-            Value of surface width of drainage
+            Value of surface width of drainage. Default is 20m
         drainage_slope : float
-            Value of slope of drainage
+            Value of slope of drainage. Default is 1m
         """
         self.dem = dem
         self.new_dem = new_dem
@@ -650,7 +650,8 @@ class GenerateFullDrainage:
         # Set up function to generate DEM with drainage
         generate_dem_with_drainage = GenerateDrainageElevation(
             self.vector,
-            self.dem
+            self.dem,
+            self.vector['value']
         )
 
         # Generate new DEM with drainage and drainage elevation

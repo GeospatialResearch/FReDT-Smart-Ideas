@@ -56,10 +56,7 @@ class GenerateFullStopbank:
         dem : xr.DataArray
             DEM
         vector : pd.Series | None = None
-            Dataframe that contains 'vector_path', 'value', 'distance' columns:
-            - 'vector_path': Column that stores directories to specific vectors
-            - 'value: Column that stores value of the vectors used to increase/decrease elevation
-            - 'distance': Column that stores value to smooth the decreased elevation
+            Vector represents centreline of stopbank
         """
         self.vector = vector
         self.dem = dem
@@ -134,7 +131,8 @@ class GenerateFullStopbank:
         value : float
             Value to decrease the elevation
         distance : float
-            Rate to control the sharpness of changing elevation
+            Rate to control the sharpness of changing elevation.
+            This is also another method of generating slope.
 
         Returns
         -------
@@ -153,7 +151,8 @@ class GenerateFullStopbank:
             # Smoothing using distance
             # Here we create a smoothing transition weights.
             # It will mask out area (close to vector) that should be affected (close to 1)
-            # and area (far away from the vector) that should not be affected (close to 0)
+            # and area (far away from the vector) that should not be affected (close to 0).
+            # This can be considered as another method of generating slope.
             dist = distance_transform_edt(mask == 0)
             weight = np.clip(1 - dist / distance, 0, 1)
             decreased_dem.values -= abs(value) * weight
@@ -189,7 +188,7 @@ class GenerateFullStopbank:
                 modified_dem,
                 rasterized_vector,
                 self.vector['value'],
-                self.vector['distance']
+                self.vector['slope']
             )
 
         return modified_dem

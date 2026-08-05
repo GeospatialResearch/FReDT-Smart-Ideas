@@ -53,10 +53,20 @@ class EngineeringSolution:
         scenario_and_id_folder : Path
             Directory to the scenario folder name with ID
         vectors : gpd.GeoDataFrame | None = None
-            GeoDataframe that contains 'vector_path', 'value', 'distance' columns:
-            - 'vector_path': Column that stores directories to specific vectors
-            - 'value: Column that stores value of the vectors used to increase/decrease elevation
-            - 'distance': Column that stores value to smooth the decreased elevation
+            GeoDataframe that contains:
+                - 'type': 'drainage' or 'stopbank'
+                - 'value': If 'drainage', 'value' will be used to decrease elevation gradually along the drainage line.
+                           Default is 0.03 m
+                           If 'stopbank', 'value' will be used to increase/decrease elevation by the same value.
+                - 'b_width': base width for 'drainage'.
+                             Default is 12m.
+                             If 'stopbank', it's 0
+                - 's_width': surface width for 'drainage'.
+                             Default is 20m.
+                             If 'stopbank', it's 0
+                - 'slope': used for both.
+                           For 'drainage', default is 1m.
+                           For 'stopbank', it's 0. It acts as a rate to control the sharpness of changing elevation
         """
         self.vectors = vectors
         self.scenario_and_id_folder = scenario_and_id_folder
