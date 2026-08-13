@@ -19,6 +19,7 @@
 Runs backend tasks using Celery. Allowing for multiple long-running tasks to complete in the background.
 Allows the frontend to send tasks and retrieve status later.
 """
+import json
 from typing import List, NamedTuple
 
 import geopandas as gpd
@@ -96,26 +97,21 @@ def check_cache(scenario_options: dict) -> int | None:
 
 
 @app.task(base=OnFailureStateTask)
-def create_hydrological_and_hydrodynamic_model_whirinaki_1999(
-    location_geojson: str | None,
-    landcover_name: str | None
-) -> int:
+def create_hydrological_and_hydrodynamic_model_whirinaki_1999(location_geojson: dict | None) -> int:
     """
     Task to run a hydrological and hydronynamic model for Whirinaki.
 
     Parameters
     ----------
-    location_geojson: str | None
-        A GeoJSON string with polygons dictating where to change landcover. # TODO combine these params into one
-    landcover_name: str | None
-        The landcover type to change landcover to.
+    location_geojson: dict | None
+        A GeoJSON dict with polygons dictating where to change landcover.
 
     Returns
     -------
     int
         The resultant flood model output ID.
     """
-    landcover_scenario_gdf = read_location_geojson(location_geojson, landcover_name)
+    landcover_scenario_gdf = read_location_geojson(location_geojson)
     flood_model_output_id = hydrological_and_hydrodynamic_pipeline.whirinaki(
         nature_scenario_gdf=landcover_scenario_gdf
     )
@@ -123,23 +119,21 @@ def create_hydrological_and_hydrodynamic_model_whirinaki_1999(
 
 
 @app.task(base=OnFailureStateTask)
-def create_hydrological_and_hydrodynamic_model_mataura_2020(location_geojson: str, landcover_name: str) -> int:
+def create_hydrological_and_hydrodynamic_model_mataura_2020(location_geojson: dict) -> int:
     """
     Task to run a hydrological and hydronynamic model for Mataura.
 
     Parameters
     ----------
-    location_geojson: str | None
-        A GeoJSON string with polygons dictating where to change landcover. # TODO combine these params into one
-    landcover_name: str | None
-        The landcover type to change landcover to.
+    location_geojson: dict | None
+        A GeoJSON dict with polygons dictating where to change landcover.
 
     Returns
     -------
     int
         The resultant flood model output ID.
     """
-    landcover_scenario_gdf = read_location_geojson(location_geojson, landcover_name)
+    landcover_scenario_gdf = read_location_geojson(location_geojson)
     flood_model_output_id = hydrological_and_hydrodynamic_pipeline.mataura(
         nature_scenario_gdf=landcover_scenario_gdf
     )
@@ -166,25 +160,32 @@ def read_hydrograph_data(flood_model_id: int, injection_point_feature_id: str) -
     return get_hydrograph_csv(flood_model_id, injection_point_feature_id)
 
 
-def read_location_geojson(location_geojson: str | None, landcover_name: str | None) -> gpd.GeoDataFrame | None:
+def read_location_geojson(location_geojson: dict | None) -> gpd.GeoDataFrame | None:
     """
     Read a GeoJSON string and a landcover name into a GeoDataFrame,
 
     Parameters
     ----------
     location_geojson: str | None
-        A GeoJSON string with polygons dictating where to change landcover. # TODO combine these params into one
-    landcover_name: str | None
-        The landcover type to change landcover to.
+        A GeoJSON string with polygons dictating where to change landcover.
 
     Returns
     -------
     gpd.GeoDataFrame
-        The GeoDataFrame containing polygons with a column named "landcover_name".
+        The GeoDataFrame containing polygons.
 
+    Raises
+    ------
+    ValueError
+        If the expected column 'landcover_name' is not present in the GeoJSON.
     """
-    if location_geojson is None or landcover_name is None:
+    if location_geojson is None:
         return None
-    landcover_scenario_gdf = gpd.read_file(location_geojson, driver="GeoJSON")
-    landcover_scenario_gdf["landcover_name"] = landcover_name
+    geojson_str = json.dumps(location_geojson)
+    landcover_scenario_gdf = gpd.read_file(geojson_str, driver="GeoJSON")
+
+    # Check GDF contains the necessary landcover data
+    if "landcover_name" not in landcover_scenario_gdf.columns:
+        raise ValueError(f"Expected column 'landcover_name' in {landcover_scenario_gdf.columns}")
+
     return landcover_scenario_gdf

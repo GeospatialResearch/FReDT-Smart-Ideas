@@ -16,8 +16,10 @@ blueprint = Blueprint('eddie_floodresilience', __name__)
 processes = [
     hh_service.Whirinaki1999BaselineProcessService(),
     hh_service.Whirinaki1999ScenarioProcessService(),
+    hh_service.Whirinaki1999LayerScenarioProcessService(),
     hh_service.Mataura2020BaselineProcessService(),
     hh_service.Mataura2020ScenarioProcessService(),
+    hh_service.Mataura2020LayerScenarioProcessService()
 ]
 
 for working_dir in ["workdir", "outputs", "logs"]:

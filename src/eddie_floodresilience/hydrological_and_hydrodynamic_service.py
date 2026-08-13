@@ -19,6 +19,7 @@
 
 import json
 from abc import ABC
+from enum import StrEnum
 from typing import Callable
 from urllib.parse import urlencode
 
@@ -31,41 +32,86 @@ from src.eddie_floodresilience.config import EnvVariable as EnvVar
 from src.eddie_floodresilience.solutions.nature.landcover import LandCoverColorMapping, LandcoverClassDataset
 
 
+class InputType(StrEnum):
+    """
+    Enum for available methods of inputting location geometry parameters into a process.
+
+    Attributes
+    ----------
+    BASELINE: Literal["baseline"]
+        A scenario that requires no specific geometry parameters
+    DRAW_POLYGON: Literal["draw polygon"]
+        A scenario where you can draw or select a single polygon to and assign a single landcover to that polygon.
+    EXISTING_LAYER: Literal["existing layer"]
+        A scenario where you can select an entire complex layer to send.
+    """
+
+    BASELINE = "baseline"
+    DRAW_POLYGON = "draw polygon"
+    EXISTING_LAYER = "existing layer"
+
+
 class PredefinedScenario(Process, ABC):
     """Abstract base class for a Process for a scenario. Children of this provide the specific task to run."""
 
     _LAND_COVER_COLOR_MAPPINGS = LandCoverColorMapping(LandcoverClassDataset.LCDB)
 
-    def __init__(self, title: str, identifier: str, task: Callable, isBaseline: bool = False) -> None:
-        """Define inputs and outputs of the WPS process, and assign process handler."""
+    def __init__(self, title: str, identifier: str, task: Callable, input_type: InputType) -> None:
+        """
+        Define inputs and outputs of the WPS process, and assign process handler.
+
+        Parameters
+        ----------
+        title: str
+            The title of the WPS process, displayed in capabilities requests.
+        identifier: str
+            The id of the process definition, used to identify which process requests are for.
+        task: Callable
+            The Celery task associated with the process.
+        input_type: InputType
+            The method of inputting location geometry parameters into this process.
+
+        """
         # Create bounding box WPS inputs
-        if isBaseline:
-            # A very simple placeholder configuration for baseline, ideally this would be removed.
-            # Inputs are required for TerriaJS though, so the front-end code would have to be fixed to allow this.
-            inputs = [LiteralInput(
-                "options",
-                "Options",
-                data_type="integer",
-                allowed_values=[0, 1]
-            ), ]
-        else:
-            landcover_classes = self._LAND_COVER_COLOR_MAPPINGS.filtered_color_mapping.landcover_name
-            inputs = [
-                ComplexInput(
-                    'location',
-                    'New Land Cover Area',
-                    supported_formats=[
-                        Format(mime_type='application/vnd.geo+json',
-                               schema='http://geojson.org/geojson-spec.html#geojson')],
-                    workdir='workdir'
-                ),
-                LiteralInput(
-                    "landcover",
-                    "Landcover Class",
-                    data_type="string",
-                    allowed_values=list(landcover_classes)
-                ),
-            ]
+        match input_type:
+            case InputType.BASELINE:
+                # A very simple placeholder configuration for baseline, ideally this would be removed.
+                # Inputs are required for TerriaJS though, so the front-end code would have to be fixed to allow this.
+                inputs = [LiteralInput(
+                    "options",
+                    "Options",
+                    data_type="integer",
+                    allowed_values=[0, 1]
+                )]
+            case InputType.DRAW_POLYGON:
+                landcover_classes = self._LAND_COVER_COLOR_MAPPINGS.filtered_color_mapping.landcover_name
+                inputs = [
+                    ComplexInput(
+                        'location',
+                        'New Land Cover Area',
+                        supported_formats=[
+                            Format(mime_type='application/vnd.geo+json',
+                                   schema='http://geojson.org/geojson-spec.html#geojson')],
+                        workdir='workdir'
+                    ),
+                    LiteralInput(
+                        "landcover",
+                        "Landcover Class",
+                        data_type="string",
+                        allowed_values=list(landcover_classes)
+                    ),
+                ]
+            case InputType.EXISTING_LAYER:
+                inputs = [
+                    ComplexInput(
+                        'landcover_layer',
+                        "New Land Cover Layer",
+                        supported_formats=[
+                            Format(mime_type='application/vnd.geo+json',
+                                   schema='http://geojson.org/geojson-spec.html#FeatureCollection')],
+                        workdir='workdir'
+                    )
+                ]
         # Create area WPS outputs
         outputs = [
             ComplexOutput("landcover", "Landcover",
@@ -80,13 +126,14 @@ class PredefinedScenario(Process, ABC):
                           supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
         ]
         # Add outputs that only make sense for non-baseline scenarios.
-        if not isBaseline:
+        is_baseline = input_type == InputType.BASELINE
+        if not is_baseline:
             outputs.append(
                 ComplexOutput("depthDifference", "Difference in Flood Depth to Baseline",
                               supported_formats=[Format("application/vnd.terriajs.catalog-member+json")])
             )
 
-        handler = handler_for_task(task, self._LAND_COVER_COLOR_MAPPINGS, isBaseline)
+        handler = handler_for_task(task, self._LAND_COVER_COLOR_MAPPINGS, input_type)
         # Initialise the process
         super().__init__(
             handler,
@@ -97,7 +144,7 @@ class PredefinedScenario(Process, ABC):
         )
 
 
-def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, is_baseline: bool = False) -> Callable:
+def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_type: InputType) -> Callable:
     """
     Create a process handler for a given task.
 
@@ -107,8 +154,8 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, is_baseli
         The callback function to be executed as a task.
     color_mapping: LandCoverColorMapping
         Contains mapping of LandCover details to colors for styling.
-    is_baseline : bool = False
-        Whether the scenario is configurable or a baseline. If it is a baseline then we do not have to read the inputs.
+    input_type: InputType
+        The method of inputting location geometry parameters into this process handler.
 
     Returns
     -------
@@ -132,30 +179,35 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, is_baseli
         Callable
             The WPS handler function.
         """
-        if is_baseline:
-            # Inputs can be ignored in a baseline
-            location_geojson_str = None
-            landcover_type_name = None
-        else:
-            # Read the inputs
-            location_geojson_str = request.inputs["location"][0].data
-            landcover_type_name = request.inputs["landcover"][0].data
+        match input_type:
+            case InputType.BASELINE:
+                # Inputs can be ignored in a baseline
+                location_geojson = None
+            case InputType.DRAW_POLYGON:
+                # Read the inputs, combine them into one dict
+                location_geojson_str = request.inputs["location"][0].data
+                location_geojson = json.loads(location_geojson_str)
+                landcover_type_name = request.inputs["landcover"][0].data
+                location_geojson["features"][0].update({"properties": {"landcover_name": landcover_type_name}})
+            case InputType.EXISTING_LAYER:
+                location_geojson_str = request.inputs["landcover_layer"][0].data
+                location_geojson = json.loads(location_geojson_str)
 
         # Check if scenario is already cached
         cache_dict = {
             "task": task.name,
-            "location_geojson_str": location_geojson_str,
-            "landcover_type_name": landcover_type_name,
+            "location_geojson": location_geojson,
         }
         check_cache_task = tasks.check_cache.delay(cache_dict)
         scenario_id = check_cache_task.get()
 
         # Run the task callback if its needed
         if scenario_id is None:
-            modelling_task = task.delay(location_geojson_str, landcover_type_name)
+            modelling_task = task.delay(location_geojson)
             scenario_id = modelling_task.get()
             tasks.cache_results.delay(scenario_id, cache_dict)
 
+        is_baseline = input_type == InputType.BASELINE
         scenario_name = "Baseline" if is_baseline else str(scenario_id)
 
         # Add Geoserver JSON Catalog entries to WPS response for use by Terria
@@ -176,6 +228,19 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, is_baseli
     return _handler
 
 
+class Whirinaki1999LayerScenarioProcessService(PredefinedScenario):
+    """Class representing a WebProcessingService process for creating a flooding scenario for Whirinaki"""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self) -> None:
+        """Define inputs and outputs of the WPS process, and assign process handler."""
+        title = "Whirinaki 1999 Layer"
+        identifier = "whirinaki1999ExistingLayer"
+        task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999
+        super().__init__(title, identifier, task, InputType.EXISTING_LAYER)
+
+
 class Whirinaki1999ScenarioProcessService(PredefinedScenario):
     """Class representing a WebProcessingService process for creating a flooding scenario for Whirinaki"""
 
@@ -186,7 +251,7 @@ class Whirinaki1999ScenarioProcessService(PredefinedScenario):
         title = "Whirinaki 1999"
         identifier = "whirinaki1999"
         task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999
-        super().__init__(title, identifier, task)
+        super().__init__(title, identifier, task, InputType.DRAW_POLYGON)
 
 
 class Whirinaki1999BaselineProcessService(PredefinedScenario):
@@ -199,7 +264,7 @@ class Whirinaki1999BaselineProcessService(PredefinedScenario):
         title = "Whirinaki 1999 Baseline"
         identifier = "whirinaki1999baseline"
         task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999
-        super().__init__(title, identifier, task, isBaseline=True)
+        super().__init__(title, identifier, task, InputType.BASELINE)
 
 
 class Mataura2020ScenarioProcessService(PredefinedScenario):
@@ -212,7 +277,20 @@ class Mataura2020ScenarioProcessService(PredefinedScenario):
         title = "Mataura 2020"
         identifier = "mataura2020"
         task = tasks.create_hydrological_and_hydrodynamic_model_mataura_2020
-        super().__init__(title, identifier, task)
+        super().__init__(title, identifier, task, InputType.DRAW_POLYGON)
+
+
+class Mataura2020LayerScenarioProcessService(PredefinedScenario):
+    """Class representing a WebProcessingService process for creating a flooding scenario for Mataura"""
+
+    # pylint: disable=too-few-public-methods
+
+    def __init__(self) -> None:
+        """Define inputs and outputs of the WPS process, and assign process handler."""
+        title = "Mataura 2020 Layer"
+        identifier = "mataura2020ExistingLayer"
+        task = tasks.create_hydrological_and_hydrodynamic_model_mataura_2020
+        super().__init__(title, identifier, task, InputType.EXISTING_LAYER)
 
 
 class Mataura2020BaselineProcessService(PredefinedScenario):
@@ -225,7 +303,7 @@ class Mataura2020BaselineProcessService(PredefinedScenario):
         title = "Mataura 2020 Baseline"
         identifier = "mataura2020baseline"
         task = tasks.create_hydrological_and_hydrodynamic_model_mataura_2020
-        super().__init__(title, identifier, task, isBaseline=True)
+        super().__init__(title, identifier, task, InputType.BASELINE)
 
 
 def building_flood_status_catalog(scenario_id: int, scenario_name: str) -> dict:
