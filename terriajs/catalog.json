@@ -45,6 +45,13 @@
           "description": "Model a land cover change scenario that will impact the flood scenario",
           "url": "$BACKEND_URL/wps",
           "identifier": "mataura2020"
+        },
+        {
+          "type": "wps",
+          "name": "Mataura 1999 Land Cover Change - Existing Layer",
+          "description": "Model a land cover change scenario that will impact the flood scenario",
+          "url": "$BACKEND_URL/wps",
+          "identifier": "mataura2020ExistingLayer"
         }
       ]
     }
