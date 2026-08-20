@@ -192,6 +192,8 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_typ
             case InputType.EXISTING_LAYER:
                 location_geojson_str = request.inputs["landcover_layer"][0].data
                 location_geojson = json.loads(location_geojson_str)
+                # Remove the unique id property, it is not needed and interferes with caching.
+                location_geojson.pop("id", None)
 
         # Check if scenario is already cached
         cache_dict = {
