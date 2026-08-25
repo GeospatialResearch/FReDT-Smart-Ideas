@@ -54,7 +54,7 @@ for name, module in eddie_plugins.items():
     app.register_blueprint(module.blueprint.blueprint)
 
 # Flood Resilience specific blueprint
-app.register_blueprint(flood_resilience_blueprint.blueprint)
+# app.register_blueprint(flood_resilience_blueprint.blueprint)
 
 
 @app.route('/')

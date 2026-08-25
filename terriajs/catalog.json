@@ -7,6 +7,13 @@
   },
   "catalog": [
     {
+      "type": "wps",
+      "name": "Whirinaki 1999 Drainage",
+      "description": "Model a land cover change scenario that will impact the flood scenario",
+      "url": "$BACKEND_URL/wps",
+      "identifier": "whirinaki1999Drainage"
+    },
+    {
       "type": "group",
       "name": "Model land cover change flood scenarios",
       "isOpen": true,
