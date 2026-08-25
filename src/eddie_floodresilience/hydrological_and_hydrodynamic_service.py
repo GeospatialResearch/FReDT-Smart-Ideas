@@ -49,6 +49,7 @@ class InputType(StrEnum):
     BASELINE = "baseline"
     DRAW_POLYGON = "draw polygon"
     EXISTING_LAYER = "existing layer"
+    LINESTRING = "linestring"
 
 
 class PredefinedScenario(Process, ABC):
@@ -111,6 +112,17 @@ class PredefinedScenario(Process, ABC):
                                    schema='http://geojson.org/geojson-spec.html#FeatureCollection')],
                         workdir='workdir'
                     )
+                ]
+            case InputType.LINESTRING:
+                inputs = [
+                    ComplexInput(
+                        'channel',
+                        'drainage channel',
+                        supported_formats=[
+                            Format(mime_type='application/vnd.geo+json',
+                                   schema='http://geojson.org/geojson-spec.html#linestring')],
+                        workdir='workdir'
+                    ),
                 ]
         # Create area WPS outputs
         outputs = [
@@ -194,7 +206,11 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_typ
                 location_geojson = json.loads(location_geojson_str)
                 # Remove the unique id property, it is not needed and interferes with caching.
                 location_geojson.pop("id", None)
-
+            case InputType.LINESTRING:
+                location_geojson_str = request.inputs["channel"][0].data
+                location_geojson = json.loads(location_geojson_str)
+                landcover_type_name = request.inputs["landcover"][0].data
+                location_geojson["features"][0].update({"properties": {"landcover_name": landcover_type_name}})
         # Check if scenario is already cached
         cache_dict = {
             "task": task.name,
@@ -229,6 +245,12 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_typ
 
     return _handler
 
+class Whirinaki1999DrainageScenarioProcessService(PredefinedScenario):
+    def __init__(self):
+        title = "Whirinaki 1999 Drainage scenario"
+        identifier = "whirinaki1999Drainage"
+        task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999
+        super().__init__(title, identifier, task, InputType.LINESTRING)
 
 class Whirinaki1999LayerScenarioProcessService(PredefinedScenario):
     """Class representing a WebProcessingService process for creating a flooding scenario for Whirinaki"""

@@ -14,6 +14,7 @@ from pywps import Service  # pylint: disable=wrong-import-position,wrong-import-
 
 blueprint = Blueprint('eddie_floodresilience', __name__)
 processes = [
+    hh_service.Whirinaki1999DrainageScenarioProcessService(),
     hh_service.Whirinaki1999BaselineProcessService(),
     hh_service.Whirinaki1999ScenarioProcessService(),
     hh_service.Whirinaki1999LayerScenarioProcessService(),
@@ -30,7 +31,7 @@ service = Service(processes, ['src/pywps.cfg'])
 
 
 @blueprint.route('/wps', methods=['GET', 'POST'])
-@check_celery_alive
+# @check_celery_alive
 def wps() -> Service:
     """
     End point for OGC WebProcessingService spec, allowing clients such as TerriaJS to request processing.

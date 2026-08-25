@@ -878,11 +878,11 @@ def riverton(
 if __name__ == '__main__':
     setup_logging(LogLevel.INFO)
     # Whirinaki
-    forest_gdf = gpd.read_file(
-        r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\polygons\polygons.shp"
-    )
+    # forest_gdf = gpd.read_file(
+    #     r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\polygons\polygons.shp"
+    # )
     drainage_gdf = gpd.read_file(
-        r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
+        r"T:\smartideas\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
     )
     whirinaki(FloodType.FLUVIAL, None, drainage_gdf)
 
