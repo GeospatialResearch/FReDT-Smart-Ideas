@@ -123,6 +123,13 @@ class PredefinedScenario(Process, ABC):
                                    schema='http://geojson.org/geojson-spec.html#linestring')],
                         workdir='workdir'
                     ),
+                    LiteralInput("width_top", "Top Width (m)", "string", allowed_values=["15", "20", "30"]),
+                    # todo add validation
+                    LiteralInput("width_bottom", "Bottom Width (m)", "string", allowed_values=["3", "5", "12"]),
+                    # todo add validation
+                    # todo work out the UI (don't limit to what Terria can do)
+                    LiteralInput("side_slope", "Side Slope (degrees)", "string",
+                                 allowed_values=["15", "20", "30", "45"]),  # todo add validation
                 ]
         # Create area WPS outputs
         outputs = [
@@ -245,12 +252,18 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_typ
 
     return _handler
 
+
 class Whirinaki1999DrainageScenarioProcessService(PredefinedScenario):
-    def __init__(self):
+    """Class representing a WebProcessingService process for creating a drainage channel scenario for Whirinaki"""
+
+    # pylint: disable=too-few-public-methods
+    def __init__(self) -> None:
+        """Define inputs and outputs of the WPS process, and assign a process handler."""
         title = "Whirinaki 1999 Drainage scenario"
         identifier = "whirinaki1999Drainage"
         task = tasks.create_hydrological_and_hydrodynamic_model_whirinaki_1999
         super().__init__(title, identifier, task, InputType.LINESTRING)
+
 
 class Whirinaki1999LayerScenarioProcessService(PredefinedScenario):
     """Class representing a WebProcessingService process for creating a flooding scenario for Whirinaki"""
