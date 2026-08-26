@@ -25,7 +25,9 @@ from urllib.parse import urlencode
 
 from celery import Task
 from pywps import ComplexInput, ComplexOutput, Format, LiteralInput, Process, WPSRequest
+from pywps.inout.literaltypes import AllowedValue
 from pywps.response.execute import ExecuteResponse
+from pywps.validator.allowed_value import ALLOWEDVALUETYPE
 
 from src.eddie_floodresilience import tasks
 from src.eddie_floodresilience.config import EnvVariable as EnvVar
@@ -123,6 +125,9 @@ class PredefinedScenario(Process, ABC):
                                    schema='http://geojson.org/geojson-spec.html#linestring')],
                         workdir='workdir'
                     ),
+                    LiteralInput("width_top", "Top Width (m)", "string", allowed_values=["15", "20", "30"]), # todo add validation
+                    LiteralInput("width_bottom", "Bottom Width (m)", "string", allowed_values=["3", "5", "12"]), # todo add validation
+                    LiteralInput("side_slope", "Side Slope (degrees)", "string", allowed_values=["15", "20", "30", "45"]), # todo add validation
                 ]
         # Create area WPS outputs
         outputs = [

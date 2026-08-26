@@ -464,8 +464,8 @@ class GenerateDrainageGeometry:
         return drainage_width_elevation
 
     def generate_drainage_slope(
-            self,
-            distance_drainage_width_to_drainage_line: float
+        self,
+        distance_drainage_width_to_drainage_line: float
     ) -> float:
         """
         Generate drainage slope
@@ -529,9 +529,9 @@ class GenerateDrainageGeometry:
         drainage_new_elevations_with_geometry_minimum = min(
             drainage_new_elevations_with_geometry,
             float(self.dem.values[
-                drainage_width_horizontal_index,
-                drainage_width_vertical_index
-            ])
+                      drainage_width_horizontal_index,
+                      drainage_width_vertical_index
+                  ])
         )
 
         return drainage_new_elevations_with_geometry_minimum
@@ -735,3 +735,83 @@ class GenerateFullDrainage:
         )
 
         return dem_full_drainage
+import geopandas as gpd
+import shapely
+class DrainageChannel:
+    def __init__(self, dem: xr.DataArray, channel_lines: gpd.GeoDataFrame):
+        self.dem = dem
+        self.channel_lines = channel_lines
+
+    def _get_channels_dem_subtrahend(self) -> xr.DataArray:
+        channel_line_with_z = self._get_channel_lines_as_3d()
+
+        for feature in self.channel_line:
+            pass
+
+    @staticmethod
+    def _get_xyz_values_at_points(dem: xr.DataArray, gs: gpd.GeoSeries) -> gpd.GeoSeries:
+        x_coords = gs.x.to_xarray()
+        y_coords = gs.y.to_xarray()
+        z_coords = dem.sel(x=x_coords, y=y_coords, method="nearest")
+
+        xyz_gs = gpd.GeoSeries.from_xy(
+            x_coords.values.ravel(),
+            y_coords.values.ravel(),
+            z=z_coords.values.ravel(),
+            crs=dem.rio.crs
+        )
+        return xyz_gs
+
+
+    def _get_channel_lines_as_3d(self) -> gpd.GeoDataFrame:
+        channels = self.channel_lines.copy(deep=True)
+        # Ensure CRS matches DEM
+        channels.to_crs(self.dem.rio.crs)
+
+        # Retrieve start points and end_points for each feature
+        channels["start_points"] = shapely.get_point(channels.geometry, 0)
+        channels["end_points"] = shapely.get_point(channels.geometry, -1)
+        start_z_points = self._get_xyz_values_at_points(self.dem, channels["start_points"])
+        end_z_points = self._get_xyz_values_at_points(self.dem, channels["end_points"])
+
+        interpolate_z(start)
+        drop_cols
+        for feature in self.channel_line:
+            start_point, end_point = None, None #todo
+            depths_at_p
+        pass
+
+    def _get_channel_feature_dem_subtrahend(self) -> xr.DataArray:
+        pass
+
+    def burn_channels_into_dem(self) -> xr.DataArray:
+        return self.dem - self._get_channels_dem_subtrahend() # todo use min maxing
+
+
+class SimpleDrainage:
+    def __init__(
+        self,
+        dem: xr.DataArray,
+
+        new_dem: xr.DataArray,
+        drainage_line: pd.Series,
+
+        horizontal_nums_arr: np.ndarray,
+        vertical_nums_arr: np.ndarray,
+
+        drainage_new_elevation: np.ndarray,
+
+        drainage_base_width: float = 12,
+        drainage_surface_width: float = 20,
+        drainage_slope: float = 1
+    ):
+        pass
+
+
+def main():
+    with xr.open_dataset(r"D:\data\smartideas_stored_data\hydrohydro_010_dev\whirinaki\original_scenario\hydrodynamic_process\z.asc") as ds:
+        dem = ds.band_data
+    channel_lines = gpd.GeoDataFrame.from_file(r"D:\dev\eddie_plugins\eddie_floodresilience\tmp\shp\drainage_channel.geojson")
+    DrainageChannel(dem=dem, channel_lines=channel_lines).burn_channels_into_dem()
+if __name__ == '__main__':
+    main()
