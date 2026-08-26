@@ -14,724 +14,222 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 """This script is for modify drainages"""
-from typing import NamedTuple
 
-import pandas as pd
-from rasterio.features import rasterize
-import xarray as xr
+import geopandas as gpd
 import numpy as np
-from shapely.geometry import Point
+import rasterio.features
+import shapely
+import xarray as xr
 
 
-class GenerateDrainageElevation:
-    """This class is for generating elevations for drainage line"""
-
-    def __init__(
-        self,
-        drainage_line: pd.Series,
-        dem: xr.DataArray,
-        decrease_elevation_value: float = 0.03
-    ) -> None:
-        """
-        Generate elevation for drainage line
-
-        Parameters
-        ----------
-        drainage_line : pd.Series
-            Drainage line
-        dem : xr.DataArray
-            DEM
-        decrease_elevation_value : float = 0.03
-            Value used to decrease the elevation at per resolution node when going downstream.
-            Default is 0.03 m.
-        """
-        self.drainage_geom = drainage_line.geometry
-        self.dem = dem
-        self.decrease_elevation_value = decrease_elevation_value
-
-    def generate_points_along_drainage_line(self) -> list:
-        """
-        Generate points along drainage line at resolution nodes
-
-        Returns
-        -------
-        drainage_points : list
-            A list of points along drainage line
-        """
-        # Get drainage distance interval along the drainage line based on resolution nodes
-        # abs() here is for if the value is negative
-        drainage_distance_interval = abs(self.dem.rio.resolution()[0])
-
-        # Generate drainage distances along the drainage line based on the intervals
-        drainage_length = self.drainage_geom.length  # Get drainage length
-        drainage_distances = np.arange(
-            0,
-            drainage_length,
-            drainage_distance_interval
-        )
-
-        # Generate points at the distance intervals/resolution nodes
-        drainage_points = [
-            self.drainage_geom.interpolate(distance) for distance in drainage_distances
-        ]
-
-        return drainage_points
-
-    def generate_ordinal_number_of_pixels(self) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Generate ordinal number of pixels
-
-        Returns
-        -------
-        horizontal_nums_arr : np.ndarray
-            Horizontal ordinal numbers of drainage line in DEM
-        vertical_nums_arr : np.ndarray
-            Vertical oridinal numbers of drainage line in DEM
-        """
-        # Generate points along drainage line based on resolution nodes
-        drainage_points = self.generate_points_along_drainage_line()
-
-        # Loop to collect ordinal number of pixels of drainage line within the DEM
-        horizontal_nums, vertical_nums = [], []
-        for each_point in drainage_points:
-            # Convert actual coordinates into ordinal number of pixels.
-            # "~" means to inverse the transform
-            dem_transform = self.dem.rio.transform()
-            vertical_num, horizontal_num = ~dem_transform * (each_point.x, each_point.y)
-
-            # Append to lists of ordinal numbers
-            horizontal_nums.append(int(horizontal_num))
-            vertical_nums.append(int(vertical_num))
-
-        # Remove duplicate points in the same pixel
-        # by using dict.fromkeys
-        horizontal_vertical = list(dict.fromkeys(zip(
-            horizontal_nums,
-            vertical_nums
-        )))
-        horizontal_nums, vertical_nums = zip(*horizontal_vertical)
-
-        # Convert to numpy array for easier manipulation
-        horizontal_nums_arr = np.array(horizontal_nums)
-        vertical_nums_arr = np.array(vertical_nums)
-
-        return horizontal_nums_arr, vertical_nums_arr
-
-    @staticmethod
-    def check_downstream_upstream(
-        horizontal_nums_arr: np.ndarray,
-        vertical_nums_arr: np.ndarray,
-        drainage_original_elevation: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-        """
-        Check if the line is connected downstream -> upstream. If not, reverse
-
-        Parameters
-        ----------
-        horizontal_nums_arr : np.ndarray
-            Horizontal ordinal numbers of drainage line in DEM
-        vertical_nums_arr : np.ndarray
-            Vertical oridinal numbers of drainage line in DEM
-        drainage_original_elevation: np.ndarray
-            Original drainage elevation
-
-        Returns
-        -------
-        horizontal_nums_arr : np.ndarray
-            Horizontal ordinal numbers of drainage line in DEM that are checked
-        vertical_nums_arr : np.ndarray
-            Vertical oridinal numbers of drainage line in DEM that are checked
-        drainage_original_elevation: np.ndarray
-            Original drainage elevation that are checked
-        """
-        # Compare the first and last drainage original elevations.
-        # If the first > the last, it's downstream-upstream.
-        # If the first < the last, it's upstream-downstream, then reverse.
-        if drainage_original_elevation[0] < drainage_original_elevation[-1]:
-            horizontal_nums_arr = horizontal_nums_arr[::-1]
-            vertical_nums_arr = vertical_nums_arr[::-1]
-            drainage_original_elevation = drainage_original_elevation[::-1]
-
-        return horizontal_nums_arr, vertical_nums_arr, drainage_original_elevation
-
-    def generate_minimum_elevation(
-        self,
-        drainage_original_elevation: np.ndarray
-    ) -> np.ndarray:
-        """
-        Compare between new and original elevations and choose the minimum one
-
-        Parameters
-        ----------
-        drainage_original_elevation : xr.DataArray
-            Original drainage elevation
-
-        Returns
-        -------
-        drainage_new_elevation : np.ndarray
-            New drainage elevation that was compared
-        """
-        # Generate new empty elevation based on original elevation
-        drainage_new_elevation = np.empty_like(drainage_original_elevation)
-
-        # Keep the first elevation
-        drainage_new_elevation[0] = drainage_original_elevation[0]
-
-        # Compare and choose the minimum value between new and original elevations.
-        for i in range(1, len(drainage_original_elevation)):
-            # Here using np.minimum as if using min() it will be flagged not scalar but np.ndarray
-            drainage_new_elevation[i] = np.minimum(
-                drainage_original_elevation[i],
-                # Subtracting a given value when going downhill
-                drainage_new_elevation[i - 1] - self.decrease_elevation_value
-            )
-
-        return drainage_new_elevation
-
-    def generate_elevation_for_drainage_line(self) -> tuple[np.ndarray, xr.DataArray]:
-        """
-        Generate new elevations for drainage line
-
-        Returns
-        -------
-        drainage_new_elevation : np.ndarray
-            New drainage elevation along the drainage line
-        new_dem : xr.DataArray
-            DEM with new drainage elevation
-        """
-        # Generate ordinal number of pixels
-        horizontal_nums_arr, vertical_nums_arr = self.generate_ordinal_number_of_pixels()
-
-        # Get drainage original elevation from DEM
-        drainage_original_elevation = self.dem.values[
-            horizontal_nums_arr,
-            vertical_nums_arr
-        ]
-
-        # Check downstream-upstream
-        (horizontal_nums_arr,
-         vertical_nums_arr,
-         drainage_original_elevation) = self.check_downstream_upstream(
-            *self.generate_ordinal_number_of_pixels(),
-            drainage_original_elevation
-        )
-
-        # Generate elevation for drainage line
-        drainage_new_elevation = self.generate_minimum_elevation(drainage_original_elevation)
-
-        # Assign new elevation to DEM
-        new_dem = self.dem.copy(deep=True)
-        new_dem.values[
-            horizontal_nums_arr,
-            vertical_nums_arr
-        ] = drainage_new_elevation
-
-        return drainage_new_elevation, new_dem
-
-
-class GenerateDrainageGeometry:
-    """This class is for generating geometries for drainage line"""  # pylint: disable=too-many-instance-attributes
-
-    def __init__(
-        self,
-        dem: xr.DataArray,
-        new_dem: xr.DataArray,
-        drainage_line: pd.Series,
-
-        horizontal_nums_arr: np.ndarray,
-        vertical_nums_arr: np.ndarray,
-
-        drainage_new_elevation: np.ndarray,
-
-        drainage_base_width: float = 12,
-        drainage_surface_width: float = 20,
-        drainage_slope: float = 1
-    ) -> None:
-        """
-        Generate geometries for drainage line.
-        This includes drainage width, drainage base, and drainage slope
-
-        Parameters
-        ----------
-        dem : xr.DataArray
-            Original DEM that is used to add drainages
-        new_dem : xr.DataArray
-            New DEM with the added drainage elevations
-        drainage_line : pd.Series
-            A row of drainage GeoDataFrame
-        horizontal_nums_arr : np.ndarray
-            Horizontal ordinal numbers of drainage line in DEM
-        vertical_nums_arr : np.ndarray
-            Vertical oridinal numbers of drainage line in DEM
-        drainage_new_elevation : np.ndarray
-            New drainage elevation along the drainage line
-        drainage_base_width : float
-            Value of base width of drainage. Default is 12m
-        drainage_surface_width : float
-            Value of surface width of drainage. Default is 20m
-        drainage_slope : float
-            Value of slope of drainage. Default is 1m
-        """
-        self.dem = dem
-        self.new_dem = new_dem
-        self.drainage_geom = drainage_line.geometry
-
-        self.horizontal_nums_arr = horizontal_nums_arr
-        self.vertical_nums_arr = vertical_nums_arr
-
-        self.drainage_new_elevation = drainage_new_elevation
-
-        self.drainage_base_width = drainage_base_width
-        self.drainage_surface_width = drainage_surface_width
-        self.drainage_slope = drainage_slope
-
-    def generate_distance_pixel_centre_downstream(self) -> np.ndarray:
-        """
-        Generate distance between each drainage pixel distance to downstream
-
-        Returns
-        -------
-        distance_pixel_center_downstream : np.ndarray
-            Sorted distances between pixel centers to downstream along the drainage line
-        """
-        # Generate distance
-        distance_pixel_center_downstream_list = []
-        for h, v in zip(self.horizontal_nums_arr[::-1], self.vertical_nums_arr[::-1]):
-            # Convert ordinal number of pixels back to actual coordinates.
-            # Using 0.5 to approach the center of a pixel
-            actual_coord_x, actual_coord_y = self.dem.rio.transform() * (
-                v + 0.5,
-                h + 0.5
-            )
-
-            # Generate distance from the pixel center point to downstream
-            distance_pixel_center_downstream_point = self.drainage_geom.project(
-                Point(actual_coord_x, actual_coord_y)
-            )
-
-            # Append to the list
-            distance_pixel_center_downstream_list.append(
-                distance_pixel_center_downstream_point
-            )
-
-        # Convert to array for easier manipulation later
-        distance_pixel_center_downstream = np.array(
-            distance_pixel_center_downstream_list
-        )
-
-        return distance_pixel_center_downstream
-
-    def sort_values_based_on_downstream_distance(
-        self,
-        distance_pixel_center_downstream: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """
-        Sort out values based on downstream distance along the drainage line
-
-        Parameters
-        ----------
-        distance_pixel_center_downstream : np.ndarray
-            Sorted distances between pixel centers to downstream along the drainage line
-
-        Returns
-        -------
-        distance_pixel_center_downstream_sorted : np.ndarray
-            Sorted distances between pixel centers to downstream along the drainage line
-        drainage_new_elevations_sorted : np.ndarray
-            Sorted drainage new elevations
-        """
-        # Get downstream indices
-        downstream_indices = np.argsort(distance_pixel_center_downstream)
-
-        # Sort out distances based on downstream indices (basically reverse)
-        distance_pixel_center_downstream_sorted = distance_pixel_center_downstream[downstream_indices]
-
-        # Sort out drainage elevations based on downstream indices
-        drainage_new_elevations_sorted = self.drainage_new_elevation[downstream_indices]
-
-        return distance_pixel_center_downstream_sorted, drainage_new_elevations_sorted
-
-    def generate_drainage_width_mask(self) -> xr.DataArray:
-        """
-        Generate drainage width mask - only two boolean values - True for drainage width and False for not
-
-        Returns
-        -------
-        drainage_width_mask : xr.DataArray
-            Mask of drainage width with True for drainage width and False for not
-        """
-        # Generate drainage width
-        drainage_width = self.drainage_geom.buffer(
-            self.drainage_surface_width,
-            cap_style=2
-        )
-
-        # Generate drainage width mask by rasterising drainage width
-        drainage_width_mask = rasterize(
-            [(drainage_width, 1)],  # Fill drainage width with 1 in the raster
-            out_shape=self.dem.shape,
-            transform=self.dem.rio.transform(),
-            fill=0,  # If not drainage, then 0
-            dtype='uint8'
-        ).astype(bool)
-
-        return drainage_width_mask
-
-    def generate_distance_drainage_width(
-        self,
-        drainage_width_horizontal_index: int,
-        drainage_width_vertical_index: int
-    ) -> tuple[float, float]:
-        """
-        Generate distance drainage width to drainage line and downstream
-
-        Parameters
-        ----------
-        drainage_width_horizontal_index : int
-            Horizontal index of drainage width
-        drainage_width_vertical_index : int
-            Vertical index of drainage width
-
-        Returns
-        -------
-        distance_drainage_width_to_drainage_line : float
-            Distance between drainage width and drainage line
-        distance_drainage_width_to_downstream : float
-            Distane between drainage width and downstream
-        """
-        # Convert DEM indices of drainage width points into actual coordinates
-        drainage_width_coords = self.dem.rio.transform() * (
-            drainage_width_vertical_index + 0.5,
-            drainage_width_horizontal_index + 0.5
-        )
-
-        # Generate drainage width points based on actual coordinates
-        drainage_width_point = Point(drainage_width_coords)
-
-        # Generate distances between points and the drainage line
-        distance_drainage_width_to_drainage_line = self.drainage_geom.distance(
-            drainage_width_point
-        )
-
-        # Generate downstream distances for these drainage width points
-        distance_drainage_width_to_downstream = self.drainage_geom.project(
-            drainage_width_point
-        )
-
-        return distance_drainage_width_to_drainage_line, distance_drainage_width_to_downstream
-
-    @staticmethod
-    def generate_drainage_width_elevation(
-        distance_pixel_center_downstream_sorted: np.ndarray,
-        distance_drainage_width_to_downstream: float,
-        drainage_new_elevations_sorted: np.ndarray
-    ) -> float:
-        """
-
-        Parameters
-        ----------
-        distance_pixel_center_downstream_sorted : np.ndarray
-            Sorted distances between pixel centers to downstream along the drainage line
-        distance_drainage_width_to_downstream : float
-            Distane between drainage width and downstream
-        drainage_new_elevations_sorted : np.ndarray
-            New drainage elevation that was sorted
-
-        Returns
-        -------
-        drainage_width_elevation : float
-            Elevation of drainage width
-        """
-        # Search through the distances between pixel centers and downstream
-        # along the drainage line to see where this drainage width is
-        drainage_width_index = np.searchsorted(
-            distance_pixel_center_downstream_sorted,
-            distance_drainage_width_to_downstream
-        )
-
-        # In case it is the last point the np.searchsorted could not catch the index
-        drainage_width_index = np.clip(
-            drainage_width_index,
-            0,
-            len(drainage_new_elevations_sorted) - 1
-        )
-
-        # Get drainage width elevation based on the drainage line elevations
-        # float() here is to make sure it is not understood as np.ndarray
-        drainage_width_elevation = float(drainage_new_elevations_sorted[drainage_width_index])
-
-        return drainage_width_elevation
-
-    def generate_drainage_slope(
-            self,
-            distance_drainage_width_to_drainage_line: float
-    ) -> float:
-        """
-        Generate drainage slope
-
-        Parameters
-        ----------
-        distance_drainage_width_to_drainage_line : float
-            Distance between drainage width and drainage line
-
-        Returns
-        -------
-        slope_beyond_base_width : float
-            Drainage slope
-        """
-        # Get differences between one side of drainage surface width and base width
-        diff_surface_vs_base = distance_drainage_width_to_drainage_line - self.drainage_base_width
-
-        # Generate distance beyond the base
-        # If < 0, still within the base width, if > 0, beyond the base width
-        distance_beyond_base = max(
-            0.0,
-            diff_surface_vs_base
-        )
-
-        # Generate slope for distance beyond base width
-        slope_beyond_base_width = self.drainage_slope * distance_beyond_base
-
-        return slope_beyond_base_width
-
-    def generate_drainage_elevation_with_geometry(
-        self,
-        drainage_width_elevations: float,
-        slope_beyond_base_width: float,
-        drainage_width_horizontal_index: int,
-        drainage_width_vertical_index: int
-    ) -> float:
-        """
-        Generate new drainage elevation with geometry information
-
-        Parameters
-        ----------
-        drainage_width_elevations: float
-            Elevation of drainage width
-        slope_beyond_base_width : float
-            Drainage slope
-        drainage_width_horizontal_index : int
-            Horizontal index of drainage width
-        drainage_width_vertical_index : int
-            Vertical index of drainage width
-
-        Returns
-        -------
-        drainage_new_elevations_with_geometry : float
-            New drainage elevation with geometry information
-        """
-        # Generate new elevation with geometry
-        drainage_new_elevations_with_geometry = drainage_width_elevations + slope_beyond_base_width
-
-        # Compare with current elevations, if the current is already low, choose it,
-        # no need for changing
-        drainage_new_elevations_with_geometry_minimum = min(
-            drainage_new_elevations_with_geometry,
-            float(self.dem.values[
-                drainage_width_horizontal_index,
-                drainage_width_vertical_index
-            ])
-        )
-
-        return drainage_new_elevations_with_geometry_minimum
-
-    def generate_dem_with_drainage_geometry(self) -> xr.DataArray:
-        """
-        Generate DEM with full drainage geometries - width, base, and slope.
-
-        Returns
-        -------
-        new_dem_geometry : xr.DataArray
-            New DEM with drainage geometry
-        """
-        # Generate drainage width mask
-        drainage_width_mask = self.generate_drainage_width_mask()
-
-        # Generate distance between pixel center to downstream
-        distance_pixel_center_downstream = self.generate_distance_pixel_centre_downstream()
-
-        # Generate sorted distance pixel-downstream and new drainage elevation
-        (distance_pixel_center_downstream_sorted,
-         drainage_new_elevations_sorted) = self.sort_values_based_on_downstream_distance(
-            distance_pixel_center_downstream
-        )
-
-        # Copy new DEM for easier manipulation
-        new_dem_geometry = self.new_dem.copy(deep=True)
-
-        # Get indices of drainage width within DEM - True for drainage width, False for not
-        drainage_width_horizontal, drainage_width_vertical = np.where(drainage_width_mask)
-
-        # Generate drainage geometry through a loop
-        for h, v in zip(drainage_width_horizontal, drainage_width_vertical):
-            # Generate distances between points and the drainage line and downstream
-            (distance_drainage_width_to_drainage_line,
-             distance_drainage_width_to_downstream) = self.generate_distance_drainage_width(h, v)
-
-            # Get drainage width elevation
-            drainage_width_elevation = self.generate_drainage_width_elevation(
-                distance_pixel_center_downstream_sorted,
-                distance_drainage_width_to_downstream,
-                drainage_new_elevations_sorted
-            )
-
-            # Generate slope for distance beyond base width
-            slope_beyond_base_width = self.generate_drainage_slope(distance_drainage_width_to_drainage_line)
-
-            # Assign new drainage values with geoemtry information to DEM
-            new_dem_geometry.values[h, v] = self.generate_drainage_elevation_with_geometry(
-                drainage_width_elevation,
-                slope_beyond_base_width,
-                h, v
-            )
-
-        return new_dem_geometry
-
-
-class DrainageInfo(NamedTuple):
+class DrainageChannel:
     """
-    Tuple to contain results of generating DEM with drainage elevation.
+    Burn drainage channel polylines into a digital elevation model (DEM).
+
+    Each channel line is converted to a 3D line whose start and end elevations are sampled from the DEM,
+    with intermediate vertices linearly interpolated by distance along the line.
+    The resulting channel bed is then rasterized and used to lower the DEM wherever a channel passes through a cell at
+    a higher elevation than its bed.
 
     Attributes
     ----------
-    horizontal_drainage_indices : np.ndarray
-        Horizontal indices of drainage width
-    vertical_drainage_indices : np.ndarray
-        Vertical indices of drainage width
-    drainage_elevation : np.ndarray
-        Drainage elevation along the drainage line
-    new_dem : xr.DataArray
-        New DEM with drainage elevation
+    dem : xarray.DataArray
+        Digital elevation model to burn channels into.
+    channel_lines : geopandas.GeoDataFrame
+        Drainage channels represented as LineString geometries.
     """
 
-    horizontal_drainage_indices: np.ndarray
-    vertical_drainage_indices: np.ndarray
-    drainage_elevation: np.ndarray
-    new_dem: xr.DataArray
-
-
-class GenerateFullDrainage:
-    """This class is to generate drainage with elevation and geometry"""
-
-    def __init__(
-        self,
-        dem: xr.DataArray,
-        vector: pd.Series | None = None
-    ) -> None:
+    def __init__(self, dem: xr.DataArray, channel_lines: gpd.GeoDataFrame) -> None:
         """
-        Generate drainage with elevation and geometry
-
         Parameters
         ----------
-        dem : xr.DataArray
-            DEM that needs modification
-        vector : pd.Series | None = None
-            Vectors that represent centerline of drainage
+        dem : xarray.DataArray
+            Digital elevation model to burn channels into.
+        channel_lines : geopandas.GeoDataFrame
+            Drainage channels represented as LineString geometries. Only
+            the start and end point elevations of each line are sampled
+            from the DEM; intermediate vertices are interpolated.
         """
         self.dem = dem
-        self.vector = vector
+        self.channel_lines = channel_lines
 
-    def generate_dem_with_drainage_elevation(self) -> DrainageInfo:
-        """
-        Generate DEM with drainage elevation
+    def burn_channels_into_dem(self) -> xr.DataArray:
+        """Lower the DEM so each channel follows its interpolated bed profile.
 
         Returns
         -------
-        horizontal_drainage_indices : np.ndarray
-            Horizontal indices of drainage width
-        vertical_drainage_indices : np.ndarray
-            Vertical indices of drainage width
-        drainage_elevation : np.ndarray
-            Drainage elevation along the drainage line
-        new_dem : xr.DataArray
-            New DEM with drainage elevation
+        xarray.DataArray
+            A copy of ``self.dem`` where every cell a channel line passes through has been lowered (if necessary) to
+            match the interpolated channel bed elevation.
+            Cells not touched by any channel are left unchanged.
         """
-        # Set up function to generate DEM with drainage
-        generate_dem_with_drainage = GenerateDrainageElevation(
-            self.vector,
-            self.dem,
-            self.vector['value']
-        )
+        return self.dem - self._compute_channel_depth_raster()
 
-        # Generate new DEM with drainage and drainage elevation
-        drainage_elevation, new_dem = generate_dem_with_drainage.generate_elevation_for_drainage_line()
+    def _compute_channel_depth_raster(self) -> xr.DataArray:
+        """Build a raster of elevation to subtract from the DEM for all channels.
 
-        # Generate indices of drainage
-        (horizontal_drainage_indices,
-         vertical_drainage_indices) = generate_dem_with_drainage.generate_ordinal_number_of_pixels()
+        A depth raster (`dem - channel_bed`, clipped to be non-negative, zero where a channel does not cover a cell) is
+        computed for every channel feature.
+        The per-feature rasters are combined with an element-wise maximum so that, where channels overlap,
+        the deepest incision wins.
 
-        return DrainageInfo(
-            horizontal_drainage_indices,
-            vertical_drainage_indices,
-            drainage_elevation,
-            new_dem)
+        Returns
+        -------
+        xarray.DataArray
+            Raster, on the same grid as `self.dem`, of elevation values to subtract from the DEM.
+            Zero where no channel is present.
+        """
+        channel_lines_3d = self._get_channel_lines_as_3d()
 
-    def generate_dem_with_drainage_geometry(
-        self,
-        horizontal_drainage_indices: np.ndarray,
-        vertical_drainage_indices: np.ndarray,
-        drainage_elevation: np.ndarray,
-        new_dem: xr.DataArray
+        depth = xr.zeros_like(self.dem, dtype=float)
+        for geometry in channel_lines_3d.geometry:
+            feature_depth = self._get_channel_feature_dem_depth(geometry)
+            depth = xr.apply_ufunc(np.fmax, depth, feature_depth)
+
+        return depth
+
+    def _get_channel_feature_dem_depth(
+        self, line_3d: shapely.LineString
     ) -> xr.DataArray:
         """
-        Generate DEM with drainage and geometry info
+        Rasterize a single 3D channel line into a channel depth DEM.
+
+        The line is split into its individual segments, each rasterized using the mean Z value of its two endpoints.
+        The resulting channel bed raster is then compared against the DEM to work out how much elevation must be removed
+        from each covered cell.
 
         Parameters
         ----------
-        horizontal_drainage_indices : np.ndarray
-            Horizontal indices of drainage width
-        vertical_drainage_indices : np.ndarray
-            Vertical indices of drainage width
-        drainage_elevation : np.ndarray
-            Drainage elevation along the drainage line
-        new_dem : xr.DataArray
-            New DEM with drainage elevation
+        line_3d : shapely.LineString
+            A single line with a Z value at every vertex, describing the channel bed elevation along its length.
 
         Returns
         -------
-        dem_drainage_geometry : xr.DataArray
-            DEM with drainage geometry information
+        xarray.DataArray
+            Raster, on the same grid as `self.dem`, of elevation to subtract from the DEM for this feature.
+            Zero where the feature does not cover a cell.
         """
-        # Set up function to modify drainage geometry - surface width, base width, and slope
-        generate_dem_with_drainage_geometry = GenerateDrainageGeometry(
-            self.dem,
-            new_dem,
-            self.vector,
-            horizontal_drainage_indices,
-            vertical_drainage_indices,
-            drainage_elevation,
-            self.vector['b_width'],
-            self.vector['s_width'],
-            self.vector['slope']
+        coords = np.asarray(line_3d.coords)
+        segments = [
+            (
+                shapely.LineString(coords[i: i + 2, :2]),
+                float(coords[i: i + 2, 2].mean()),
+            )
+            for i in range(len(coords) - 1)
+        ]
+
+        channel_elevation = rasterio.features.rasterize(
+            segments,
+            out_shape=self.dem.shape,
+            transform=self.dem.rio.transform(),
+            fill=np.nan,
+            all_touched=True,
+            dtype="float64",
+        )
+        channel_elevation_da = xr.DataArray(
+            channel_elevation, coords=self.dem.coords, dims=self.dem.dims
         )
 
-        # Generate DEM with drainage geometry
-        dem_drainage_geometry = generate_dem_with_drainage_geometry.generate_dem_with_drainage_geometry()
+        depth = (self.dem - channel_elevation_da).clip(min=0)
+        return depth.fillna(0)
 
-        return dem_drainage_geometry
+    @staticmethod
+    def _get_xyz_values_at_points(dem: xr.DataArray, gs: gpd.GeoSeries) -> gpd.GeoSeries:
+        """Sample DEM elevation at a set of 2D points.
 
-    def generate_full_drainage(self) -> xr.DataArray:
-        """
-        Generate drainage with full information
+        Parameters
+        ----------
+        dem : xarray.DataArray
+            DEM to sample, with ``x``/``y`` coordinates.
+        gs : geopandas.GeoSeries
+            Points (2D) at which to sample the DEM.
 
         Returns
         -------
-        dem_full_drainage : xr.DataArray
-            DEM with full drainage information
+        geopandas.GeoSeries
+            3D points, in the same order and with the same index as
+            ``gs``, with ``z`` set to the nearest DEM value at each
+            point's x/y location.
         """
-        # Generate drainage information
-        (horizontal_drainage_indices,
-         vertical_drainage_indices,
-         drainage_elevation,
-         new_dem) = self.generate_dem_with_drainage_elevation()
+        x_coords = xr.DataArray(gs.x.to_numpy(), dims="points")
+        y_coords = xr.DataArray(gs.y.to_numpy(), dims="points")
+        z_coords = dem.sel(x=x_coords, y=y_coords, method="nearest")
 
-        # Generate DEM with full drainage information
-        dem_full_drainage = self.generate_dem_with_drainage_geometry(
-            horizontal_drainage_indices,
-            vertical_drainage_indices,
-            drainage_elevation,
-            new_dem
+        xyz_gs = gpd.GeoSeries.from_xy(
+            x_coords.values,
+            y_coords.values,
+            z=z_coords.values,
+            index=gs.index,
+            crs=dem.rio.crs,
         )
+        return xyz_gs
 
-        return dem_full_drainage
+    def _get_channel_lines_as_3d(self) -> gpd.GeoSeries:
+        """Build 3D versions of the channel lines with interpolated bed elevations.
+
+        Each line's start and end elevations are sampled from the DEM.
+        Every intermediate vertex is then assigned a Z value by linearly
+        interpolating between the start and end elevation, proportional
+        to the vertex's distance along the line.
+
+        Returns
+        -------
+        geopandas.GeoSeries
+            3D LineString geometries, one per input channel, with a Z
+            value at every vertex describing the channel bed profile.
+        """
+        channels = self.channel_lines.copy(deep=True)
+        channels = channels.to_crs(self.dem.rio.crs)
+
+        start_points = gpd.GeoSeries(
+            shapely.get_point(channels.geometry, 0), index=channels.index, crs=channels.crs
+        )
+        end_points = gpd.GeoSeries(
+            shapely.get_point(channels.geometry, -1), index=channels.index, crs=channels.crs
+        )
+        start_z = self._get_xyz_values_at_points(self.dem, start_points).z.to_numpy()
+        end_z = self._get_xyz_values_at_points(self.dem, end_points).z.to_numpy()
+
+        lines_3d = [
+            self._interpolate_line_z(geometry, start, end)
+            for geometry, start, end in zip(channels.geometry, start_z, end_z)
+        ]
+
+        return gpd.GeoSeries(lines_3d, index=channels.index, crs=channels.crs)
+
+    @staticmethod
+    def _interpolate_line_z(
+        line: shapely.LineString, start_z: float, end_z: float
+    ) -> shapely.LineString:
+        """Linearly interpolate Z values along a line's vertices.
+
+        Parameters
+        ----------
+        line : shapely.LineString
+            2D line to convert to 3D.
+        start_z : float
+            Elevation at the line's first vertex.
+        end_z : float
+            Elevation at the line's last vertex.
+
+        Returns
+        -------
+        shapely.LineString
+            3D line with the same x/y vertices as ``line``, and Z values
+            interpolated linearly by distance along the line between
+            ``start_z`` and ``end_z``.
+        """
+        coords = np.asarray(line.coords)
+        segment_lengths = np.hypot(*np.diff(coords, axis=0).T)
+        cumulative_distance = np.insert(np.cumsum(segment_lengths), 0, 0.0)
+        length = cumulative_distance[-1]
+
+        if length > 0:
+            fraction = cumulative_distance / length
+        else:
+            fraction = np.zeros_like(cumulative_distance)
+        z = start_z + fraction * (end_z - start_z)
+
+        return shapely.LineString(np.column_stack([coords, z]))

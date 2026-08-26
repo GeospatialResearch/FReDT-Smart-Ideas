@@ -9,7 +9,7 @@
     {
       "type": "wps",
       "name": "Whirinaki 1999 Drainage",
-      "description": "Model a land cover change scenario that will impact the flood scenario",
+      "description": "Model a channel scenario that will impact the flood scenario. <img src=\"https://www.fao.org/fishery/docs/CDrom/FAO_Training/FAO_Training/General/x6708e/GR000888.JPG\">",
       "url": "$BACKEND_URL/wps",
       "identifier": "whirinaki1999Drainage"
     },
