@@ -849,7 +849,7 @@ class InjectionPointsFloodModelGenerator:
 
         # Read rives' data from catchment model output
         with xr.open_dataset(rivers_data_path) as rivers_data:
-            rivers_flow = rivers_data['q_river']
+            rivers_flow = rivers_data['q_av_river']
 
         return rivers_flow
 

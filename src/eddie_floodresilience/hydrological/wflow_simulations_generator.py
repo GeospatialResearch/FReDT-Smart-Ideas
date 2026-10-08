@@ -27,6 +27,7 @@ import geopandas as gpd
 
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
+from .wflow_gw_parameters_generator import GroundwaterParameterGenerator
 from ..solutions.nature.landcover import LandcoverClassDataset
 
 log = logging.getLogger(__name__)
@@ -187,38 +188,38 @@ class WflowSimulationsGenerator:
             ]
 
         else:
-            # Get subbasin river outlet
-            subbasin_river_outlet = gpd.read_file(
-                self.scenario_and_id_folder.parent / 'terrain/river_outlet.shp'
-            )
-
-            # Get subbasin river outlet coordinates
-            subbasin_river_outlet_coords = list(
-                subbasin_river_outlet.geometry.iloc[0].coords
-            )[0]
-
-            # Make sure it is in list style
-            subbasin_river_outlet_coords_list = [
-                subbasin_river_outlet_coords[0], subbasin_river_outlet_coords[1]
-            ]
-
-            # Set up region information
-            region_information = str({
-                "subbasin": subbasin_river_outlet_coords_list,
-                "strord": 4,
-                "bbox": self.flood_aoi_boundary
-            })
-
-            # Force override is turned off for performance, so we must manually remove the run_default dir if required.
-            run_default_dir = output_folder_name / "run_default"
-            if run_default_dir.exists():
-                shutil.rmtree(run_default_dir)
+            # # Get subbasin river outlet
+            # subbasin_river_outlet = gpd.read_file(
+            #     self.scenario_and_id_folder.parent / 'terrain/river_outlet.shp'
+            # )
+            #
+            # # Get subbasin river outlet coordinates
+            # subbasin_river_outlet_coords = list(
+            #     subbasin_river_outlet.geometry.iloc[0].coords
+            # )[0]
+            #
+            # # Make sure it is in list style
+            # subbasin_river_outlet_coords_list = [
+            #     subbasin_river_outlet_coords[0], subbasin_river_outlet_coords[1]
+            # ]
+            #
+            # # Set up region information
+            # region_information = str({
+            #     "subbasin": subbasin_river_outlet_coords_list,
+            #     "strord": 4,
+            #     "bbox": self.flood_aoi_boundary
+            # })
+            #
+            # # Force override is turned off for performance, so we must manually remove the run_default dir if required.
+            # run_default_dir = output_folder_name / "run_default"
+            # if run_default_dir.exists():
+            #     shutil.rmtree(run_default_dir)
 
             # Set up command for preprocessing
             preprocessing_command_list = [
-                "hydromt", "build", "wflow",
+                "hydromt", "build", "wflow_sbm",
                 str(output_folder_name),
-                "-r", region_information,
+                # "-r", region_information,
                 "-i", str(wflow_build_file),
                 "-d", str(data_catalog_file),
                 "-vv"
@@ -229,6 +230,25 @@ class WflowSimulationsGenerator:
             preprocessing_command_list,
             check=True
         )
+
+    def gw_parameters_command(self):
+        """Set up gw parameters for wflow simulation"""
+
+        # Set up settings to generate groundwater parameters
+        gw_paras = GroundwaterParameterGenerator(
+            path=self.hydrological_process_path / "wflow_test_full",
+            input_name="staticmaps.nc",
+            output_name="staticmaps_new_method_002_riverdepth_002_other_parameters_002.nc",
+            conductivity_divisor=50.0,
+            riverbed_thickness_scaled=60.0,
+            b_exponent=0.5,
+            min_depth=1.0,
+            max_depth=2.5,
+            gwf_f_multiplier=110
+        )
+
+        # Generate groundwater parameters
+        gw_paras.run()
 
     def simulation_command(self) -> None:
         """Set up simulation command and generate simulation"""
@@ -258,11 +278,14 @@ class WflowSimulationsGenerator:
 
     def wflow_model_simulations_pipeline(self) -> None:
         """Generate wflow model simulation"""
-        # Generate files for preprocessing
-        self.files_for_preprocessing_generator()
+        # # Generate files for preprocessing
+        # self.files_for_preprocessing_generator()
 
-        # Preprocessing data for wflow model
-        self.preprocessing_command()
+        # # Preprocess data for wflow model
+        # self.preprocessing_command()
+
+        # Generate groundwater parameters
+        self.gw_parameters_command()
 
         # Generate wflow model simulation
         self.simulation_command()

@@ -19,6 +19,21 @@ from src.eddie_floodresilience.solutions.nature.landcover import LandcoverClassD
 log = logging.getLogger(__name__)
 
 
+class _IndentedDumper(yaml.SafeDumper):
+    """Indent list items under their parent key, keep short lists inline"""
+
+    def increase_indent(self, flow=False, indentless=False):
+        return super().increase_indent(flow, False)
+
+
+def _represent_list(dumper, data):
+    inline = all(not isinstance(item, (dict, list)) for item in data)
+    return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=inline)
+
+
+_IndentedDumper.add_representer(list, _represent_list)
+
+
 class WflowBuildGenerator:
     """
     This class is to generate wflow_build.yml for preprocessing data for wflow
@@ -123,10 +138,12 @@ class WflowBuildGenerator:
                 # Generate configuration section
                 config = {
                     "setup_config": {
-                        "starttime": self.start_time,
-                        "endtime": self.end_time,
-                        "timestepsecs": 3600,
-                        "input.path_forcing": str(self.forcing_path)
+                        "data": {
+                            "starttime": self.start_time,
+                            "endtime": self.end_time,
+                            "timestepsecs": 3600,
+                            "input.path_forcing": str(self.forcing_path)
+                        }
                     }
                 }
             else:
@@ -136,37 +153,81 @@ class WflowBuildGenerator:
                 # Generate configuration section
                 config = {
                     "setup_config": {
-                        "starttime": self.start_time,
-                        "endtime": self.end_time,
-                        "timestepsecs": 3600,
-                        "input.path_forcing": str(forcing_path)
+                        "data": {
+                            "starttime": self.start_time,
+                            "endtime": self.end_time,
+                            "timestepsecs": 3600,
+                            "input.path_forcing": str(forcing_path)
+                        }
                     }
                 }
 
         else:
+            # Generate data section
+            data = {
+                # Path parameter
+                "dir_output": "run_default",
+
+                # Time parameters
+                "time.starttime": self.start_time,
+                "time.endtime": self.end_time,
+                "time.timestepsecs": 3600,
+
+                # Model parameters
+                "model.type": "sbm_gwf",
+                "model.snow__flag": False,
+                "model.snow_gravitational_transport__flag": False,
+                "model.river_kinematic_wave__time_step": 900,
+                "model.land_kinematic_wave__time_step": 3600,
+                "model.land_streamorder__min_count": 2,
+                "model.river_streamorder__min_count": 3,
+                "model.conductivity_profile": "exponential",
+                "water_mass_balance__flag": True,
+
+                # Forcing parameters
+                "input.path_forcing": input_path_forcing,
+                "input.forcing.atmosphere_water__precipitation_volume_flux": "precip",
+                "input.forcing.land_surface_water__potential_evaporation_volume_flux": "pet",
+                "input.forcing.atmosphere_air__temperature": "temp",
+
+                # Groundwater parameters
+                # Spatial variables
+                "input.static.subsurface_surface_water__horizontal_saturated_hydraulic_conductivity": "conductivity",
+                "input.static.subsurface_water__specific_yield": "specific_yield",
+                "input.static.river_water__infiltration_conductance": "infilt_cond",
+                "input.static.river_water__exfiltration_conductance": "exfilt_cond",
+                "input.static.river_bottom__elevation": "river_bottom",
+                "input.static.subsurface__horizontal_saturated_hydraulic_conductivity_scale_parameter": "gwf_f",
+                # Constant variables
+                "input.static.soil_layer_water__vertical_saturated_hydraulic_conductivity_factor.value":
+                    [0.03, 1.0, 1.0, 1.0, 1.0, 1.0],
+                "input.static.soil_water_saturated_zone_top__capillary_rise_max_water_table_depth.value": 4000.0,
+                "input.static.soil_water_saturated_zone_top__capillary_rise_averianov_exponent.value": 1,
+
+                # State parameters
+                "state.variables.vegetation_canopy_water__depth": "canopystorage",
+                "state.variables.soil_water_saturated_zone__depth": "satwaterdepth",
+                "state.variables.soil_layer_water_unsaturated_zone__depth": "ustorelayerdepth",
+                "state.variables.soil_surface__temperature": "tsoil",
+                "state.variables.snowpack_dry_snow__leq_depth": "snow",
+                "state.variables.snowpack_liquid_water__depth": "snowwater",
+                "state.variables.land_surface_water__instantaneous_volume_flow_rate": "q_land",
+                "state.variables.land_surface_water__depth": "h_land",
+                "state.variables.river_water__instantaneous_volume_flow_rate": "q_river",
+                "state.variables.river_water__depth": "h_river",
+                "state.variables.subsurface_water__hydraulic_head": "head",
+
+                # Output parameters
+                "output.netcdf_grid.path": "output.nc",
+                "output.netcdf_grid.compressionlevel": 0,
+                "output.netcdf_grid.variables.river_water__volume_flow_rate": "q_av_river",
+                "output.path": "output.nc"
+            }
 
             # Generate configuration section
             config = {
                 "setup_config": {
-                    "starttime": self.start_time,
-                    "endtime": self.end_time,
-                    "timestepsecs": 3600,
-                    "input.path_forcing": input_path_forcing,
-                    # Extra parameters
-                    "water_mass_balance__flag": True,
-                    "output.path": "output.nc",
-                    "output.compressionlevel": 1,
-                    "output.lateral.river.q": "q_river",
-
-                    "model.masswasting": False,
-                    "model.snow": False,
-                    "model.reinit": True,
-                    "model.sizeinmetres": True,
-                    "model.kin_wave_iteration": False,
-                    "model.kw_river_tstep": 600,
-                    "model.kw_land_tstep": 3600,
-                    "model.min_streamorder_land": 2,
-                    "model.min_streamorder_river": 3
+                    "data": data
                 }
             }
 
@@ -181,13 +242,36 @@ class WflowBuildGenerator:
         basemaps : dict
             A dictionary that contains basemaps' section
         """
+        # Get subbasin river outlet
+        subbasin_river_outlet = gpd.read_file(
+            self.scenario_and_id_folder.parent / "terrain/river_outlet.shp"
+        )
+
+        # Get subbasin river outlet coordinates
+        subbasin_river_outlet_coords = list(
+            subbasin_river_outlet.geometry.iloc[0].coords
+        )[0]
+
+        # Make sure it is in list style (plain floats so the YAML stays clean)
+        subbasin_river_outlet_coords_list = [
+            float(subbasin_river_outlet_coords[0]), float(subbasin_river_outlet_coords[1])
+        ]
+
         # Generate basemaps section
         basemaps = {
             "setup_basemaps": {
                 "hydrography_fn": "merit_hydrox",
-                "basin_index_fn": "merit_hydro_index",
                 "upscale_method": "ihu",
-                "res": self.resolution
+                "res": self.resolution,
+                "region": {
+                    "subbasin": subbasin_river_outlet_coords_list,
+                    "strord": 4,
+                },
+                "output_names": {
+                    "basin__local_drain_direction": "wflow_ldd",
+                    "subbasin_location__count": "wflow_subcatch",
+                    "land_surface__slope": "Slope",
+                },
             }
         }
 
@@ -214,17 +298,42 @@ class WflowBuildGenerator:
             "setup_rivers": {
                 "hydrography_fn": "merit_hydrox",
                 "river_geom_fn": "hydro_rivers_lin",
-                "river_upa": river_information['river_upa'],  # whirinaki: 0.1, mataura: 1
+                "river_upa": river_information["river_upa"],
                 "rivdph_method": "manning",
-                "min_rivdph": river_information['min_rivdph'],  # mataura: 1
-                "min_rivwth": river_information['min_rivwth'],  # whirinaki: 30, mataura: 0.05
+                "min_rivdph": river_information["min_rivdph"],
+                "min_rivwth": river_information["min_rivwth"],
                 "slope_len": self.resolution * 3,
                 "smooth_len": self.resolution * 5,
-                "river_routing": "kinematic-wave"
+                "river_routing": "kinematic_wave",
+                "output_names": {
+                    "river_location__mask": "wflow_river",
+                    "river__length": "wflow_riverlength",
+                    "river__width": "wflow_riverwidth",
+                    "river_bank_water__depth": "RiverDepth",
+                    "river__slope": "RiverSlope",
+                },
             }
         }
 
         return rivers
+
+    def river_roughness_section(self) -> dict:
+        """
+        Write out setup_river_roughness step
+
+        Returns
+        -------
+        river_roughness_section : dict
+            A dictionary that contains river roughness' section
+        """
+        # Generate river roughness section
+        river_roughness_section = {
+            "setup_river_roughness": {
+                "output_name": "N_River"
+            }
+        }
+
+        return river_roughness_section
 
     def lakes_section(self) -> dict:
         """
@@ -237,8 +346,8 @@ class WflowBuildGenerator:
         """
         # Generate lakes section
         lakes = {
-            "setup_lakes": {
-                "lakes_fn": "hydro_lakes",
+            "setup_reservoirs_no_control": {
+                "reservoirs_fn": "hydro_lakes",
                 "min_area": 10.0
             }
         }
@@ -292,7 +401,8 @@ class WflowBuildGenerator:
                 "lulc_fn": "landcover",
                 "lulc_sampling_method": "any",
                 "lulc_zero_classes": lulc_zero_classes,
-                "buffer": 2
+                "buffer": 2,
+                "output_name": "LAI",
             }
         }
 
@@ -311,7 +421,16 @@ class WflowBuildGenerator:
         soil = {
             "setup_soilmaps": {
                 "soil_fn": "soilgrids_2020",
-                "ptf_ksatver": "brakensiek"
+                "ptf_ksatver": "brakensiek",
+                "wflow_thicknesslayers": [50, 100, 150, 250, 350],
+                "output_names": {
+                    "soil_water__saturated_volume_fraction": "thetaS",
+                    "soil_water__residual_volume_fraction": "thetaR",
+                    "soil_surface_water__vertical_saturated_hydraulic_conductivity": "KsatVer",
+                    "soil__thickness": "SoilThickness",
+                    "soil_water__vertical_saturated_hydraulic_conductivity_scale_parameter": "f",
+                    "soil_layer_water__brooks_corey_exponent": "c",
+                },
             }
         }
 
@@ -390,26 +509,30 @@ class WflowBuildGenerator:
         # Read Json file to collect some site information
         river_path = self.hydromt_path / f"river_data/{self.river_name}/{self.river_name}.json"
         with open(river_path, "r", encoding="utf-8") as f:
-            constant_parameters_for_site = json.load(f)['setup_constant_pars']
+            site = json.load(f)['setup_constant_pars']
 
         # Generate constant parameters
         constant_parameters = {
             "setup_constant_pars": {
-                "KsatHorFrac": constant_parameters_for_site['KsatHorFrac'],
-                "Cfmax": 3.75653,
-                "cf_soil": 0.038,
-                "EoverR": 0.11,
-                "InfiltCapPath": constant_parameters_for_site['InfiltCapPath'],
-                "InfiltCapSoil": constant_parameters_for_site['InfiltCapSoil'],  # whirinaki: 1, mataura:300
-                "MaxLeakage": 0,
-                "rootdistpar": -500,
-                "TT": 0,
-                "TTI": 2,
-                "TTM": 0,
-                "WHC": 0.1,
-                "G_Cfmax": 5.3,
-                "G_SIfrac": 0.002,
-                "G_TT": 1.3,
+                "subsurface_water__horizontal_to_vertical_saturated_hydraulic_conductivity_ratio": site["KsatHorFrac"],
+                "snowpack__degree_day_coefficient": 3.75653,
+                "soil_surface_water__infiltration_reduction_parameter": 0.038,
+                "vegetation_canopy_water__mean_evaporation_to_mean_precipitation_ratio": 0.11,
+                "compacted_soil_surface_water__infiltration_capacity": site["InfiltCapPath"],
+                "soil_water_saturated_zone_bottom__max_leakage_volume_flux": 1,
+                "soil_wet_root__sigmoid_function_shape_parameter": -500,
+                "atmosphere_air__snowfall_temperature_threshold": 0,
+                "atmosphere_air__snowfall_temperature_interval": 2,
+                "snowpack__melting_temperature_threshold": 0,
+                "snowpack__liquid_water_holding_capacity": 0.1,
+                "glacier_ice__degree_day_coefficient": 5.3,
+                "glacier_firn_accumulation__snowpack_dry_snow_leq_depth_fraction": 0.002,
+                "glacier_ice__melting_temperature_threshold": 1.3,
+                "vegetation_root__feddes_critical_pressure_head_h1": 0.0,
+                "vegetation_root__feddes_critical_pressure_head_h2": -100.0,
+                "vegetation_root__feddes_critical_pressure_head_h3_high": -400.0,
+                "vegetation_root__feddes_critical_pressure_head_h3_low": -1000.0,
+                "vegetation_root__feddes_critical_pressure_head_h4": -16000.0,
             }
         }
 
@@ -428,17 +551,17 @@ class WflowBuildGenerator:
         if self.polygons is not None:
             # Generate "write" section
             write_section = {
-                "write_grid": {},
-                "write_geoms": {},
-                "write_config": {}
+                "staticmaps.write": {},
+                "geoms.write": {},
+                "config.write": {}
             }
         else:
             # Generate "write" section
             write_section = {
-                "write_forcing": {"freq_out": "D"},
-                "write_grid": {},
-                "write_geoms": {},
-                "write_config": {}
+                "forcing.write": {"output_frequency": "D"},  # leave out when polygons is not None
+                "staticmaps.write": {},
+                "geoms.write": {},
+                "config.write": {}
             }
 
         return write_section
@@ -470,6 +593,7 @@ class WflowBuildGenerator:
                     self.config_section(),
                     self.basemaps_section(),
                     self.rivers_section(),
+                    self.river_roughness_section(),
                     self.lakes_section(),
                     self.landcover_section(),
                     self.lai_section(),
@@ -482,6 +606,7 @@ class WflowBuildGenerator:
                     self.config_section(),
                     self.basemaps_section(),
                     self.rivers_section(),
+                    self.river_roughness_section(),
                     self.lakes_section(),
                     self.landcover_section(),
                     self.lai_section(),
@@ -493,9 +618,17 @@ class WflowBuildGenerator:
                     self.write_section()
                 ]
 
-        # Generate wflow build section
+        # Generate wflow build steps (hydromt v1: a LIST of single-step dicts)
+        steps = []
         for each_section in sections_list:
-            wflow_build.update(each_section)
+            if isinstance(each_section, list):  # e.g. write_section() returning a list
+                steps.extend(each_section)
+            else:
+                # split any multi-key dict into one item per step
+                for step_name, step_args in each_section.items():
+                    steps.append({step_name: step_args})
+
+        wflow_build = {"steps": steps}
 
         return wflow_build
 
@@ -520,7 +653,9 @@ class WflowBuildGenerator:
             yaml.dump(
                 wflow_build,
                 output_file,
-                sort_keys=False
+                Dumper=_IndentedDumper,
+                sort_keys=False,
+                width=200,
             )
 
     def wflow_build_generator(self) -> None:
