@@ -27,8 +27,6 @@ class GroundwaterParameterGenerator:
     def __init__(
         self,
         path,
-        input_name: str,
-        output_name: str,
         conductivity_divisor: float =50,
         riverbed_thickness_scaled: float =60,
         b_exponent: float =0.5,
@@ -43,10 +41,6 @@ class GroundwaterParameterGenerator:
         ----------
         path : Path
             Directory to the wflow model folder that stores the staticmaps file
-        input_name : str = "staticmaps.nc"
-            Name of the original staticmaps file built by hydromt_wflow
-        output_name : str = "staticmaps_gwf.nc"
-            Name of the new staticmaps file with groundwater parameters added
         conductivity_divisor : float = 50.0
             Value used to scale horizontal conductivity from KsatVer.
             conductivity = KsatVer / conductivity_divisor
@@ -65,9 +59,8 @@ class GroundwaterParameterGenerator:
             gwf_f = f * gwf_f_multiplier
         """
         # Input and output
-        self.input_path = Path(path) / input_name
-        self.output_path = Path(path) / output_name
-
+        self.file_path = Path(path) / "staticmaps.nc"
+        
         self.conductivity_divisor = conductivity_divisor
         self.riverbed_thickness_scaled = riverbed_thickness_scaled
         self.b_exponent = b_exponent                                # Leopold & Maddock exponent
@@ -77,14 +70,16 @@ class GroundwaterParameterGenerator:
 
     def load_staticmaps(self) -> xr.Dataset:
         """
-        Read the original staticmaps
+        Read the original staticmaps into memory and close the file,
+        so the same file can be overwritten later
 
         Returns
         -------
         ds : xr.Dataset
             Original staticmaps
         """
-        ds = xr.open_dataset(self.input_path)
+        with xr.open_dataset(self.file_path) as src:
+            ds = src.load()
         return ds
 
     def add_groundwater_parameters(self, ds: xr.Dataset) -> xr.Dataset:
@@ -198,8 +193,8 @@ class GroundwaterParameterGenerator:
         Path
             Directory to the new staticmaps
         """
-        ds.to_netcdf(self.output_path, mode="w")
-        return self.output_path
+        ds.to_netcdf(self.file_path, mode="w")
+        return self.file_path
 
     def run(self) -> Path:
         """

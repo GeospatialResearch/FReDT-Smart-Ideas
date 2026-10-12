@@ -27,8 +27,10 @@ import geopandas as gpd
 
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
-from .wflow_gw_parameters_generator import GroundwaterParameterGenerator
+from .wflow_groundwater_parameters_generator import GroundwaterParameterGenerator
+from ..solutions.nature import lai_modification
 from ..solutions.nature.landcover import LandcoverClassDataset
+from ..solutions.nature.lai_modification import LAIScenarioModification
 
 log = logging.getLogger(__name__)
 
@@ -179,7 +181,7 @@ class WflowSimulationsGenerator:
         if self.polygons is not None:
             # Set up command
             preprocessing_command_list = [
-                "hydromt", "update", "wflow",
+                "hydromt", "update", "wflow_sbm",
                 str(self.scenario_and_id_folder.parent / r"original_scenario/hydrological_process/wflow_test_full"),
                 "-o", str(output_folder_name),
                 "-i", str(wflow_build_file),
@@ -188,32 +190,6 @@ class WflowSimulationsGenerator:
             ]
 
         else:
-            # # Get subbasin river outlet
-            # subbasin_river_outlet = gpd.read_file(
-            #     self.scenario_and_id_folder.parent / 'terrain/river_outlet.shp'
-            # )
-            #
-            # # Get subbasin river outlet coordinates
-            # subbasin_river_outlet_coords = list(
-            #     subbasin_river_outlet.geometry.iloc[0].coords
-            # )[0]
-            #
-            # # Make sure it is in list style
-            # subbasin_river_outlet_coords_list = [
-            #     subbasin_river_outlet_coords[0], subbasin_river_outlet_coords[1]
-            # ]
-            #
-            # # Set up region information
-            # region_information = str({
-            #     "subbasin": subbasin_river_outlet_coords_list,
-            #     "strord": 4,
-            #     "bbox": self.flood_aoi_boundary
-            # })
-            #
-            # # Force override is turned off for performance, so we must manually remove the run_default dir if required.
-            # run_default_dir = output_folder_name / "run_default"
-            # if run_default_dir.exists():
-            #     shutil.rmtree(run_default_dir)
 
             # Set up command for preprocessing
             preprocessing_command_list = [
@@ -231,14 +207,12 @@ class WflowSimulationsGenerator:
             check=True
         )
 
-    def gw_parameters_command(self):
-        """Set up gw parameters for wflow simulation"""
+    def groundwater_parameters_command(self):
+        """Set up groundwater parameters for wflow simulation"""
 
         # Set up settings to generate groundwater parameters
-        gw_paras = GroundwaterParameterGenerator(
+        groundwater_paras = GroundwaterParameterGenerator(
             path=self.hydrological_process_path / "wflow_test_full",
-            input_name="staticmaps.nc",
-            output_name="staticmaps_new_method_002_riverdepth_002_other_parameters_002.nc",
             conductivity_divisor=50.0,
             riverbed_thickness_scaled=60.0,
             b_exponent=0.5,
@@ -248,7 +222,18 @@ class WflowSimulationsGenerator:
         )
 
         # Generate groundwater parameters
-        gw_paras.run()
+        groundwater_paras.run()
+
+    def lai_modification_command(self) -> None:
+        """Modify LAI data according to the nature-based solution scenario"""
+        # Set up settings to modify LAI data
+        lai_modification = lai_modification(
+            staticmaps_original=self.scenario_and_id_folder.parent / "original_scenario" / "hydrological_process" / "wflow_test_full" / "staticmaps.nc",
+            staticmaps_scenario=self.hydrological_process_path / "wflow_test_full" / "staticmaps.nc"
+        )
+
+        # Modify LAI data
+        lai_modification.run()
 
     def simulation_command(self) -> None:
         """Set up simulation command and generate simulation"""
@@ -280,12 +265,16 @@ class WflowSimulationsGenerator:
         """Generate wflow model simulation"""
         # # Generate files for preprocessing
         # self.files_for_preprocessing_generator()
-
+        #
         # # Preprocess data for wflow model
         # self.preprocessing_command()
 
-        # Generate groundwater parameters
-        self.gw_parameters_command()
+        # Fix diluted LAI for converted land cover (nature scenarios only)
+        if self.polygons is not None:
+            self.lai_modification_command()
+        else:
+            # Generate groundwater parameters
+            self.groundwater_parameters_command()
 
         # Generate wflow model simulation
         self.simulation_command()

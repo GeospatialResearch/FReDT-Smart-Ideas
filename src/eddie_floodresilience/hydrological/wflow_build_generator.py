@@ -20,13 +20,55 @@ log = logging.getLogger(__name__)
 
 
 class _IndentedDumper(yaml.SafeDumper):
-    """Indent list items under their parent key, keep short lists inline"""
+    """
+    YAML dumper that indents list items under their parent key.
+
+    By default, PyYAML writes list items at the same indentation level as
+    their parent key. This dumper indents them one level deeper, so the
+    "steps:" list in wflow_build.yml is nested correctly, e.g.
+
+        steps:
+          - setup_config:
+              ...
+    """
 
     def increase_indent(self, flow=False, indentless=False):
+        """
+        Increase indentation, always indenting block sequences
+
+        Parameters
+        ----------
+        flow : bool
+            Whether the current node is written in flow style (inline, e.g. [a, b]).
+            Default is False.
+        indentless : bool
+            Whether PyYAML wants to write the sequence without extra indentation.
+            Ignored here - always set to False so list items are indented.
+        """
         return super().increase_indent(flow, False)
 
 
 def _represent_list(dumper, data):
+    """
+    Represent a list in inline style if it only contains simple values
+
+    Lists of scalars (numbers, strings, booleans), e.g. lulc_zero_classes or
+    wflow_thicknesslayers, are written inline as [14, 20, 21, 22].
+    Lists containing dictionaries or lists, e.g. the "steps" list,
+    are written in block style (one item per line).
+
+    Parameters
+    ----------
+    dumper : yaml.SafeDumper
+        The YAML dumper that is writing the document
+    data : list
+        The list to be written out
+
+    Returns
+    -------
+    yaml.SequenceNode
+        YAML node for the list, in flow (inline) or block style
+    """
     inline = all(not isinstance(item, (dict, list)) for item in data)
     return dumper.represent_sequence("tag:yaml.org,2002:seq", data, flow_style=inline)
 

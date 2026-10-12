@@ -4,6 +4,10 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
+from PIL import Image  # load before GDAL to avoid DLL clash
+import netCDF4         # load before GDAL to avoid DLL clash
+from osgeo import gdal
+
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -549,7 +553,7 @@ def otautau(
         Flood model output ID.
     """
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_OTAUTAU
-    forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    forcing_name = 'otautau' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
     river_name = 'otautau'
     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
@@ -897,7 +901,7 @@ if __name__ == '__main__':
     # mataura(FloodType.FLUVIAL, forest_gdf, None)
 
     # Otautau
-    # gdf = gpd.read_file(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
-    # )
+    gdf = gpd.read_file(
+        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
+    )
     otautau(FloodType.FLUVIAL, None, None)
