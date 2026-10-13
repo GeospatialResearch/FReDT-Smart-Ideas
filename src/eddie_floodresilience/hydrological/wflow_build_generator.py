@@ -241,8 +241,7 @@ class WflowBuildGenerator:
                 "input.static.river_bottom__elevation": "river_bottom",
                 "input.static.subsurface__horizontal_saturated_hydraulic_conductivity_scale_parameter": "gwf_f",
                 # Constant variables
-                "input.static.soil_layer_water__vertical_saturated_hydraulic_conductivity_factor.value":
-                    [0.03, 1.0, 1.0, 1.0, 1.0, 1.0],
+                "input.static.soil_layer_water__vertical_saturated_hydraulic_conductivity_factor": "kvfrac",
                 "input.static.soil_water_saturated_zone_top__capillary_rise_max_water_table_depth.value": 4000.0,
                 "input.static.soil_water_saturated_zone_top__capillary_rise_averianov_exponent.value": 1,
 

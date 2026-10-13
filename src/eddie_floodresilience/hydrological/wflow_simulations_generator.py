@@ -30,7 +30,8 @@ from .wflow_build_generator import WflowBuildGenerator
 from .wflow_groundwater_parameters_generator import GroundwaterParameterGenerator
 from ..solutions.nature import lai_modification
 from ..solutions.nature.landcover import LandcoverClassDataset
-from ..solutions.nature.lai_modification import LAIScenarioModification
+from ..solutions.nature.lai_modification import LAIModification
+from ..solutions.nature.kvfrac_modification import KvfracModification
 
 log = logging.getLogger(__name__)
 
@@ -227,13 +228,25 @@ class WflowSimulationsGenerator:
     def lai_modification_command(self) -> None:
         """Modify LAI data according to the nature-based solution scenario"""
         # Set up settings to modify LAI data
-        lai_modification = lai_modification(
+        lai_modification = LAIModification(
             staticmaps_original=self.scenario_and_id_folder.parent / "original_scenario" / "hydrological_process" / "wflow_test_full" / "staticmaps.nc",
             staticmaps_scenario=self.hydrological_process_path / "wflow_test_full" / "staticmaps.nc"
         )
 
         # Modify LAI data
         lai_modification.run()
+
+    def kvfrac_modification_command(self, scenario_kvfrac: tuple) -> None:
+        """Modify kvfrac data according to the nature-based solution scenario"""
+        # Set up settings to modify kvfrac data
+        kvfrac_modification = KvfracModification(
+            staticmaps_scenario=self.hydrological_process_path / "wflow_test_full" / "staticmaps.nc",
+            polygons=self.polygons,
+            scenario_kvfrac=scenario_kvfrac
+        )
+
+        # Modify kvfrac data
+        kvfrac_modification.run()
 
     def simulation_command(self) -> None:
         """Set up simulation command and generate simulation"""
@@ -272,6 +285,7 @@ class WflowSimulationsGenerator:
         # Fix diluted LAI for converted land cover (nature scenarios only)
         if self.polygons is not None:
             self.lai_modification_command()
+            self.kvfrac_modification_command(scenario_kvfrac=(0.037, 1.0, 1.0, 1.0, 1.0, 1.0))
         else:
             # Generate groundwater parameters
             self.groundwater_parameters_command()

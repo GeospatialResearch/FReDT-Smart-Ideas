@@ -179,6 +179,44 @@ class GroundwaterParameterGenerator:
         ds["gwf_f"] = ds["f"] * self.gwf_f_multiplier
         return ds
 
+    def add_kvfrac(
+        self,
+        ds: xr.Dataset,
+        kvfrac_values: tuple = (0.03, 1.0, 1.0, 1.0, 1.0, 1.0)
+    ) -> xr.Dataset:
+        """
+        Add kvfrac (factor to multiply the vertical conductivity of each soil layer).
+        It uses the same soil layers as the Brooks-Corey exponent (c)
+
+        Parameters
+        ----------
+        ds : xr.Dataset
+            Staticmaps
+        kvfrac_values : tuple = (0.03, 1.0, 1.0, 1.0, 1.0, 1.0)
+            kvfrac value for each soil layer, from top to bottom
+
+        Returns
+        -------
+        ds : xr.Dataset
+            Staticmaps with kvfrac added
+        """
+        # Use c as the template for soil layers (layer, y, x)
+        soil_layers = ds["c"]
+        kvfrac_values = np.array(kvfrac_values, dtype=np.float32)
+
+        # Make sure there is one kvfrac value per soil layer
+        if soil_layers.shape[0] != len(kvfrac_values):
+            raise ValueError(
+                f"Staticmaps has {soil_layers.shape[0]} soil layers but kvfrac_values has {len(kvfrac_values)}"
+            )
+
+        # Give each soil layer its own kvfrac value over the whole grid
+        kvfrac = np.ones(soil_layers.shape, dtype=np.float32) * kvfrac_values[:, None, None]
+
+        # Write into staticmaps
+        ds["kvfrac"] = (soil_layers.dims, kvfrac)
+        return ds
+
     def save_staticmaps(self, ds: xr.Dataset) -> Path:
         """
         Write out new staticmaps
@@ -209,4 +247,5 @@ class GroundwaterParameterGenerator:
         ds = self.add_groundwater_parameters(ds)
         ds = self.fix_river_depth(ds)
         ds = self.scale_groundwater_parameter(ds)
+        ds = self.add_kvfrac(ds)
         return self.save_staticmaps(ds)

@@ -508,8 +508,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # # Generate terrain data for wflow and flood models
+            # self.terrain_data_pipeline()
 
             # Generate wflow data
             self.wflow_data_pipeline(scenario_and_id_folder)
@@ -904,4 +904,4 @@ if __name__ == '__main__':
     gdf = gpd.read_file(
         r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
     )
-    otautau(FloodType.FLUVIAL, None, None)
+    otautau(FloodType.FLUVIAL, gdf, None)

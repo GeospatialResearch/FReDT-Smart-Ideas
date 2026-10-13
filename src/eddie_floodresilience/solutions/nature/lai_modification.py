@@ -28,7 +28,7 @@ import rasterio.features
 from affine import Affine
 
 
-class LAIScenarioModification:
+class LAIModification:
     """This class is to modify LAI data according to the nature-based solution scenario."""
 
     def __init__(
