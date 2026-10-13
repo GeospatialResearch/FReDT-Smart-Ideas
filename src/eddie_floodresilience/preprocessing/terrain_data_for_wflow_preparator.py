@@ -10,7 +10,7 @@ import pandas as pd
 import pyflwdir
 import rioxarray as rxr
 import xarray as xr
-from hydromt import flw
+from hydromt.gis import flw
 
 
 class TerrainDataWflowPreparator:

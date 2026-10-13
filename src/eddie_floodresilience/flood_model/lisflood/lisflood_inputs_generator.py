@@ -428,8 +428,10 @@ class TerrainFloodModelGenerator:
             ) * 2
 
         # Clip Manning's n
-        clipped_manning_for_flood = manning_for_flood.rio.clip_box(
-            *self.terrain_crs_clipped.rio.bounds()
+        xmin, ymin, xmax, ymax = self.terrain_crs_clipped.rio.bounds()
+        clipped_manning_for_flood = manning_for_flood.sel(
+            x=slice(xmin, xmax),
+            y=slice(ymax, ymin)   # y goes from top to bottom, so ymax first
         )
 
         # Remove sea
