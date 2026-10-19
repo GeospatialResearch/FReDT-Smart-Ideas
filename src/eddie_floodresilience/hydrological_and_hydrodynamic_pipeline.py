@@ -886,22 +886,22 @@ if __name__ == '__main__':
     # drainage_gdf = gpd.read_file(
     #     r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
     # )
-    # whirinaki(FloodType.FLUVIAL, None, None)
+    whirinaki(FloodType.FLUVIAL, None, None)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
 
-    # Mataura
+    # # Mataura
     # forest_gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura\polygons_upstream_thick\polygons.shp"
     # )
     # forest_gdf = gpd.read_file(
     #     r"H:\smartidea_data\simulations\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura_012\polygons_upstream_thick\polygons.shp"
     # )
-    # mataura(FloodType.FLUVIAL, forest_gdf, None)
+    # mataura(FloodType.FLUVIAL, None, None)
 
-    # Otautau
-    gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
-    )
-    otautau(FloodType.FLUVIAL, gdf, None)
+    # # Otautau
+    # gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
+    # )
+    # otautau(FloodType.FLUVIAL, gdf, None)

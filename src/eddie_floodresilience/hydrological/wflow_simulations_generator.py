@@ -17,6 +17,7 @@
 
 """Runs Wflow model simulations"""
 
+import json
 import logging
 import shutil
 import subprocess
@@ -139,6 +140,24 @@ class WflowSimulationsGenerator:
         self.resolution = resolution
         self.landcover = landcover
 
+        # Load river-specific parameters from json
+        self.river_params = self._load_river_params()
+
+    def _load_river_params(self) -> dict:
+        """
+        Load river-specific parameters from
+        <hydromt_path>/river_data/<river_name>/<river_name>.json
+
+        Returns
+        -------
+        dict
+            Dictionary of river-specific parameters
+        """
+        json_path = Path(self.hydromt_path) / "river_data" / self.river_name / f"{self.river_name}.json"
+        log.info(f"Loading river parameters from {json_path}")
+        with open(json_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
     def files_for_preprocessing_generator(self) -> None:
         """Generate files for preprocessing"""
         # Generate data_catalog.yml
@@ -210,6 +229,8 @@ class WflowSimulationsGenerator:
 
     def groundwater_parameters_command(self):
         """Set up groundwater parameters for wflow simulation"""
+        # Read groundwater parameters from json
+        gw_pars = self.river_params["setup_groundwater_pars"]
 
         # Set up settings to generate groundwater parameters
         groundwater_paras = GroundwaterParameterGenerator(
@@ -219,7 +240,8 @@ class WflowSimulationsGenerator:
             b_exponent=0.5,
             min_depth=1.0,
             max_depth=2.5,
-            gwf_f_multiplier=110
+            f_multiplier=gw_pars["f"],
+            gwf_f_multiplier=gw_pars["gwf_f_multiplier"]
         )
 
         # Generate groundwater parameters
@@ -284,8 +306,14 @@ class WflowSimulationsGenerator:
 
         # Fix diluted LAI for converted land cover (nature scenarios only)
         if self.polygons is not None:
+            # Adjust LAI data
             self.lai_modification_command()
-            self.kvfrac_modification_command(scenario_kvfrac=(0.037, 1.0, 1.0, 1.0, 1.0, 1.0))
+
+            # Read kvfrac from json
+            kvfrac = self.river_params["setup_groundwater_pars"]["kvfrac"]
+
+            # Adjust infiltration of runoff
+            self.kvfrac_modification_command(scenario_kvfrac=(kvfrac, 1.0, 1.0, 1.0, 1.0, 1.0))
         else:
             # Generate groundwater parameters
             self.groundwater_parameters_command()

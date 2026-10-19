@@ -32,6 +32,7 @@ class GroundwaterParameterGenerator:
         b_exponent: float =0.5,
         min_depth: float =1,
         max_depth: float =2.5,
+        f_multiplier: float=1,
         gwf_f_multiplier: float =110
     ):
         """
@@ -54,6 +55,9 @@ class GroundwaterParameterGenerator:
             River depth (m) for the smallest headwater river
         max_depth : float = 2.5
             River depth (m) for the largest river in the catchment
+        f_multiplier : float = 1
+            Value used to scale the conductivity scale parameter for runoff
+            f = f * f_multiplier
         gwf_f_multiplier : float = 110
             Value used to scale the conductivity scale parameter for groundwater flow.
             gwf_f = f * gwf_f_multiplier
@@ -66,6 +70,7 @@ class GroundwaterParameterGenerator:
         self.b_exponent = b_exponent                                # Leopold & Maddock exponent
         self.min_depth = min_depth                                  # m, smallest headwater river
         self.max_depth = max_depth                                  # m, largest river
+        self.gwf_f_multiplier = f_multiplier                        # f = f * this
         self.gwf_f_multiplier = gwf_f_multiplier                    # gwf_f = f * this
 
     def load_staticmaps(self) -> xr.Dataset:
@@ -176,6 +181,7 @@ class GroundwaterParameterGenerator:
         ds : xr.Dataset
             Staticmaps with scaled gwf_f
         """
+        ds["f"] = ds["f"] * self.f_multiplier
         ds["gwf_f"] = ds["f"] * self.gwf_f_multiplier
         return ds
 
