@@ -318,7 +318,7 @@ class WflowSimulationsGenerator:
             )
 
     def wflow_model_simulations_pipeline(self) -> None:
-        """Generate wflow model simulation"""
+        # """Generate wflow model simulation"""
         # # Generate files for preprocessing
         # self.files_for_preprocessing_generator()
         #
@@ -336,14 +336,14 @@ class WflowSimulationsGenerator:
                 kvfrac = float(ds_orig["kvfrac"].isel(layer=0).median())
 
             # At the moment, this is only for forest and wetland
-            # In the future, this should be created as a column in land cover mapping
+            # In the future, this should be created as a column in land cover mapping and can be changed
             if (self.polygons["landcover"] == 45).any():
                 # This is for wetland
                 kvfrac = kvfrac + 0.007
                 self.conductance_modification_command(infilt_multiplier=4, exfilt_multiplier=1/2)
             else:
                 # This is for forest
-                kvfrac = kvfrac + 0.012
+                kvfrac = kvfrac + 0.01
 
             # Adjust infiltration of runoff
             self.kvfrac_modification_command(scenario_kvfrac=(kvfrac, 1.0, 1.0, 1.0, 1.0, 1.0))

@@ -510,9 +510,9 @@ class HydrologicalAndHydrodynamicPipeline:
         else:
             # # Generate terrain data for wflow and flood models
             # self.terrain_data_pipeline()
-            #
-            # # Generate wflow data
-            # self.wflow_data_pipeline(scenario_and_id_folder)
+
+            # Generate wflow data
+            self.wflow_data_pipeline(scenario_and_id_folder)
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
@@ -887,7 +887,7 @@ if __name__ == '__main__':
     # drainage_gdf = gpd.read_file(
     #     r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
     # )
-    # whirinaki(FloodType.FLUVIAL, None, None)
+    whirinaki(FloodType.FLUVIAL, None, None)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
@@ -901,8 +901,8 @@ if __name__ == '__main__':
     # )
     # mataura(FloodType.FLUVIAL, None, None)
 
-    # Otautau
-    gdf = gpd.read_file(
-        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
-    )
-    otautau(FloodType.FLUVIAL, gdf, None)
+    # # Otautau
+    # gdf = gpd.read_file(
+    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
+    # )
+    # otautau(FloodType.FLUVIAL, None, None)
