@@ -25,6 +25,7 @@ from pathlib import Path
 from datetime import datetime
 
 import geopandas as gpd
+import xarray as xr
 
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
@@ -232,7 +233,6 @@ class WflowSimulationsGenerator:
         # Read groundwater parameters from json
         gw_pars = self.river_params["setup_groundwater_pars"]
 
-        # Set up settings to generate groundwater parameters
         groundwater_paras = GroundwaterParameterGenerator(
             path=self.hydrological_process_path / "wflow_test_full",
             conductivity_divisor=50.0,
@@ -240,7 +240,7 @@ class WflowSimulationsGenerator:
             b_exponent=0.5,
             min_depth=1.0,
             max_depth=2.5,
-            f_multiplier=gw_pars["f"],
+            f_multiplier=gw_pars["f_multiplier"],
             gwf_f_multiplier=gw_pars["gwf_f_multiplier"]
         )
 
@@ -262,6 +262,7 @@ class WflowSimulationsGenerator:
         """Modify kvfrac data according to the nature-based solution scenario"""
         # Set up settings to modify kvfrac data
         kvfrac_modification = KvfracModification(
+            staticmaps_original=self.scenario_and_id_folder.parent / "original_scenario" / "hydrological_process" / "wflow_test_full" / "staticmaps.nc",
             staticmaps_scenario=self.hydrological_process_path / "wflow_test_full" / "staticmaps.nc",
             polygons=self.polygons,
             scenario_kvfrac=scenario_kvfrac
@@ -269,6 +270,26 @@ class WflowSimulationsGenerator:
 
         # Modify kvfrac data
         kvfrac_modification.run()
+
+    def conductance_modification_command(self, infilt_multiplier: float, exfilt_multiplier: float) -> None:
+        """Multiply infilt_cond and exfilt_cond inside the polygons (from the original values)"""
+        orig = self.scenario_and_id_folder.parent / "original_scenario" / "hydrological_process" / "wflow_test_full" / "staticmaps.nc"
+        scen = self.hydrological_process_path / "wflow_test_full" / "staticmaps.nc"
+
+        with xr.open_dataset(orig) as ds:
+            ds_orig = ds.load()
+        with xr.open_dataset(scen) as ds:
+            ds_scen = ds.load()
+
+        # Same polygon mask as kvfrac (inside polygons and inside catchment)
+        mask = KvfracModification(scen, self.polygons, ()).build_modify_mask(ds_scen)
+        mask = xr.DataArray(mask, coords={"y": ds_scen["y"], "x": ds_scen["x"]}, dims=("y", "x"))
+
+        # Multiply inside polygons, keep original values elsewhere
+        ds_scen["infilt_cond"] = ds_orig["infilt_cond"].where(~mask, ds_orig["infilt_cond"] * infilt_multiplier)
+        ds_scen["exfilt_cond"] = ds_orig["exfilt_cond"].where(~mask, ds_orig["exfilt_cond"] * exfilt_multiplier)
+
+        ds_scen.to_netcdf(scen, mode="w")
 
     def simulation_command(self) -> None:
         """Set up simulation command and generate simulation"""
@@ -309,13 +330,26 @@ class WflowSimulationsGenerator:
             # Adjust LAI data
             self.lai_modification_command()
 
-            # Read kvfrac from json
-            kvfrac = self.river_params["setup_groundwater_pars"]["kvfrac"]
+            # Read kvfrac from the original scenario's staticmaps
+            orig = self.scenario_and_id_folder.parent / "original_scenario" / "hydrological_process" / "wflow_test_full" / "staticmaps.nc"
+            with xr.open_dataset(orig) as ds_orig:
+                kvfrac = float(ds_orig["kvfrac"].isel(layer=0).median())
+
+            # At the moment, this is only for forest and wetland
+            # In the future, this should be created as a column in land cover mapping
+            if (self.polygons["landcover"] == 45).any():
+                # This is for wetland
+                kvfrac = kvfrac + 0.007
+                self.conductance_modification_command(infilt_multiplier=4, exfilt_multiplier=1/2)
+            else:
+                # This is for forest
+                kvfrac = kvfrac + 0.012
 
             # Adjust infiltration of runoff
             self.kvfrac_modification_command(scenario_kvfrac=(kvfrac, 1.0, 1.0, 1.0, 1.0, 1.0))
+
         else:
-            # Generate groundwater parameters
+            # Generate groundwater parameters (before kvfrac, so it cannot overwrite it)
             self.groundwater_parameters_command()
 
         # Generate wflow model simulation

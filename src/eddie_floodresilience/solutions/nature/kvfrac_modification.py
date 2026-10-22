@@ -43,7 +43,8 @@ class KvfracModification:
         """
         Modify kvfrac data according to the nature-based solution scenario.
         kvfrac is the factor to multiply the vertical conductivity of each soil layer.
-        All cells get the baseline kvfrac, then cells inside the polygons get the scenario kvfrac.
+        Cells outside the polygons keep the original kvfrac (from staticmaps_original),
+        cells inside the polygons get the scenario kvfrac, cells outside the catchment stay nodata.
         This works for any nature-based solution (e.g. wetland, forest).
 
         Parameters
@@ -57,13 +58,14 @@ class KvfracModification:
             Ex: (0.037, 1.0, 1.0, 1.0, 1.0, 1.0) for wetland, (0.035, 1.0, 1.0, 1.0, 1.0, 1.0) for forest
         baseline_kvfrac : tuple = (0.03, 1.0, 1.0, 1.0, 1.0, 1.0)
             kvfrac for each soil layer outside the polygons, from top to bottom.
-            This should be the same as the original scenario
+            Only used when staticmaps_original is not given
         changed_cells_only : bool = False
             True means only modifying cells inside the polygons whose land cover was changed.
             False means modifying all cells inside the polygons
         staticmaps_original : Path | None = None
             Directory to the staticmaps of the original scenario.
-            Only needed when changed_cells_only is True
+            Its kvfrac is used outside the polygons (recommended).
+            Also needed when changed_cells_only is True
         """
         self.staticmaps_scenario = Path(staticmaps_scenario)
         self.polygons = polygons
@@ -198,13 +200,21 @@ class KvfracModification:
                 f"and scenario_kvfrac has {len(self.scenario_kvfrac)}"
             )
 
-        # Start every cell from the baseline kvfrac
-        baseline_values = np.array(self.baseline_kvfrac, dtype=np.float32)
-        kvfrac = np.ones(soil_layers.shape, dtype=np.float32) * baseline_values[:, None, None]
+        # Start every cell from the original kvfrac (or the baseline values if no original given)
+        if self.staticmaps_original is not None:
+            ds_original = self.load_staticmaps(self.staticmaps_original)
+            kvfrac = ds_original["kvfrac"].values.astype(np.float32).copy()
+        else:
+            baseline_values = np.array(self.baseline_kvfrac, dtype=np.float32)
+            kvfrac = np.ones(soil_layers.shape, dtype=np.float32) * baseline_values[:, None, None]
 
         # Replace kvfrac inside the chosen cells, layer by layer
         for layer in range(n_layers):
             kvfrac[layer][modify_mask] = self.scenario_kvfrac[layer]
+
+        # Keep nodata outside the catchment
+        outside_catchment = ~(ds_scenario["wflow_subcatch"].values > 0)
+        kvfrac[:, outside_catchment] = np.nan
 
         # Write into staticmaps
         modified_staticmaps = ds_scenario.copy()

@@ -21,6 +21,9 @@ import numpy as np
 import xarray as xr
 from pathlib import Path
 
+from celery.utils.sysinfo import df
+
+
 class GroundwaterParameterGenerator:
     """This class is to generate groundwater parameters."""  # pylint: disable=too-many-instance-attributes
 
@@ -33,7 +36,9 @@ class GroundwaterParameterGenerator:
         min_depth: float =1,
         max_depth: float =2.5,
         f_multiplier: float=1,
-        gwf_f_multiplier: float =110
+        gwf_f_multiplier: float =110,
+        infilt_cond_multiplier: float =1,
+        exfilt_cond_multiplier: float =1
     ):
         """
         Generate groundwater parameters for hydrological modelling
@@ -61,6 +66,10 @@ class GroundwaterParameterGenerator:
         gwf_f_multiplier : float = 110
             Value used to scale the conductivity scale parameter for groundwater flow.
             gwf_f = f * gwf_f_multiplier
+        infilt_cond_multiplier : float = 1
+            Value used to scale the amount of water flow from river to aquifer
+        exfilt_cond_multiplier : float = 1
+            Value used to scale the amount of water flow from aquifer to river
         """
         # Input and output
         self.file_path = Path(path) / "staticmaps.nc"
@@ -70,7 +79,7 @@ class GroundwaterParameterGenerator:
         self.b_exponent = b_exponent                                # Leopold & Maddock exponent
         self.min_depth = min_depth                                  # m, smallest headwater river
         self.max_depth = max_depth                                  # m, largest river
-        self.gwf_f_multiplier = f_multiplier                        # f = f * this
+        self.f_multiplier = f_multiplier                            # f = f * this
         self.gwf_f_multiplier = gwf_f_multiplier                    # gwf_f = f * this
 
     def load_staticmaps(self) -> xr.Dataset:

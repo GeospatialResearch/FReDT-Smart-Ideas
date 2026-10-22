@@ -489,8 +489,8 @@ class HydrologicalAndHydrodynamicPipeline:
         # Apply land cover solution
         # (this would be for both landcover and elevation solutions)
         if self.polygons is not None:
-            # Apply solutions
-            self.total_solutions(scenario_and_id_folder)
+            # # Apply solutions
+            # self.total_solutions(scenario_and_id_folder)
 
             # Generate wflow data
             self.wflow_data_pipeline(scenario_and_id_folder)
@@ -510,9 +510,9 @@ class HydrologicalAndHydrodynamicPipeline:
         else:
             # # Generate terrain data for wflow and flood models
             # self.terrain_data_pipeline()
-
-            # Generate wflow data
-            self.wflow_data_pipeline(scenario_and_id_folder)
+            #
+            # # Generate wflow data
+            # self.wflow_data_pipeline(scenario_and_id_folder)
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
@@ -764,6 +764,7 @@ def whirinaki(
 
     num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1641148, 6072532, 1642796, 6076268]
+    # flood_aoi_boundary = [1639270, 6072596, 1642789, 6076268]
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
@@ -886,7 +887,7 @@ if __name__ == '__main__':
     # drainage_gdf = gpd.read_file(
     #     r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
     # )
-    whirinaki(FloodType.FLUVIAL, None, None)
+    # whirinaki(FloodType.FLUVIAL, None, None)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
@@ -900,8 +901,8 @@ if __name__ == '__main__':
     # )
     # mataura(FloodType.FLUVIAL, None, None)
 
-    # # Otautau
-    # gdf = gpd.read_file(
-    #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
-    # )
-    # otautau(FloodType.FLUVIAL, gdf, None)
+    # Otautau
+    gdf = gpd.read_file(
+        r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
+    )
+    otautau(FloodType.FLUVIAL, gdf, None)
