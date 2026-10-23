@@ -18,14 +18,73 @@
 """Modify LAI data according to the nature-based solution scenario."""
 
 from pathlib import Path
-
-from osgeo import gdal
 import numpy as np
 import pandas as pd
 import xarray as xr
 import geopandas as gpd
+import rioxarray  # noqa: F401  # pylint: disable=unused-import  # adds .rio to read staticmaps crs
 import rasterio.features
 from affine import Affine
+
+
+def load_staticmaps(staticmaps_path: Path) -> xr.Dataset:
+    """
+    Read staticmaps into memory and close the file, so it can be overwritten later
+
+    Parameters
+    ----------
+    staticmaps_path : Path
+        Directory to the staticmaps
+
+    Returns
+    -------
+    staticmaps : xr.Dataset
+        Staticmaps
+    """
+    with xr.open_dataset(staticmaps_path) as ds:
+        staticmaps = ds.load()
+
+    return staticmaps
+
+
+def rasterize_polygons(ds: xr.Dataset, polygons: gpd.GeoDataFrame) -> np.ndarray:
+    """
+    Convert polygons into raster format on the staticmaps grid
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        Staticmaps that define the grid
+    polygons : gpd.GeoDataFrame
+        Polygons to rasterize
+
+    Returns
+    -------
+    polygon_mask : np.ndarray
+        True for cells inside the polygons
+    """
+    # Make sure polygons have the same crs as staticmaps
+    if ds.rio.crs is not None:
+        polygons = polygons.to_crs(ds.rio.crs)
+
+    # Set up grid information from staticmaps
+    x = ds["x"].values
+    y = ds["y"].values
+    res_x = x[1] - x[0]
+    res_y = y[1] - y[0]
+    transform = Affine.translation(x[0] - res_x / 2, y[0] - res_y / 2) * Affine.scale(res_x, res_y)
+
+    # Rasterize all polygons at once
+    shapes = [(geom, 1) for geom in polygons.geometry]
+    polygon_mask = rasterio.features.rasterize(
+        shapes=shapes,
+        out_shape=(len(y), len(x)),
+        transform=transform,
+        fill=0,
+        dtype="uint8"
+    ).astype(bool)
+
+    return polygon_mask
 
 
 class LAIModification:
@@ -73,28 +132,6 @@ class LAIModification:
         self.use_polygon_mask = use_polygon_mask
         self.changed_cells_only = changed_cells_only
         self.lai_csv_name = lai_csv_name
-
-    def load_staticmaps(
-        self,
-        staticmaps_path: Path
-    ) -> xr.Dataset:
-        """
-        Read staticmaps into memory
-
-        Parameters
-        ----------
-        staticmaps_path : Path
-            Directory to the staticmaps
-
-        Returns
-        -------
-        staticmaps : xr.Dataset
-            Staticmaps
-        """
-        with xr.open_dataset(staticmaps_path) as ds:
-            staticmaps = ds.load()
-
-        return staticmaps
 
     def detect_changed_codes(
         self,
@@ -149,6 +186,11 @@ class LAIModification:
             Modified LAI table
         reference_lai : dict
             Monthly LAI from the original scenario for each land cover code
+
+        Raises
+        ------
+        ValueError
+            If a land cover code does not appear exactly once in both LAI tables
         """
         # Read LAI tables
         original_table = pd.read_csv(self.staticmaps_original.parent / self.lai_csv_name)
@@ -199,23 +241,8 @@ class LAIModification:
             polygon_mask = np.ones(ds_scenario["wflow_subcatch"].shape, dtype=bool)
             return polygon_mask
 
-        # Set up grid information from staticmaps
-        x = ds_scenario["x"].values
-        y = ds_scenario["y"].values
-        res_x = x[1] - x[0]
-        res_y = y[1] - y[0]
-        transform = Affine.translation(x[0] - res_x / 2, y[0] - res_y / 2) * Affine.scale(res_x, res_y)
-
-        # Rasterize all polygons at once
-        polygons = gpd.read_file(self.polygon_shp)
-        shapes = [(geom, 1) for geom in polygons.geometry]
-        polygon_mask = rasterio.features.rasterize(
-            shapes=shapes,
-            out_shape=(len(y), len(x)),
-            transform=transform,
-            fill=0,
-            dtype="uint8"
-        ).astype(bool)
+        # Rasterize the scenario polygons onto the staticmaps grid
+        polygon_mask = rasterize_polygons(ds_scenario, gpd.read_file(self.polygon_shp))
 
         return polygon_mask
 
@@ -244,6 +271,11 @@ class LAIModification:
         -------
         modified_staticmaps : xr.Dataset
             Staticmaps of the new scenario with modified LAI
+
+        Raises
+        ------
+        ValueError
+            If the number of months in LAI does not match the LAI table
         """
         # Set up masks
         active_mask = ds_scenario["wflow_subcatch"].values > 0
@@ -331,8 +363,8 @@ class LAIModification:
             Directory to the modified staticmaps
         """
         # Read staticmaps
-        ds_original = self.load_staticmaps(self.staticmaps_original)
-        ds_scenario = self.load_staticmaps(self.staticmaps_scenario)
+        ds_original = load_staticmaps(self.staticmaps_original)
+        ds_scenario = load_staticmaps(self.staticmaps_scenario)
 
         # Find land cover codes that need LAI modifying
         codes = self.detect_changed_codes(ds_original, ds_scenario)

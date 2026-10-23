@@ -18,14 +18,11 @@
 """Modify kvfrac data according to the nature-based solution scenario."""
 
 from pathlib import Path
-
-from osgeo import gdal
 import numpy as np
 import xarray as xr
 import geopandas as gpd
-import rioxarray  # pylint: disable=unused-import  # adds .rio to read staticmaps crs
-import rasterio.features
-from affine import Affine
+
+from .lai_modification import load_staticmaps, rasterize_polygons
 
 
 class KvfracModification:
@@ -74,69 +71,6 @@ class KvfracModification:
         self.changed_cells_only = changed_cells_only
         self.staticmaps_original = Path(staticmaps_original) if staticmaps_original is not None else None
 
-    def load_staticmaps(
-        self,
-        staticmaps_path: Path
-    ) -> xr.Dataset:
-        """
-        Read staticmaps into memory
-
-        Parameters
-        ----------
-        staticmaps_path : Path
-            Directory to the staticmaps
-
-        Returns
-        -------
-        staticmaps : xr.Dataset
-            Staticmaps
-        """
-        with xr.open_dataset(staticmaps_path) as ds:
-            staticmaps = ds.load()
-
-        return staticmaps
-
-    def build_polygon_mask(
-        self,
-        ds_scenario: xr.Dataset
-    ) -> np.ndarray:
-        """
-        Convert polygons into raster format on the staticmaps grid
-
-        Parameters
-        ----------
-        ds_scenario : xr.Dataset
-            Staticmaps of the new scenario
-
-        Returns
-        -------
-        polygon_mask : np.ndarray
-            True for cells inside the polygons
-        """
-        # Make sure polygons have the same crs as staticmaps
-        polygons = self.polygons
-        if ds_scenario.rio.crs is not None:
-            polygons = polygons.to_crs(ds_scenario.rio.crs)
-
-        # Set up grid information from staticmaps
-        x = ds_scenario["x"].values
-        y = ds_scenario["y"].values
-        res_x = x[1] - x[0]
-        res_y = y[1] - y[0]
-        transform = Affine.translation(x[0] - res_x / 2, y[0] - res_y / 2) * Affine.scale(res_x, res_y)
-
-        # Rasterize all polygons at once
-        shapes = [(geom, 1) for geom in polygons.geometry]
-        polygon_mask = rasterio.features.rasterize(
-            shapes=shapes,
-            out_shape=(len(y), len(x)),
-            transform=transform,
-            fill=0,
-            dtype="uint8"
-        ).astype(bool)
-
-        return polygon_mask
-
     def build_modify_mask(
         self,
         ds_scenario: xr.Dataset
@@ -157,12 +91,12 @@ class KvfracModification:
         """
         # Cells inside the catchment and inside the polygons
         active_mask = ds_scenario["wflow_subcatch"].values > 0
-        polygon_mask = self.build_polygon_mask(ds_scenario)
+        polygon_mask = rasterize_polygons(ds_scenario, self.polygons)
         modify_mask = active_mask & polygon_mask
 
         # Only keep cells whose land cover was changed
         if self.changed_cells_only:
-            ds_original = self.load_staticmaps(self.staticmaps_original)
+            ds_original = load_staticmaps(self.staticmaps_original)
             changed = ds_scenario["meta_landuse"].values != ds_original["meta_landuse"].values
             modify_mask &= changed
 
@@ -188,6 +122,11 @@ class KvfracModification:
         -------
         modified_staticmaps : xr.Dataset
             Staticmaps of the new scenario with modified kvfrac
+
+        Raises
+        ------
+        ValueError
+            If the number of kvfrac values does not match the number of soil layers
         """
         # Use c as the template for soil layers (layer, y, x)
         soil_layers = ds_scenario["c"]
@@ -202,7 +141,7 @@ class KvfracModification:
 
         # Start every cell from the original kvfrac (or the baseline values if no original given)
         if self.staticmaps_original is not None:
-            ds_original = self.load_staticmaps(self.staticmaps_original)
+            ds_original = load_staticmaps(self.staticmaps_original)
             kvfrac = ds_original["kvfrac"].values.astype(np.float32).copy()
         else:
             baseline_values = np.array(self.baseline_kvfrac, dtype=np.float32)
@@ -254,7 +193,7 @@ class KvfracModification:
             Directory to the modified staticmaps
         """
         # Read staticmaps
-        ds_scenario = self.load_staticmaps(self.staticmaps_scenario)
+        ds_scenario = load_staticmaps(self.staticmaps_scenario)
 
         # Choose cells to modify
         modify_mask = self.build_modify_mask(ds_scenario)

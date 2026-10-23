@@ -32,7 +32,9 @@ class _IndentedDumper(yaml.SafeDumper):
               ...
     """
 
-    def increase_indent(self, flow=False, indentless=False):
+    def increase_indent(self,
+                        flow: bool = False,
+                        indentless: bool = False) -> None:
         """
         Increase indentation, always indenting block sequences
 
@@ -45,10 +47,10 @@ class _IndentedDumper(yaml.SafeDumper):
             Whether PyYAML wants to write the sequence without extra indentation.
             Ignored here - always set to False so list items are indented.
         """
-        return super().increase_indent(flow, False)
+        super().increase_indent(flow, False)
 
 
-def _represent_list(dumper, data):
+def _represent_list(dumper: yaml.SafeDumper, data: list) -> yaml.SequenceNode:
     """
     Represent a list in inline style if it only contains simple values
 

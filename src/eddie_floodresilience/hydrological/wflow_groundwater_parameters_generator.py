@@ -17,11 +17,9 @@
 
 """Generate groundwater parameters"""
 
+from pathlib import Path
 import numpy as np
 import xarray as xr
-from pathlib import Path
-
-from celery.utils.sysinfo import df
 
 
 class GroundwaterParameterGenerator:
@@ -29,17 +27,15 @@ class GroundwaterParameterGenerator:
 
     def __init__(
         self,
-        path,
-        conductivity_divisor: float =50,
-        riverbed_thickness_scaled: float =60,
-        b_exponent: float =0.5,
-        min_depth: float =1,
-        max_depth: float =2.5,
-        f_multiplier: float=1,
-        gwf_f_multiplier: float =110,
-        infilt_cond_multiplier: float =1,
-        exfilt_cond_multiplier: float =1
-    ):
+        path: Path,
+        conductivity_divisor: float = 50,
+        riverbed_thickness_scaled: float = 60,
+        b_exponent: float = 0.5,
+        min_depth: float = 1,
+        max_depth: float = 2.5,
+        f_multiplier: float = 1,
+        gwf_f_multiplier: float = 110
+    ) -> None:
         """
         Generate groundwater parameters for hydrological modelling
 
@@ -66,21 +62,16 @@ class GroundwaterParameterGenerator:
         gwf_f_multiplier : float = 110
             Value used to scale the conductivity scale parameter for groundwater flow.
             gwf_f = f * gwf_f_multiplier
-        infilt_cond_multiplier : float = 1
-            Value used to scale the amount of water flow from river to aquifer
-        exfilt_cond_multiplier : float = 1
-            Value used to scale the amount of water flow from aquifer to river
         """
         # Input and output
         self.file_path = Path(path) / "staticmaps.nc"
-        
         self.conductivity_divisor = conductivity_divisor
         self.riverbed_thickness_scaled = riverbed_thickness_scaled
-        self.b_exponent = b_exponent                                # Leopold & Maddock exponent
-        self.min_depth = min_depth                                  # m, smallest headwater river
-        self.max_depth = max_depth                                  # m, largest river
-        self.f_multiplier = f_multiplier                            # f = f * this
-        self.gwf_f_multiplier = gwf_f_multiplier                    # gwf_f = f * this
+        self.b_exponent = b_exponent  # Leopold & Maddock exponent
+        self.min_depth = min_depth  # m, smallest headwater river
+        self.max_depth = max_depth  # m, largest river
+        self.f_multiplier = f_multiplier  # f = f * this
+        self.gwf_f_multiplier = gwf_f_multiplier  # gwf_f = f * this
 
     def load_staticmaps(self) -> xr.Dataset:
         """
@@ -122,8 +113,8 @@ class GroundwaterParameterGenerator:
         uparea = ds["meta_upstream_area"].values
         real_width = ds["wflow_riverwidth"].values
         outlet_idx = np.nanargmax(np.where(river, uparea, np.nan))
-        row, col = np.unravel_index(outlet_idx, uparea.shape)
-        a_coef = real_width[row, col] / (uparea[row, col] ** self.b_exponent)
+        outlet = np.unravel_index(outlet_idx, uparea.shape)  # (row, col) of the outlet
+        a_coef = real_width[outlet] / (uparea[outlet] ** self.b_exponent)
         width_smooth = np.where(river, a_coef * uparea ** self.b_exponent, np.nan)
 
         # Infiltration / exfiltration conductance (uses smooth width)
@@ -214,6 +205,11 @@ class GroundwaterParameterGenerator:
         -------
         ds : xr.Dataset
             Staticmaps with kvfrac added
+
+        Raises
+        ------
+        ValueError
+            If the number of kvfrac values does not match the number of soil layers
         """
         # Use c as the template for soil layers (layer, y, x)
         soil_layers = ds["c"]

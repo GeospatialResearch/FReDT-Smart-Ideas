@@ -4,10 +4,6 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-from PIL import Image  # load before GDAL to avoid DLL clash
-import netCDF4         # load before GDAL to avoid DLL clash
-from osgeo import gdal
-
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -22,7 +18,7 @@ from sqlalchemy import insert
 from eddie.digitaltwin import retrieve_from_instructions
 from eddie.digitaltwin.setup_environment import get_database
 from eddie.digitaltwin.tables import create_table
-from eddie.digitaltwin.utils import setup_logging, LogLevel
+from eddie.digitaltwin.utils import LogLevel
 
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
@@ -489,8 +485,8 @@ class HydrologicalAndHydrodynamicPipeline:
         # Apply land cover solution
         # (this would be for both landcover and elevation solutions)
         if self.polygons is not None:
-            # # Apply solutions
-            # self.total_solutions(scenario_and_id_folder)
+            # Apply solutions
+            self.total_solutions(scenario_and_id_folder)
 
             # Generate wflow data
             self.wflow_data_pipeline(scenario_and_id_folder)
@@ -508,8 +504,8 @@ class HydrologicalAndHydrodynamicPipeline:
 
         # Original scenario
         else:
-            # # Generate terrain data for wflow and flood models
-            # self.terrain_data_pipeline()
+            # Generate terrain data for wflow and flood models
+            self.terrain_data_pipeline()
 
             # Generate wflow data
             self.wflow_data_pipeline(scenario_and_id_folder)
@@ -553,7 +549,7 @@ def otautau(
         Flood model output ID.
     """
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_OTAUTAU
-    forcing_name = 'otautau' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    forcing_name = 'otautau'  # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
     river_name = 'otautau'
     precipitation_path = Path(r"H:/Barra/Mataura/rainfall_gauges_HIRDS")
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
@@ -679,7 +675,7 @@ def mataura(
         Flood model output ID.
     """
     hydro_combination_path = EnvVariable.HYDRO_COMBINATION_PATH_MATAURA
-    forcing_name = 'mataura' # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
+    forcing_name = 'mataura'  # Path(r"H:/Barra/Mataura/merge_gauges_HIRDS_001")
     river_name = 'mataura'
     precipitation_path = EnvVariable.PRECIPITATION_PATH / "mataura"
     start_time = datetime.fromisoformat("2020-02-03T00:00:00")
@@ -895,9 +891,6 @@ if __name__ == '__main__':
     # # Mataura
     # forest_gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura\polygons_upstream_thick\polygons.shp"
-    # )
-    # forest_gdf = gpd.read_file(
-    #     r"H:\smartidea_data\simulations\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura_012\polygons_upstream_thick\polygons.shp"
     # )
     # mataura(FloodType.FLUVIAL, None, None)
 

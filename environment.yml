@@ -17,7 +17,7 @@
 # YML file for setting up the Digital-Twin Python environment
 # Locked down most package versions to reduce docker build to,e
 
-name: fredt_005
+name: fredt
 channels:
   - conda-forge
   - nodefaults
