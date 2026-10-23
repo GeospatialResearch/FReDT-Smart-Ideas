@@ -17,17 +17,21 @@
 
 """Runs Wflow model simulations"""
 
+import json
 import logging
-import shutil
 import subprocess
 from pathlib import Path
 from datetime import datetime
 
 import geopandas as gpd
+import xarray as xr
 
 from .wflow_data_catalog_generator import DataCatalogGenerator
 from .wflow_build_generator import WflowBuildGenerator
+from .wflow_groundwater_parameters_generator import GroundwaterParameterGenerator
 from ..solutions.nature.landcover import LandcoverClassDataset
+from ..solutions.nature.lai_modification import LAIModification
+from ..solutions.nature.kvfrac_modification import KvfracModification
 
 log = logging.getLogger(__name__)
 
@@ -135,6 +139,24 @@ class WflowSimulationsGenerator:
         self.resolution = resolution
         self.landcover = landcover
 
+        # Load river-specific parameters from json
+        self.river_params = self._load_river_params()
+
+    def _load_river_params(self) -> dict:
+        """
+        Load river-specific parameters from
+        <hydromt_path>/river_data/<river_name>/<river_name>.json
+
+        Returns
+        -------
+        dict
+            Dictionary of river-specific parameters
+        """
+        json_path = Path(self.hydromt_path) / "river_data" / self.river_name / f"{self.river_name}.json"
+        log.info(f"Loading river parameters from {json_path}")
+        with open(json_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+
     def files_for_preprocessing_generator(self) -> None:
         """Generate files for preprocessing"""
         # Generate data_catalog.yml
@@ -178,7 +200,7 @@ class WflowSimulationsGenerator:
         if self.polygons is not None:
             # Set up command
             preprocessing_command_list = [
-                "hydromt", "update", "wflow",
+                "hydromt", "update", "wflow_sbm",
                 str(self.scenario_and_id_folder.parent / r"original_scenario/hydrological_process/wflow_test_full"),
                 "-o", str(output_folder_name),
                 "-i", str(wflow_build_file),
@@ -187,38 +209,12 @@ class WflowSimulationsGenerator:
             ]
 
         else:
-            # Get subbasin river outlet
-            subbasin_river_outlet = gpd.read_file(
-                self.scenario_and_id_folder.parent / 'terrain/river_outlet.shp'
-            )
-
-            # Get subbasin river outlet coordinates
-            subbasin_river_outlet_coords = list(
-                subbasin_river_outlet.geometry.iloc[0].coords
-            )[0]
-
-            # Make sure it is in list style
-            subbasin_river_outlet_coords_list = [
-                subbasin_river_outlet_coords[0], subbasin_river_outlet_coords[1]
-            ]
-
-            # Set up region information
-            region_information = str({
-                "subbasin": subbasin_river_outlet_coords_list,
-                "strord": 4,
-                "bbox": self.flood_aoi_boundary
-            })
-
-            # Force override is turned off for performance, so we must manually remove the run_default dir if required.
-            run_default_dir = output_folder_name / "run_default"
-            if run_default_dir.exists():
-                shutil.rmtree(run_default_dir)
 
             # Set up command for preprocessing
             preprocessing_command_list = [
-                "hydromt", "build", "wflow",
+                "hydromt", "build", "wflow_sbm",
                 str(output_folder_name),
-                "-r", region_information,
+                # "-r", region_information,
                 "-i", str(wflow_build_file),
                 "-d", str(data_catalog_file),
                 "-vv"
@@ -229,6 +225,91 @@ class WflowSimulationsGenerator:
             preprocessing_command_list,
             check=True
         )
+
+    def groundwater_parameters_command(self) -> None:
+        """Set up groundwater parameters for wflow simulation"""
+        # Read groundwater parameters from json
+        gw_pars = self.river_params["setup_groundwater_pars"]
+
+        groundwater_paras = GroundwaterParameterGenerator(
+            path=self.hydrological_process_path / "wflow_test_full",
+            conductivity_divisor=50.0,
+            riverbed_thickness_scaled=60.0,
+            b_exponent=0.5,
+            min_depth=1.0,
+            max_depth=2.5,
+            f_multiplier=gw_pars["f_multiplier"],
+            gwf_f_multiplier=gw_pars["gwf_f_multiplier"]
+        )
+
+        # Generate groundwater parameters
+        groundwater_paras.run()
+
+    def lai_modification_command(self) -> None:
+        """Modify LAI data according to the nature-based solution scenario"""
+        # Set up settings to modify LAI data
+        lai_modification = LAIModification(
+            staticmaps_original=Path(self.scenario_and_id_folder.parent, "original_scenario",
+                                     "hydrological_process", "wflow_test_full", "staticmaps.nc"),
+            staticmaps_scenario=self.hydrological_process_path / "wflow_test_full" / "staticmaps.nc"
+        )
+
+        # Modify LAI data
+        lai_modification.run()
+
+    def kvfrac_modification_command(self, scenario_kvfrac: tuple) -> None:
+        """
+        Modify kvfrac data according to the nature-based solution scenario
+
+        Parameters
+        ----------
+        scenario_kvfrac : tuple
+            kvfrac for each soil layer inside the polygons, from top to bottom.
+            Ex: (0.023, 1.0, 1.0, 1.0, 1.0, 1.0) for wetland
+        """
+        # Set up settings to modify kvfrac data
+        kvfrac_modification = KvfracModification(
+            staticmaps_original=Path(self.scenario_and_id_folder.parent, "original_scenario",
+                                     "hydrological_process", "wflow_test_full", "staticmaps.nc"),
+            staticmaps_scenario=self.hydrological_process_path / "wflow_test_full" / "staticmaps.nc",
+            polygons=self.polygons,
+            scenario_kvfrac=scenario_kvfrac
+        )
+
+        # Modify kvfrac data
+        kvfrac_modification.run()
+
+    def conductance_modification_command(self, infilt_multiplier: float, exfilt_multiplier: float) -> None:
+        """
+        Multiply infilt_cond and exfilt_cond inside the polygons (from the original values)
+
+        Parameters
+        ----------
+        infilt_multiplier : float
+            Value used to scale the river infiltration conductance inside the polygons.
+            infilt_cond = original infilt_cond * infilt_multiplier. Ex: 4 for wetland
+        exfilt_multiplier : float
+            Value used to scale the river exfiltration conductance inside the polygons.
+            exfilt_cond = original exfilt_cond * exfilt_multiplier. Ex: 0.5 for wetland
+        """
+        orig = Path(self.scenario_and_id_folder.parent, "original_scenario",
+                    "hydrological_process", "wflow_test_full", "staticmaps.nc")
+        scen = self.hydrological_process_path / "wflow_test_full" / "staticmaps.nc"
+
+        with xr.open_dataset(orig) as ds:
+            ds_orig = ds.load()
+        with xr.open_dataset(scen) as ds:
+            ds_scen = ds.load()
+
+        # Same polygon mask as kvfrac (inside polygons and inside catchment)
+        mask = KvfracModification(scen, self.polygons, ()).build_modify_mask(ds_scen)
+        mask = xr.DataArray(mask, coords={"y": ds_scen["y"], "x": ds_scen["x"]}, dims=("y", "x"))
+
+        # Multiply inside polygons, keep original values elsewhere
+        ds_scen["infilt_cond"] = ds_orig["infilt_cond"].where(~mask, ds_orig["infilt_cond"] * infilt_multiplier)
+        ds_scen["exfilt_cond"] = ds_orig["exfilt_cond"].where(~mask, ds_orig["exfilt_cond"] * exfilt_multiplier)
+
+        ds_scen.to_netcdf(scen, mode="w")
 
     def simulation_command(self) -> None:
         """Set up simulation command and generate simulation"""
@@ -261,8 +342,36 @@ class WflowSimulationsGenerator:
         # Generate files for preprocessing
         self.files_for_preprocessing_generator()
 
-        # Preprocessing data for wflow model
+        # Preprocess data for wflow model
         self.preprocessing_command()
+
+        # Fix diluted LAI for converted land cover (nature scenarios only)
+        if self.polygons is not None:
+            # Adjust LAI data
+            self.lai_modification_command()
+
+            # Read kvfrac from the original scenario's staticmaps
+            orig = Path(self.scenario_and_id_folder.parent, "original_scenario",
+                        "hydrological_process", "wflow_test_full", "staticmaps.nc")
+            with xr.open_dataset(orig) as ds_orig:
+                kvfrac = float(ds_orig["kvfrac"].isel(layer=0).median())
+
+            # At the moment, this is only for forest and wetland
+            # In the future, this should be created as a column in land cover mapping and can be changed
+            if (self.polygons["landcover"] == 45).any():
+                # This is for wetland
+                kvfrac = kvfrac + 0.007
+                self.conductance_modification_command(infilt_multiplier=4, exfilt_multiplier=1 / 2)
+            else:
+                # This is for forest
+                kvfrac = kvfrac + 0.01
+
+            # Adjust infiltration of runoff
+            self.kvfrac_modification_command(scenario_kvfrac=(kvfrac, 1.0, 1.0, 1.0, 1.0, 1.0))
+
+        else:
+            # Generate groundwater parameters (before kvfrac, so it cannot overwrite it)
+            self.groundwater_parameters_command()
 
         # Generate wflow model simulation
         self.simulation_command()

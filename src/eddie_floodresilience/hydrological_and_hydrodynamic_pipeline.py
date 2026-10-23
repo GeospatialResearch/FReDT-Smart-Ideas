@@ -4,7 +4,6 @@ Created on Sat Apr 11 17:11:15 2026
 
 @author: mng42
 """
-
 import logging
 from datetime import datetime
 from os import cpu_count
@@ -19,7 +18,7 @@ from sqlalchemy import insert
 from eddie.digitaltwin import retrieve_from_instructions
 from eddie.digitaltwin.setup_environment import get_database
 from eddie.digitaltwin.tables import create_table
-from eddie.digitaltwin.utils import setup_logging, LogLevel
+from eddie.digitaltwin.utils import LogLevel
 
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
@@ -761,6 +760,7 @@ def whirinaki(
 
     num_threads = max(1, cpu_count() - 1)
     flood_aoi_boundary = [1641148, 6072532, 1642796, 6076268]
+    # flood_aoi_boundary = [1639270, 6072596, 1642789, 6076268]
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
@@ -837,7 +837,7 @@ def riverton(
     end_time = datetime.fromisoformat("2020-02-05T00:00:00")
 
     num_threads = max(1, cpu_count() - 1)
-    flood_aoi_boundary = [1209555.319, 4849977.393, 1222804.726, 4864906.303]
+    flood_aoi_boundary = [1210562.138, 4853975.041, 1217304.262, 4857445.962]
     adjust_manning = False
     flood_model = 'lisflood-fp'
 
@@ -876,15 +876,14 @@ def riverton(
 
 
 if __name__ == '__main__':
-    setup_logging(LogLevel.INFO)
-    # Whirinaki
-    forest_gdf = gpd.read_file(
-        r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\polygons\polygons.shp"
-    )
-    drainage_gdf = gpd.read_file(
-        r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
-    )
-    whirinaki(FloodType.FLUVIAL, None, drainage_gdf)
+    # # Whirinaki
+    # forest_gdf = gpd.read_file(
+    #     r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\polygons\polygons.shp"
+    # )
+    # drainage_gdf = gpd.read_file(
+    #     r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
+    # )
+    whirinaki(FloodType.FLUVIAL, None, None)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
@@ -893,10 +892,10 @@ if __name__ == '__main__':
     # forest_gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\mataura\polygons_upstream_thick\polygons.shp"
     # )
-    # mataura(FloodType.FLUVIAL, forest_gdf, None)
+    # mataura(FloodType.FLUVIAL, None, None)
 
     # # Otautau
-    # wetland_gdf = gpd.read_file(
+    # gdf = gpd.read_file(
     #     r"D:\Digital_Twin_data\hydrological_hydrodynamic_path_031\otautau\polygons\polygons.shp"
     # )
-    # otautau(FloodType.FLUVIAL, wetland_gdf, None)
+    # otautau(FloodType.FLUVIAL, None, None)
