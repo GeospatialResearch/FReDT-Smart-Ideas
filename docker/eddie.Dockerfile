@@ -102,7 +102,7 @@ ENV PATH="/opt/julia-1.12.6/bin:$PATH"
 ENV JULIA_DEPOT_PATH="/opt/julia"
 
 # Install Julia package Wflow
-RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="0.8.1")'
+RUN julia -e 'using Pkg; Pkg.update(); Pkg.add(name="Wflow", version="1.0.4")'
 
 # Copy python virtual environment from build layer
 COPY --chown=root:root --chmod=655 --from=build /venv /venv
