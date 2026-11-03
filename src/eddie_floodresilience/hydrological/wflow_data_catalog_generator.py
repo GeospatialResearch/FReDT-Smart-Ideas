@@ -89,10 +89,23 @@ class DataCatalogGenerator:
         # Generate a dictionary with forcing information
         forcing = {
             "era5_hourly": {
-                "crs": 4326,
                 "data_type": "RasterDataset",
-                "driver": "netcdf",
-                "meta": {
+                "uri": str(self.forcing_path / "era5_hourly_*.nc"),
+                "driver": {
+                    "name": "raster_xarray"
+                },
+                "data_adapter": {
+                    "unit_add": {
+                        "temp": -273.15
+                    },
+                    "unit_mult": {
+                        "pet": 3600,
+                        "precip": 1,
+                        "press_msl": 0.01
+                    }
+                },
+                "metadata": {
+                    "crs": 4326,
                     "category": "meteo",
                     "history": "Extracted from Copernicus Climate Data Store",
                     "paper_doi": "10.1002/qj.3803",
@@ -100,15 +113,6 @@ class DataCatalogGenerator:
                     "source_license":
                         "https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products",
                     "source_url": "https://doi.org/10.24381/cds.bd0915c6"
-                },
-                "path": str(self.forcing_path / "era5_hourly_*.nc"),
-                "unit_add": {
-                    "temp": -273.15
-                },
-                "unit_mult": {
-                    "pet": 3600,
-                    "precip": 1,
-                    "press_msl": 0.01
                 }
             }
         }
@@ -131,10 +135,13 @@ class DataCatalogGenerator:
         # Generate a dictionary with orography information
         orography = {
             "era5_orography": {
-                "crs": 4326,
                 "data_type": "RasterDataset",
-                "driver": "netcdf",
-                "meta": {
+                "uri": "era5_orography.nc",
+                "driver": {
+                    "name": "raster_xarray"
+                },
+                "metadata": {
+                    "crs": 4326,
                     "category": "meteo",
                     "history": "Extracted from Copernicus Climate Data Store",
                     "paper_doi": "10.1002/qj.3803",
@@ -142,8 +149,7 @@ class DataCatalogGenerator:
                     "source_license":
                         "https://cds.climate.copernicus.eu/cdsapp/#!/terms/licence-to-use-copernicus-products",
                     "source_url": "https://doi.org/10.24381/cds.bd0915c6"
-                },
-                "path": "era5_orography.nc"
+                }
             }
         }
 
@@ -173,17 +179,19 @@ class DataCatalogGenerator:
         # Generate a dictionary with landcover information
         landcover = {
             "landcover": {
-                "crs": 4326,
                 "data_type": "RasterDataset",
-                "driver": "raster",
-                "meta": {
+                "uri": str(landcover_file),
+                "driver": {
+                    "name": "rasterio"
+                },
+                "metadata": {
+                    "crs": 4326,
                     "category": "landuse & landcover",
                     "paper_doi": "10.1594/PANGAEA.787668",
                     "paper_ref": "Arino et al (2012)",
                     "source_license": "CC-BY-3.0",
                     "source_url": "http://due.esrin.esa.int/page_globcover.php"
-                },
-                "path": str(landcover_file)
+                }
             }
         }
 
@@ -203,17 +211,21 @@ class DataCatalogGenerator:
         # Generate a dictionary with lakes' information
         lakes = {
             "hydro_lakes": {
-                "crs": 4326,
                 "data_type": "GeoDataFrame",
-                "driver": "vector",
-                "meta": {
+                "version": "1.0",
+                "uri": "hydro_lakes.gpkg",
+                "driver": {
+                    "name": "pyogrio"
+                },
+                "data_adapter": {
+                    "unit_mult": {
+                        "Area_avg": 1_000_000.0
+                    }
+                },
+                "metadata": {
+                    "crs": 4326,
                     "category": "surface water",
                     "source_author": "Arjen Haag"
-                },
-                "version": 1.0,
-                "path": "hydro_lakes.gpkg",
-                "unit_mult": {
-                    "Area_avg": 1_000_000.0
                 }
             }
         }
@@ -235,15 +247,17 @@ class DataCatalogGenerator:
         # Generate a dictionary with terrain information
         terrain = {
             "merit_hydrox": {
-                "crs": 2193,
                 "data_type": "RasterDataset",
-                "driver": "raster",
-                "meta": {
+                "version": "1.0",
+                "uri": str(self.scenario_and_id_folder.parent / r'terrain/merit_hydro/{variable}.tif'),
+                "driver": {
+                    "name": "rasterio"
+                },
+                "metadata": {
+                    "crs": 2193,
                     "category": "topography",
                     "paper_ref": "Yamazaki et al. (2019)"
-                },
-                "version": 1.0,
-                "path": str(self.scenario_and_id_folder.parent / r'terrain/merit_hydro/{variable}.tif')
+                }
             }
         }
 
@@ -264,16 +278,18 @@ class DataCatalogGenerator:
         # Generate a dictionary with basin information
         basin = {
             "merit_hydro_index": {
-                "crs": 2193,
                 "data_type": "GeoDataFrame",
-                "driver": "vector",
-                "meta": {
+                "uri": str(self.scenario_and_id_folder.parent / r'terrain/merit_hydro_index.gpkg'),
+                "driver": {
+                    "name": "pyogrio"
+                },
+                "metadata": {
+                    "crs": 2193,
                     "category": "topography",
                     "paper_doi": "10.5194/hess-2020-582",
                     "paper_ref": "Eilander et al. (in review)",
                     "source_license": "CC-BY-NC 4.0"
-                },
-                "path": str(self.scenario_and_id_folder.parent / r'terrain/merit_hydro_index.gpkg')
+                }
             }
         }
 
@@ -294,17 +310,19 @@ class DataCatalogGenerator:
         rivers = {
             "hydro_rivers_lin": {
                 "data_type": "GeoDataFrame",
-                "driver": "vector",
-                "meta": {
+                "version": "1",
+                "uri": str(self.scenario_and_id_folder.parent / r'terrain/rivers_lin2019_v1.gpkg'),
+                "driver": {
+                    "name": "pyogrio"
+                },
+                "metadata": {
                     "category": "hydrography",
                     "paper_doi": "10.5281/zenodo.3552776",
                     "paper_ref": "Lin et al. (2019)",
                     "source_license": "CC-BY-NC 4.0",
                     "source_url": "https://zenodo.org/record/3552776#.YVbOrppByUk",
                     "processing_notes": "hydrography/rivers_lin2019/README"
-                },
-                "version": 1,
-                "path": str(self.scenario_and_id_folder.parent / r'terrain/rivers_lin2019_v1.gpkg')
+                }
             }
         }
 
@@ -322,14 +340,16 @@ class DataCatalogGenerator:
         # Generate a dictionary with soilgrids' information
         soilgrids = {
             "soilgrids_2020": {
-                "crs": 4326,
                 "data_type": "RasterDataset",
-                "driver": "raster",
-                "meta": {
-                    "category": "soil"
+                "version": "2020",
+                "uri": "soilgrids_2020/{variable}.tif",
+                "driver": {
+                    "name": "rasterio"
                 },
-                "version": 2020,
-                "path": "soilgrids_2020/{variable}.tif"
+                "metadata": {
+                    "crs": 4326,
+                    "category": "soil"
+                }
             }
         }
 
@@ -360,16 +380,20 @@ class DataCatalogGenerator:
         # Set up lai information for wflow
         lai = {
             "modis_lai": {
-                "crs": crs,
                 "data_type": "RasterDataset",
-                "driver": "netcdf",
-                "meta": {
-                    "category": "landuse & landcover"
+                "version": "6",
+                "uri": lai_path,
+                "driver": {
+                    "name": "raster_xarray"
                 },
-                "version": 6,
-                "path": lai_path,
-                "unit_mult": {
-                    "LAI": 0.1
+                "data_adapter": {
+                    "unit_mult": {
+                        "LAI": 0.1
+                    }
+                },
+                "metadata": {
+                    "crs": crs,
+                    "category": "landuse & landcover"
                 }
             }
         }
