@@ -16,7 +16,7 @@
 
 
 """
-Unit tests for DrainageChannel.
+Unit tests for DrainageChannelBurner.
 """
 
 import geopandas as gpd

@@ -24,7 +24,7 @@ import pandas as pd
 import rioxarray as rxr
 import xarray as xr
 
-from src.eddie_floodresilience.solutions.engineer.drainage import GenerateFullDrainage
+from src.eddie_floodresilience.solutions.engineer.drainage import DrainageChannelBurner
 from src.eddie_floodresilience.solutions.engineer.stopbank import GenerateFullStopbank
 
 log = logging.getLogger(__name__)
@@ -99,13 +99,13 @@ class EngineeringSolution:
             DEM with full drainage information
         """
         # Set up drainage function
-        generate_dem_with_full_drainage = GenerateFullDrainage(
+        generate_dem_with_full_drainage = DrainageChannelBurner(
             dem_need_modification,
             drainage_vector
         )
 
         # Generate DEM with full drainage
-        dem_with_full_drainage = generate_dem_with_full_drainage.generate_full_drainage()
+        dem_with_full_drainage = generate_dem_with_full_drainage.burn_channels_into_dem()
 
         return dem_with_full_drainage
 

@@ -24,7 +24,7 @@ import shapely
 import xarray as xr
 
 
-class DrainageChannel:
+class DrainageChannelBurner:
     """
     Burn drainage channel polylines into a digital elevation model (DEM).
 
@@ -39,7 +39,7 @@ class DrainageChannel:
         Digital elevation model to burn channels into.
     channel_lines : geopandas.GeoDataFrame
         Drainage channels represented as LineString geometries.
-    """
+    """  # pylint: disable=too-few-public-methods
 
     def __init__(self, dem: xr.DataArray, channel_lines: gpd.GeoDataFrame) -> None:
         """
