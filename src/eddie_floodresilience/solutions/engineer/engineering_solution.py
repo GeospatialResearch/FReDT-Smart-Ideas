@@ -24,7 +24,7 @@ import pandas as pd
 import rioxarray as rxr
 import xarray as xr
 
-from src.eddie_floodresilience.solutions.engineer.drainage import GenerateFullDrainage
+from src.eddie_floodresilience.solutions.engineer.drainage import DrainageChannelBurner
 from src.eddie_floodresilience.solutions.engineer.stopbank import GenerateFullStopbank
 
 log = logging.getLogger(__name__)
@@ -81,7 +81,7 @@ class EngineeringSolution:
     @staticmethod
     def generate_dem_with_full_drainage(
         dem_need_modification: xr.DataArray,
-        drainage_vector: gpd.GeoSeries
+        drainage_vector: gpd.GeoDataFrame
     ) -> xr.DataArray:
         """
         Generate DEM with full drainage
@@ -90,7 +90,7 @@ class EngineeringSolution:
         ----------
         dem_need_modification : xr.DataArray
             DEM that needs modification
-        drainage_vector : gpd.GeoSeries
+        drainage_vector : gpd.GeoDataFrame
             Drainage information
 
         Returns
@@ -99,13 +99,13 @@ class EngineeringSolution:
             DEM with full drainage information
         """
         # Set up drainage function
-        generate_dem_with_full_drainage = GenerateFullDrainage(
+        generate_dem_with_full_drainage = DrainageChannelBurner(
             dem_need_modification,
             drainage_vector
         )
 
         # Generate DEM with full drainage
-        dem_with_full_drainage = generate_dem_with_full_drainage.generate_full_drainage()
+        dem_with_full_drainage = generate_dem_with_full_drainage.burn_channels_into_dem()
 
         return dem_with_full_drainage
 
@@ -149,16 +149,17 @@ class EngineeringSolution:
         modified_dem = self.dem
 
         # Apply engineering solution to the DEM
-        for i in range(self.vectors.shape[0]):
-            if self.vectors.iloc[i]['type'] == 'drainage':
+        for _idx, vector_feature in self.vectors.iterrows():
+            if vector_feature['type'] == 'drainage':
+                single_feature_gdf = gpd.GeoDataFrame(vector_feature.to_frame().T, crs=self.vectors.crs)
                 modified_dem = self.generate_dem_with_full_drainage(
                     modified_dem,
-                    self.vectors.iloc[i]
+                    single_feature_gdf
                 )
             else:
                 modified_dem = self.generate_dem_with_full_stopbank(
                     modified_dem,
-                    self.vectors.iloc[i]
+                    vector_feature
                 )
 
         # Hydrodynamic process path

@@ -20,6 +20,7 @@ from eddie.digitaltwin.setup_environment import get_database
 from eddie.digitaltwin.tables import create_table
 from eddie.digitaltwin.utils import LogLevel
 
+from lib.eddie.src.eddie.digitaltwin.utils import LogLevel
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
 from src.eddie_floodresilience.flood_model.flood_model_parameters_generator import FloodType
@@ -470,13 +471,13 @@ class HydrologicalAndHydrodynamicPipeline:
         # Ensure output directory exists
         self.hydro_combination_path.mkdir(parents=True, exist_ok=True)
 
-        # Download external spatial data into database
-        bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.flood_aoi_boundary)], crs="EPSG:2193")
-        retrieve_from_instructions.main(
-            bbox_gdf,
-            Path("src/eddie_floodresilience/static_boundary_instructions.json"),
-            log_level=LogLevel.INFO
-        )
+        # # Download external spatial data into database
+        # bbox_gdf = gpd.GeoDataFrame(geometry=[box(*self.flood_aoi_boundary)], crs="EPSG:2193")
+        # retrieve_from_instructions.main(
+        #     bbox_gdf,
+        #     Path("src/eddie_floodresilience/static_boundary_instructions.json"),
+        #     log_level=LogLevel.INFO
+        # )
 
         # Set scenario
         scenario_and_id_folder = self.scenario_folder_generator()
@@ -505,13 +506,14 @@ class HydrologicalAndHydrodynamicPipeline:
         # Original scenario
         else:
             # Generate terrain data for wflow and flood models
-            self.terrain_data_pipeline()
+            # self.terrain_data_pipeline()
 
             # Generate wflow data
-            self.wflow_data_pipeline(scenario_and_id_folder)
-
+            # self.wflow_data_pipeline(scenario_and_id_folder)
+            #
             # Generate flood data
-            flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
+            # flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
+            pass
 
         self.serve_wflow_data(scenario_and_id_folder, flood_model_output_id)
         return flood_model_output_id
@@ -876,14 +878,17 @@ def riverton(
 
 
 if __name__ == '__main__':
+    from eddie.digitaltwin.utils import setup_logging
+    setup_logging(LogLevel.INFO)
     # # Whirinaki
     # forest_gdf = gpd.read_file(
     #     r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\polygons\polygons.shp"
     # )
-    # drainage_gdf = gpd.read_file(
-    #     r"H:\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
-    # )
-    whirinaki(FloodType.FLUVIAL, None, None)
+    drainage_gdf = gpd.read_file(
+        r"T:\smartideas\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
+    )
+    whirinaki(FloodType.FLUVIAL, None, drainage_gdf)
+    # whirinaki(FloodType.FLUVIAL, None, None)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
