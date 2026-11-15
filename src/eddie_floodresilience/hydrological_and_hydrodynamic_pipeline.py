@@ -513,7 +513,6 @@ class HydrologicalAndHydrodynamicPipeline:
 
             # Generate flood data
             flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
-            pass
 
         self.serve_wflow_data(scenario_and_id_folder, flood_model_output_id)
         return flood_model_output_id

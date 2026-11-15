@@ -102,7 +102,15 @@ class WflowServeDataGenerator:
         workspace_name = f"{db_name}-intermediate-wflow"
 
         # Read catchment polygon
-        catchment_file = self.scenario_and_id_folder / "hydrological_process/wflow_test_full/staticgeoms/basins.geojson"
+        catchment_relative_path = Path("hydrological_process/wflow_test_full/staticgeoms/basins.geojson")
+        catchment_file = self.scenario_and_id_folder / catchment_relative_path
+        if not catchment_file.exists() and self.scenario_and_id_folder.name.startswith("scenario_engineer_"):
+            # In the case that it's an engineering-only solution, this file does not exist
+            # but can be retrieved from the original scenario.
+            original_scenario_folder = self.scenario_and_id_folder.parent / "original_scenario"
+            catchment_file = original_scenario_folder / catchment_relative_path
+        if not catchment_file.exists():
+            raise FileNotFoundError(f"File {catchment_file} does not exist.")
         catchment_poly = gpd.read_file(catchment_file)
         if catchment_poly.crs.to_epsg() is None:
             raise KeyError(f"CRS is not defined in EPSG# form in vector file {catchment_file}.")
