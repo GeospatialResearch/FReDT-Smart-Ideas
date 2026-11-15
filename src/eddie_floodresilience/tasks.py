@@ -22,13 +22,16 @@ Allows the frontend to send tasks and retrieve status later.
 import json
 from typing import List, NamedTuple
 
-import geopandas as gpd
+from celery import signals
 from celery.signals import setup_logging as celery_setup_logging_signal
+from celery.worker.consumer import Consumer
+import geopandas as gpd
 
-from eddie.digitaltwin import cache_new_results, check_cache_results
+from eddie.digitaltwin import cache_new_results, check_cache_results, retrieve_from_instructions, setup_environment
 from eddie.digitaltwin.utils import setup_logging, LogLevel
-from eddie.tasks import OnFailureStateTask, app  # pylint: disable=cyclic-import
+from eddie.tasks import OnFailureStateTask, add_base_data_to_db, app, wkt_to_gdf  # pylint: disable=cyclic-import
 from src.eddie_floodresilience import hydrological_and_hydrodynamic_pipeline
+from src.eddie_floodresilience.run_all import DEFAULT_MODULES_TO_PARAMETERS
 from src.eddie_floodresilience.hydrological.wflow_serve_data_generator import get_hydrograph_csv
 
 
@@ -48,6 +51,24 @@ class DepthTimePlot(NamedTuple):
 
     depths: List[float]
     times: List[float]
+
+
+@signals.worker_ready.connect
+def on_startup(sender: Consumer, **_kwargs: None) -> None:  # pylint: disable=missing-param-doc
+    """
+    Initialise database, runs when Celery instance is ready.
+
+    Parameters
+    ----------
+    sender : Consumer
+        The Celery worker node instance
+    """
+    with sender.app.connection() as conn:
+        # Gather area of interest from file.
+        aoi_wkt = gpd.read_file("selected_polygon.geojson").to_crs(4326).geometry[0].wkt
+        # Send a task to initialise this area of interest.
+        base_data_parameters = DEFAULT_MODULES_TO_PARAMETERS[retrieve_from_instructions]
+        sender.app.send_task("eddie.tasks.add_base_data_to_db", args=[aoi_wkt, base_data_parameters], connection=conn)
 
 
 @celery_setup_logging_signal.connect

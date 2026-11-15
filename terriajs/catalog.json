@@ -15,6 +15,54 @@
     },
     {
       "type": "group",
+      "name": "Whirinaki Tide and Sea Level Rise Demonstrations",
+      "description": "A collection of model outputs showing the how tide and sea level rise affect the Whirinaki River",
+      "isOpen": true,
+      "members": [
+        {
+          "name": "Past Event (10 Year Return Period)",
+          "layers": "scenario1_past_event_noSLR_10_year_max",
+          "styles": "plasma_0_3m",
+          "type": "wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
+          "opacity": 1
+        },
+        {
+          "name": "90 Year Return Period Rain at Low Tide",
+          "layers": "scenario3_90yr_lowtide_max",
+          "styles": "plasma_0_3m",
+          "type": "wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
+          "opacity": 1
+        },
+        {
+          "name": "90 Year Return Period Rain at High Tide",
+          "layers": "scenario2_90yr_hightide_max",
+          "styles": "plasma_0_3m",
+          "type": "wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
+          "opacity": 1
+        },
+        {
+          "name": "90 Year Return Period Rain at Low Tide + Sea Level Rise",
+          "layers": "scenario5_90yr_lowtide_slr_6m_max",
+          "styles": "plasma_0_3m",
+          "type": "wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
+          "opacity": 1
+        },
+        {
+          "name": "90 Year Return Period Rain at High Tide + Sea Level Rise",
+          "layers": "scenario4_90yr_hightide_slr_6m_max",
+          "styles": "plasma_0_3m",
+          "type": "wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
+          "opacity": 1
+        }
+      ]
+    },
+    {
+      "type": "group",
       "name": "Model land cover change flood scenarios",
       "isOpen": true,
       "members": [
@@ -38,27 +86,6 @@
           "description": "Model a land cover change scenario that will impact the flood scenario",
           "url": "$BACKEND_URL/wps",
           "identifier": "whirinaki1999ExistingLayer"
-        },
-        {
-          "type": "wps",
-          "name": "Mataura 2020 Baseline",
-          "description": "Model a land cover change scenario that will impact the flood scenario",
-          "url": "$BACKEND_URL/wps",
-          "identifier": "mataura2020baseline"
-        },
-        {
-          "type": "wps",
-          "name": "Mataura 2020 Land Cover Change",
-          "description": "Model a land cover change scenario that will impact the flood scenario",
-          "url": "$BACKEND_URL/wps",
-          "identifier": "mataura2020"
-        },
-        {
-          "type": "wps",
-          "name": "Mataura 1999 Land Cover Change - Existing Layer",
-          "description": "Model a land cover change scenario that will impact the flood scenario",
-          "url": "$BACKEND_URL/wps",
-          "identifier": "mataura2020ExistingLayer"
         }
       ]
     }
