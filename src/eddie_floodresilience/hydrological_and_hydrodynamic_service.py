@@ -198,10 +198,9 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_typ
         Callable
             The WPS handler function.
         """
+        location_geojson = None
+        channel_geojson = None
         match input_type:
-            case InputType.BASELINE:
-                # Inputs can be ignored in a baseline
-                location_geojson = None
             case InputType.DRAW_POLYGON:
                 # Read the inputs, combine them into one dict
                 location_geojson_str = request.inputs["location"][0].data
@@ -214,21 +213,21 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_typ
                 # Remove the unique id property, it is not needed and interferes with caching.
                 location_geojson.pop("id", None)
             case InputType.LINESTRING:
-                location_geojson_str = request.inputs["channel"][0].data
-                location_geojson = json.loads(location_geojson_str)
-                landcover_type_name = request.inputs["landcover"][0].data
-                location_geojson["features"][0].update({"properties": {"landcover_name": landcover_type_name}})
+                channel_geojson_str = request.inputs["channel"][0].data
+                channel_geojson = json.loads(channel_geojson_str)
+                channel_geojson["features"][0]["properties"]["type"] = "drainage"
         # Check if scenario is already cached
         cache_dict = {
             "task": task.name,
             "location_geojson": location_geojson,
+            "channel_geojson": channel_geojson
         }
         check_cache_task = tasks.check_cache.delay(cache_dict)
         scenario_id = check_cache_task.get()
 
         # Run the task callback if its needed
         if scenario_id is None:
-            modelling_task = task.delay(location_geojson)
+            modelling_task = task.delay(location_geojson, channel_geojson)
             scenario_id = modelling_task.get()
             tasks.cache_results.delay(scenario_id, cache_dict)
 

@@ -118,7 +118,7 @@ def check_cache(scenario_options: dict) -> int | None:
 
 
 @app.task(base=OnFailureStateTask)
-def create_hydrological_and_hydrodynamic_model_whirinaki_1999(location_geojson: dict | None) -> int:
+def create_hydrological_and_hydrodynamic_model_whirinaki_1999(location_geojson: dict | None, channel_geojson: dict | None) -> int:
     """
     Task to run a hydrological and hydronynamic model for Whirinaki.
 
@@ -133,8 +133,10 @@ def create_hydrological_and_hydrodynamic_model_whirinaki_1999(location_geojson: 
         The resultant flood model output ID.
     """
     landcover_scenario_gdf = read_location_geojson(location_geojson)
+    engineer_scenario_gdf = read_line_geojson(channel_geojson)
     flood_model_output_id = hydrological_and_hydrodynamic_pipeline.whirinaki(
-        nature_scenario_gdf=landcover_scenario_gdf
+        nature_scenario_gdf=landcover_scenario_gdf,
+        engineer_scenario_gdf=engineer_scenario_gdf
     )
     return flood_model_output_id
 
@@ -187,7 +189,7 @@ def read_location_geojson(location_geojson: dict | None) -> gpd.GeoDataFrame | N
 
     Parameters
     ----------
-    location_geojson: str | None
+    location_geojson: str | None # todo this type seems wrong! (and also of course its wrong)
         A GeoJSON string with polygons dictating where to change landcover.
 
     Returns
@@ -210,3 +212,33 @@ def read_location_geojson(location_geojson: dict | None) -> gpd.GeoDataFrame | N
         raise ValueError(f"Expected column 'landcover_name' in {landcover_scenario_gdf.columns}")
 
     return landcover_scenario_gdf
+
+def read_line_geojson(location_geojson: dict | None) -> gpd.GeoDataFrame | None:
+    """
+    Read a GeoJSON string and a landcover name into a GeoDataFrame, #todo fix all comment and doc
+
+    Parameters
+    ----------
+    location_geojson: str | None # todo this type seems wrong! (and also of course its wrong)
+        A GeoJSON string with polygons dictating where to change landcover.
+
+    Returns
+    -------
+    gpd.GeoDataFrame
+        The GeoDataFrame containing polygons.
+
+    Raises
+    ------
+    ValueError
+        If the expected column 'landcover_name' is not present in the GeoJSON.
+    """
+    if location_geojson is None:
+        return None
+    geojson_str = json.dumps(location_geojson)
+    engineering_scenario_gdf = gpd.read_file(geojson_str, driver="GeoJSON")
+
+    # Check GDF contains the necessary landcover data
+    if "type" not in engineering_scenario_gdf.columns:
+        raise ValueError(f"Expected column 'type' in {engineering_scenario_gdf.columns}")
+
+    return engineering_scenario_gdf

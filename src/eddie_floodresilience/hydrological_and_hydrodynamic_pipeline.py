@@ -20,7 +20,7 @@ from eddie.digitaltwin.setup_environment import get_database
 from eddie.digitaltwin.tables import create_table
 from eddie.digitaltwin.utils import LogLevel
 
-from lib.eddie.src.eddie.digitaltwin.utils import LogLevel
+from eddie.digitaltwin.utils import LogLevel
 from src.eddie_floodresilience.config import EnvVariable
 from src.eddie_floodresilience.flood_model.bgflood.bgflood_simulations_generator import BGFloodModelSimulationsGenerator
 from src.eddie_floodresilience.flood_model.flood_model_parameters_generator import FloodType
@@ -886,8 +886,8 @@ if __name__ == '__main__':
     drainage_gdf = gpd.read_file(
         r"T:\smartideas\forLuke\automation_example\polygons_vectors\whirinaki_vers_002\vectors\drainage.shp"
     )
-    # whirinaki(FloodType.FLUVIAL, None, drainage_gdf)
-    whirinaki(FloodType.FLUVIAL, None, None)
+    whirinaki(FloodType.FLUVIAL, None, drainage_gdf)
+    # whirinaki(FloodType.FLUVIAL, None, None)
 
     # # Riverton
     # riverton(FloodType.FLUVIAL, None, None)
