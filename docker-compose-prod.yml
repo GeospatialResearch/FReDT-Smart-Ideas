@@ -1,160 +1,159 @@
+# Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
+# LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+# Defines services, their images, and interactions between services.
+
+volumes:
+  postgres_db_vol_efr:
+  stored_data_efr:
+  geoserver_data_efr:
+
 services:
-  # Copyright © 2021-2026 Geospatial Research Institute Toi Hangarau
-  # LICENSE: https://github.com/GeospatialResearch/Digital-Twins/blob/master/LICENSE
-  #
-  # This program is free software: you can redistribute it and/or modify
-  # it under the terms of the GNU Affero General Public License as
-  # published by the Free Software Foundation, either version 3 of the
-  # License, or (at your option) any later version.
-  #
-  # This program is distributed in the hope that it will be useful,
-  # but WITHOUT ANY WARRANTY; without even the implied warranty of
-  # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-  # GNU Affero General Public License for more details.
-  #
-  # You should have received a copy of the GNU Affero General Public License
-  # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+  db_postgres_efr:
+    # Database to store all vector data, states, and links to raster data.
+    image: postgis/postgis:16-3.4
+    container_name: db_postgres_digital_twin_efr
+    restart: always
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_db_vol_efr:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    healthcheck:
+      test: pg_isready -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB
 
-  # Defines services, their images, and interactions between services.
+  backend:
+    # Performs analysis, computation, handles web requests, facilitates database interactions
+    build:
+      context: .
+      dockerfile: docker/eddie.Dockerfile
+    container_name: backend_digital_twin_efr
+    entrypoint: [ "src/backend_entrypoint.sh" ]
+    env_file:
+      - .env
+      - api_keys.env
+      - .env.docker-override
+      - .env.docker-override.prod
+    healthcheck:
+      test: curl --fail -s http://localhost:5000/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    ports:
+      - "5005:5000"
+    depends_on:
+      - db_postgres_efr
+      - message_broker_efr
+      - geoserver-efr
+    environment:
+      VIRTUAL_HOST: ${BACKEND_VIRTUAL_HOST}
+      LETSENCRYPT_HOST: ${BACKEND_VIRTUAL_HOST}
+      LETSENCRYPT_EMAIL: gri-enquiries@canterbury.ac.nz
 
-  volumes:
-    postgres_db_vol_efr:
-    stored_data_efr:
-    geoserver_data_efr:
+  celery_worker:
+    # Performs tasks such as complex computation asynchronously on behalf of backend
+    build:
+      context: .
+      dockerfile: docker/eddie.Dockerfile
+    container_name: celery_worker_digital_twin_efr
+    entrypoint: [ "src/celery_worker_entrypoint.sh" ]
+    restart: always
+    env_file:
+      - .env
+      - api_keys.env
+      - .env.docker-override
+      - .env.docker-override.prod
+    volumes:
+      # Bind host data directories to container, allowing different instances to share data sources.
+      - stored_data_efr:/stored_data
+      - geoserver_data_efr:/stored_data/geoserver
+      - ${HYDROMT_PATH}:/necessary_data:ro
+    ports:
+      - "5006:5001"
+    healthcheck:
+      test: curl --fail -s http://localhost:5001/ || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    depends_on:
+      - db_postgres_efr
+      - message_broker_efr
+      - geoserver-efr
 
-  services:
-    db_postgres_efr:
-      # Database to store all vector data, states, and links to raster data.
-      image: postgis/postgis:16-3.4
-      container_name: db_postgres_digital_twin_efr
-      restart: always
-      ports:
-        - "${POSTGRES_PORT}:5432"
-      volumes:
-        - postgres_db_vol_efr:/var/lib/postgresql/data
-      environment:
-        POSTGRES_USER: ${POSTGRES_USER}
-        POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-        POSTGRES_DB: ${POSTGRES_DB}
-      healthcheck:
-        test: pg_isready -h 127.0.0.1 -U $POSTGRES_USER -d $POSTGRES_DB
+  geoserver-efr:
+    # Serves geospatial web data through interactions with files and database
+    build:
+      context: lib/eddie
+      dockerfile: geoserver.Dockerfile
+    container_name: geoserver_digital_twin_efr
+    volumes:
+      - geoserver_data_efr:/opt/geoserver_data
+    depends_on:
+      - db_postgres_efr
+    environment:
+      - SKIP_DEMO_DATA=true
+      - CORS_ENABLED=true
+      - ROOT_WEBAPP_REDIRECT=true
+      - GEOSERVER_ADMIN_USER=$GEOSERVER_ADMIN_NAME
+      - GEOSERVER_ADMIN_PASSWORD=$GEOSERVER_ADMIN_PASSWORD
+      - VIRTUAL_HOST=${GEOSERVER_VIRTUAL_HOST}
+      - LETSENCRYPT_HOST=${GEOSERVER_VIRTUAL_HOST}
+      - LETSENCRYPT_EMAIL=gri-enquiries@canterbury.ac.nz
+    restart: always
+    healthcheck:
+      test: curl --fail -s http://localhost:8080/geoserver || exit 1
+      timeout: 5s
+      retries: 10
 
-    backend:
-      # Performs analysis, computation, handles web requests, facilitates database interactions
-      build:
-        context: .
-        dockerfile: docker/eddie.Dockerfile
-      container_name: backend_digital_twin_efr
-      entrypoint: [ "src/backend_entrypoint.sh" ]
-      env_file:
-        - .env
-        - api_keys.env
-        - .env.docker-override
-        - .env.docker-override.prod
-      healthcheck:
-        test: curl --fail -s http://localhost:5000/ || exit 1
-        interval: 10s
-        timeout: 5s
-        retries: 10
-      ports:
-        - "5005:5000"
-      depends_on:
-        - db_postgres_efr
-        - message_broker_efr
-        - geoserver-efr
-      environment:
-        VIRTUAL_HOST: ${BACKEND_VIRTUAL_HOST}
-        LETSENCRYPT_HOST: ${BACKEND_VIRTUAL_HOST}
-        LETSENCRYPT_EMAIL: gri-enquiries@canterbury.ac.nz
+  terria_map:
+    # Front-end using terria.js
+    build:
+      context: terriajs
+    container_name: terria_map_digital_twin_efr
+    ports:
+      - "3002:3001"
+    environment:
+      - CESIUM_ACCESS_TOKEN=$CESIUM_ACCESS_TOKEN
+      - BACKEND_HOST=$BACKEND_HOST
+      - BACKEND_PORT=$BACKEND_PORT
+      - GEOSERVER_HOST=$GEOSERVER_HOST
+      - GEOSERVER_PORT=$GEOSERVER_PORT
+      - VIRTUAL_HOST=${WWW_VIRTUAL_HOST}
+      - LETSENCRYPT_HOST=${WWW_VIRTUAL_HOST}
+      - LETSENCRYPT_EMAIL=gri-enquiries@canterbury.ac.nz
+    healthcheck:
+      test: curl --fail -s http://localhost:3001/ || exit 1
+      timeout: 5s
+      retries: 10
 
-    celery_worker:
-      # Performs tasks such as complex computation asynchronously on behalf of backend
-      build:
-        context: .
-        dockerfile: docker/eddie.Dockerfile
-      container_name: celery_worker_digital_twin_efr
-      entrypoint: [ "src/celery_worker_entrypoint.sh" ]
-      restart: always
-      env_file:
-        - .env
-        - api_keys.env
-        - .env.docker-override
-        - .env.docker-override.prod
-      volumes:
-        # Bind host data directories to container, allowing different instances to share data sources.
-        - stored_data_efr:/stored_data
-        - geoserver_data_efr:/stored_data/geoserver
-        - ${HYDROMT_PATH}:/necessary_data:ro
-      ports:
-        - "5006:5001"
-      healthcheck:
-        test: curl --fail -s http://localhost:5001/ || exit 1
-        interval: 10s
-        timeout: 5s
-        retries: 10
-      depends_on:
-        - db_postgres_efr
-        - message_broker_efr
-        - geoserver-efr
+  message_broker_efr:
+    # Communicates between backend and workers to assign tasks and store state
+    image: redis:7
+    container_name: message_broker_efr_digital_twin_efr
+    healthcheck:
+      test: redis-cli ping | grep PONG
+      timeout: 1s
+      retries: 10
 
-    geoserver-efr:
-      # Serves geospatial web data through interactions with files and database
-      build:
-        context: lib/eddie
-        dockerfile: geoserver.Dockerfile
-      container_name: geoserver_digital_twin_efr
-      volumes:
-        - geoserver_data_efr:/opt/geoserver_data
-      depends_on:
-        - db_postgres_efr
-      environment:
-        - SKIP_DEMO_DATA=true
-        - CORS_ENABLED=true
-        - ROOT_WEBAPP_REDIRECT=true
-        - GEOSERVER_ADMIN_USER=$GEOSERVER_ADMIN_NAME
-        - GEOSERVER_ADMIN_PASSWORD=$GEOSERVER_ADMIN_PASSWORD
-        - VIRTUAL_HOST=${GEOSERVER_VIRTUAL_HOST}
-        - LETSENCRYPT_HOST=${GEOSERVER_VIRTUAL_HOST}
-        - LETSENCRYPT_EMAIL=gri-enquiries@canterbury.ac.nz
-      restart: always
-      healthcheck:
-        test: curl --fail -s http://localhost:8080/geoserver || exit 1
-        timeout: 5s
-        retries: 10
+    restart: always
 
-    terria_map:
-      # Front-end using terria.js
-      build:
-        context: terriajs
-      container_name: terria_map_digital_twin_efr
-      ports:
-        - "3002:3001"
-      environment:
-        - CESIUM_ACCESS_TOKEN=$CESIUM_ACCESS_TOKEN
-        - BACKEND_HOST=$BACKEND_HOST
-        - BACKEND_PORT=$BACKEND_PORT
-        - GEOSERVER_HOST=$GEOSERVER_HOST
-        - GEOSERVER_PORT=$GEOSERVER_PORT
-        - VIRTUAL_HOST=${WWW_VIRTUAL_HOST}
-        - LETSENCRYPT_HOST=${WWW_VIRTUAL_HOST}
-        - LETSENCRYPT_EMAIL=gri-enquiries@canterbury.ac.nz
-      healthcheck:
-        test: curl --fail -s http://localhost:3001/ || exit 1
-        timeout: 5s
-        retries: 10
-
-    message_broker_efr:
-      # Communicates between backend and workers to assign tasks and store state
-      image: redis:7
-      container_name: message_broker_efr_digital_twin_efr
-      healthcheck:
-        test: redis-cli ping | grep PONG
-        timeout: 1s
-        retries: 10
-
-      restart: always
-
-  networks:
-    default:
-      name: webproxy
-      external: true
+networks:
+  default:
+    name: webproxy
+    external: true
