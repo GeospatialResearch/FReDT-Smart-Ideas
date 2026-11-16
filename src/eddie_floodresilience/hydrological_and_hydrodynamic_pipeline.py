@@ -289,8 +289,7 @@ class HydrologicalAndHydrodynamicPipeline:
         # Set up log message
         log.info("Starting total solutions")
 
-        if self.polygons is not None and self.vectors is not None:
-
+        if self.polygons is not None:
             # Nature based solution
             nature_based_solution = NatureBasedSolution(
                 self.hydromt_path,
@@ -300,27 +299,7 @@ class HydrologicalAndHydrodynamicPipeline:
             )
             nature_based_solution.apply_nature_based_solution()
 
-            # Engineering solution
-            engineering_solution = EngineeringSolution(
-                self.flood_model,
-                scenario_and_id_folder,
-                self.vectors
-            )
-            engineering_solution.apply_engineering_solution()
-
-        elif self.polygons is not None:
-
-            # Nature based solution
-            nature_based_solution = NatureBasedSolution(
-                self.hydromt_path,
-                scenario_and_id_folder,
-                self.landcover,
-                self.polygons
-            )
-            nature_based_solution.apply_nature_based_solution()
-
-        elif self.vectors is not None:
-
+        if self.vectors is not None:
             # Engineering solution
             engineering_solution = EngineeringSolution(
                 self.flood_model,
@@ -878,6 +857,7 @@ def riverton(
 
 if __name__ == '__main__':
     from eddie.digitaltwin.utils import setup_logging
+
     setup_logging(LogLevel.INFO)
     # # Whirinaki
     # forest_gdf = gpd.read_file(
