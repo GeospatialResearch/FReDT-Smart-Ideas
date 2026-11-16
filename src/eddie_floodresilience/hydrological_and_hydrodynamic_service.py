@@ -122,14 +122,7 @@ class PredefinedScenario(Process, ABC):
                             Format(mime_type='application/vnd.geo+json',
                                    schema='http://geojson.org/geojson-spec.html#linestring')],
                         workdir='workdir'
-                    ),
-                    LiteralInput("width_top", "Top Width (m)", "string", allowed_values=["15", "20", "30"]),
-                    # todo add validation
-                    LiteralInput("width_bottom", "Bottom Width (m)", "string", allowed_values=["3", "5", "12"]),
-                    # todo add validation
-                    # todo work out the UI (don't limit to what Terria can do)
-                    LiteralInput("side_slope", "Side Slope (degrees)", "string",
-                                 allowed_values=["15", "20", "30", "45"]),  # todo add validation
+                    )
                 ]
         # Create area WPS outputs
         outputs = [
