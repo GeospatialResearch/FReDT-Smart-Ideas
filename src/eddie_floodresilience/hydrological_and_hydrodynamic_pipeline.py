@@ -461,38 +461,19 @@ class HydrologicalAndHydrodynamicPipeline:
         # Set scenario
         scenario_and_id_folder = self.scenario_folder_generator()
 
-        # The if function here will be modified later
-        # Apply land cover solution
-        # (this would be for both landcover and elevation solutions)
-        if self.polygons is not None:
-            # Apply solutions
-            self.total_solutions(scenario_and_id_folder)
-
-            # Generate wflow data
-            self.wflow_data_pipeline(scenario_and_id_folder)
-
-            # Generate flood data
-            flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
-
-        # Apply elevation solution
-        elif self.vectors is not None:
-            # Apply solutions
-            self.total_solutions(scenario_and_id_folder)
-
-            # Generate flood data
-            flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
-
-        # Original scenario
-        else:
-            # Generate terrain data for wflow and flood models
+        is_baseline = self.polygons is None and self.vectors is None
+        if is_baseline:
+            # Run baseline scenario
             self.terrain_data_pipeline()
-
-            # Generate wflow data
             self.wflow_data_pipeline(scenario_and_id_folder)
+        else:
+            # Run modified scenario
+            self.total_solutions(scenario_and_id_folder)
+            # vectors-only scenarios (local-scale elevation) skip the wflow stage
+            if self.polygons is not None:
+                self.wflow_data_pipeline(scenario_and_id_folder)
 
-            # Generate flood data
-            flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
-
+        flood_model_output_id = self.flood_data_pipeline(scenario_and_id_folder)
         self.serve_wflow_data(scenario_and_id_folder, flood_model_output_id)
         return flood_model_output_id
 
