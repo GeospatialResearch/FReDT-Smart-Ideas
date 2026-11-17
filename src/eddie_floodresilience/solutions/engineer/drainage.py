@@ -19,6 +19,7 @@
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import rasterio.features
 import shapely
 import xarray as xr
@@ -136,7 +137,7 @@ class DrainageChannelBurner:
         return depth.fillna(0)
 
     @staticmethod
-    def _get_xyz_values_at_points(dem: xr.DataArray, gs: gpd.GeoSeries) -> gpd.GeoSeries:
+    def _get_xyz_values_at_points(dem: xr.DataArray, gs: gpd.GeoSeries, depth_modifier: pd.Series | None = None) -> gpd.GeoSeries:
         """Sample DEM elevation at a set of 2D points.
 
         Parameters
@@ -156,6 +157,9 @@ class DrainageChannelBurner:
         x_coords = xr.DataArray(gs.x.to_numpy(), dims="points")
         y_coords = xr.DataArray(gs.y.to_numpy(), dims="points")
         z_coords = dem.sel(x=x_coords, y=y_coords, method="nearest")
+
+        if depth_modifier is not None:
+            z_coords -= depth_modifier
 
         xyz_gs = gpd.GeoSeries.from_xy(
             x_coords.values,
@@ -189,8 +193,9 @@ class DrainageChannelBurner:
         end_points = gpd.GeoSeries(
             shapely.get_point(channels.geometry, -1), index=channels.index, crs=channels.crs
         )
-        start_z = self._get_xyz_values_at_points(self.dem, start_points).z.to_numpy()
-        end_z = self._get_xyz_values_at_points(self.dem, end_points).z.to_numpy()
+        channel_ends_depth = channels["channel_ends_depth"]
+        start_z = self._get_xyz_values_at_points(self.dem, start_points, channel_ends_depth).z.to_numpy()
+        end_z = self._get_xyz_values_at_points(self.dem, end_points, channel_ends_depth).z.to_numpy()
 
         lines_3d = [
             self._interpolate_line_z(geometry, start, end)

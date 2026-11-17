@@ -122,7 +122,8 @@ class PredefinedScenario(Process, ABC):
                             Format(mime_type='application/vnd.geo+json',
                                    schema='http://geojson.org/geojson-spec.html#linestring')],
                         workdir='workdir'
-                    )
+                    ),
+                    LiteralInput("channel_ends_depth", "Channel End Depth (m)", "string", allowed_values=["1", "2", "3"])
                 ]
         # Create area WPS outputs
         outputs = [
@@ -209,6 +210,8 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_typ
                 channel_geojson_str = request.inputs["channel"][0].data
                 channel_geojson = json.loads(channel_geojson_str)
                 channel_geojson["features"][0]["properties"]["type"] = "drainage"
+                channel_ends_depth = int(request.inputs["channel_ends_depth"][0].data)
+                channel_geojson["features"][0]["properties"]["channel_ends_depth"] = channel_ends_depth
         # Check if scenario is already cached
         cache_dict = {
             "task": task.name,
