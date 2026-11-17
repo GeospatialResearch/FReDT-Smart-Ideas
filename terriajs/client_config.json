@@ -1,12 +1,12 @@
 {
   "initializationUrls": [
     "catalog",
-    "http://localhost:5000/terria-catalog.json"
+    "$BACKEND_URL/terria-catalog.json"
   ],
   "parameters": {
     "appName": "Flood Resilience Digital Twin (FReDT)",
     "supportEmail": "gri-enquiries+fredt@canterbury.ac.nz",
-    "cesiumIonAccessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiJjNDVmYTBmNi03MDVmLTRjNmEtOWJjNC1hZjgzMjYxMmVkMjIiLCJpZCI6Nzk4NzUsImlhdCI6MTc3NjM5NTc5OH0.II5BJkgeRakSWRhj4p2_fprRvwa0ZMusvW4nNw-7iCo",
+    "cesiumIonAccessToken": "$CESIUM_ACCESS_TOKEN",
     "brandBarElements": [
       "<div style=\"display: flex; align-items: center;\">\n  <h1 style=\"color: white;\">Flood Resilience Digital Twin (FReDT)</h1>\n</div>"
     ],

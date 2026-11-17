@@ -10,7 +10,7 @@
       "type": "wps",
       "name": "Whirinaki 1999 Drainage",
       "description": "Model a channel scenario that will impact the flood scenario.",
-      "url": "http://localhost:5000/wps",
+      "url": "$BACKEND_URL/wps",
       "identifier": "whirinaki1999Drainage"
     },
     {
@@ -24,7 +24,7 @@
           "layers": "scenario1_past_event_noSLR_10_year_max",
           "styles": "plasma_0_3m",
           "type": "wms",
-          "url": "http://localhost:8088/geoserver/static_files/wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
           "opacity": 1
         },
         {
@@ -32,7 +32,7 @@
           "layers": "scenario3_90yr_lowtide_max",
           "styles": "plasma_0_3m",
           "type": "wms",
-          "url": "http://localhost:8088/geoserver/static_files/wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
           "opacity": 1
         },
         {
@@ -40,7 +40,7 @@
           "layers": "scenario2_90yr_hightide_max",
           "styles": "plasma_0_3m",
           "type": "wms",
-          "url": "http://localhost:8088/geoserver/static_files/wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
           "opacity": 1
         },
         {
@@ -48,7 +48,7 @@
           "layers": "scenario5_90yr_lowtide_slr_6m_max",
           "styles": "plasma_0_3m",
           "type": "wms",
-          "url": "http://localhost:8088/geoserver/static_files/wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
           "opacity": 1
         },
         {
@@ -56,7 +56,7 @@
           "layers": "scenario4_90yr_hightide_slr_6m_max",
           "styles": "plasma_0_3m",
           "type": "wms",
-          "url": "http://localhost:8088/geoserver/static_files/wms",
+          "url": "$GEOSERVER_URL/geoserver/static_files/wms",
           "opacity": 1
         }
       ]
@@ -70,21 +70,21 @@
           "type": "wps",
           "name": "Whirinaki 1999 Baseline",
           "description": "Model a land cover change scenario that will impact the flood scenario",
-          "url": "http://localhost:5000/wps",
+          "url": "$BACKEND_URL/wps",
           "identifier": "whirinaki1999baseline"
         },
         {
           "type": "wps",
           "name": "Whirinaki 1999 Land Cover Change",
           "description": "Model a land cover change scenario that will impact the flood scenario",
-          "url": "http://localhost:5000/wps",
+          "url": "$BACKEND_URL/wps",
           "identifier": "whirinaki1999"
         },
         {
           "type": "wps",
           "name": "Whirinaki 1999 Land Cover Change - Existing Layer",
           "description": "Model a land cover change scenario that will impact the flood scenario",
-          "url": "http://localhost:5000/wps",
+          "url": "$BACKEND_URL/wps",
           "identifier": "whirinaki1999ExistingLayer"
         }
       ]
