@@ -89,18 +89,36 @@ class PredefinedScenario(Process, ABC):
                 inputs = [
                     ComplexInput(
                         'location',
-                        'New Land Cover Area',
+                        'Select New Land Cover Area',
                         supported_formats=[
                             Format(mime_type='application/vnd.geo+json',
                                    schema='http://geojson.org/geojson-spec.html#geojson')],
-                        workdir='workdir'
+                        workdir='workdir',
+                        min_occurs=0,
                     ),
                     LiteralInput(
                         "landcover",
                         "Landcover Class",
                         data_type="string",
-                        allowed_values=list(landcover_classes)
+                        allowed_values=list(landcover_classes),
+                        min_occurs=0,
                     ),
+                    ComplexInput(
+                        'channel',
+                        'Drainage Channel',
+                        supported_formats=[
+                            Format(mime_type='application/vnd.geo+json',
+                                   schema='http://geojson.org/geojson-spec.html#linestring')],
+                        workdir='workdir',
+                        min_occurs=0,
+                    ),
+                    LiteralInput(
+                        "channel_ends_depth",
+                        "Channel End Depth (m)",
+                        "string",
+                        allowed_values=["1", "2", "3"],
+                        min_occurs=0
+                    )
                 ]
             case InputType.EXISTING_LAYER:
                 inputs = [
@@ -123,7 +141,8 @@ class PredefinedScenario(Process, ABC):
                                    schema='http://geojson.org/geojson-spec.html#linestring')],
                         workdir='workdir'
                     ),
-                    LiteralInput("channel_ends_depth", "Channel End Depth (m)", "string", allowed_values=["1", "2", "3"])
+                    LiteralInput("channel_ends_depth", "Channel End Depth (m)", "string",
+                                 allowed_values=["1", "2", "3"])
                 ]
         # Create area WPS outputs
         outputs = [
@@ -197,10 +216,20 @@ def handler_for_task(task: Task, color_mapping: LandCoverColorMapping, input_typ
         match input_type:
             case InputType.DRAW_POLYGON:
                 # Read the inputs, combine them into one dict
-                location_geojson_str = request.inputs["location"][0].data
-                location_geojson = json.loads(location_geojson_str)
-                landcover_type_name = request.inputs["landcover"][0].data
-                location_geojson["features"][0].update({"properties": {"landcover_name": landcover_type_name}})
+                location_input = request.inputs.get("location", None)
+                if location_input is not None:
+                    location_geojson_str = location_input[0].data
+                    location_geojson = json.loads(location_geojson_str)
+                    landcover_type_name = request.inputs["landcover"][0].data
+                    location_geojson["features"][0].update({"properties": {"landcover_name": landcover_type_name}})
+
+                channel_input = request.inputs.get("channel", None)
+                if channel_input is not None:
+                    channel_geojson_str = request.inputs["channel"][0].data
+                    channel_geojson = json.loads(channel_geojson_str)
+                    channel_geojson["features"][0]["properties"]["type"] = "drainage"
+                    channel_ends_depth = int(request.inputs["channel_ends_depth"][0].data)
+                    channel_geojson["features"][0]["properties"]["channel_ends_depth"] = channel_ends_depth
             case InputType.EXISTING_LAYER:
                 location_geojson_str = request.inputs["landcover_layer"][0].data
                 location_geojson = json.loads(location_geojson_str)
